@@ -317,6 +317,14 @@
             app:key="queue_limit"
             app:title="@string/settings_queue_limit"
             app:useSimpleSummaryProvider="true" />
+        <ListPreference
+            app:defaultValue="15"
+            app:dialogTitle="@string/settings_seek_seconds"
+            app:entries="@array/seek_seconds_values"
+            app:entryValues="@array/seek_seconds_values"
+            app:key="seek_seconds"
+            app:title="@string/settings_seek_seconds"
+            app:useSimpleSummaryProvider="true" />
     </com.eddyizm.tempus.util.ClickablePreferenceCategory>
 
     <com.eddyizm.tempus.util.ClickablePreferenceCategory app:title="@string/settings_title_playlist">

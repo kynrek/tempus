@@ -105,6 +105,7 @@ object Preferences {
     private const val ALLOW_PLAYLIST_DUPLICATES = "allow_playlist_duplicates"
     private const val LAST_PLAYLIST_ID = "last_playlist_id"
     private const val QUEUE_LIMIT = "queue_limit"
+    private const val SEEK_SECONDS = "seek_seconds"
     private const val KEEP_PLAYED_IN_QUEUE = "keep_played_in_queue"
     private const val LAST_PLAYLIST_NAME = "last_playlist_name"
     private const val HOME_SORT_PLAYLISTS = "home_sort_playlists"
@@ -1042,6 +1043,12 @@ object Preferences {
     fun getQueueLimit(): Int {
         val parsed = App.getInstance().preferences.getString(QUEUE_LIMIT, "500")?.toIntOrNull()
         return parsed?.takeIf { it >= 10 } ?: 500
+    }
+
+    /** Mini player ⟲/⟳ jump, matching MiniCarHome's widget choices (5, 10, 15, 30, 60). */
+    @JvmStatic
+    fun getSeekSeconds(): Int {
+        return App.getInstance().preferences.getString(SEEK_SECONDS, "15")?.toIntOrNull()?.takeIf { it > 0 } ?: 15
     }
 
     @JvmStatic

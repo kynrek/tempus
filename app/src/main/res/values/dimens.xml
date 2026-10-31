@@ -2,9 +2,9 @@
     <dimen name="appbar_header_height">296dp</dimen>
     <dimen name="activity_margin_content">24dp</dimen>
     <dimen name="bottom_sheet_behavior_peek_height">136dp</dimen>
-    <dimen name="bottom_sheet_peek_height">56dp</dimen>
+    <dimen name="bottom_sheet_peek_height">78dp</dimen>
     <dimen name="now_playing_bottom_peek_height">64dp</dimen>
-    <dimen name="global_padding_bottom">164dp</dimen>
+    <dimen name="global_padding_bottom">186dp</dimen>
     <dimen name="radius">2dp</dimen>
     <dimen name="dots_height">2dp</dimen>
     <dimen name="downloaded_item_padding">12dp</dimen>
@@ -15,13 +15,13 @@
     <!-- A–Z scrubber overlay: the strip itself is 52dp, the rest is room for the letter bubble. -->
     <dimen name="alphabet_scrubber_width">240dp</dimen>
     <!-- Room left under the A–Z strip for the mini player (landscape hides the bottom navbar). -->
-    <dimen name="alphabet_scrubber_bottom_inset">64dp</dimen>
+    <dimen name="alphabet_scrubber_bottom_inset">86dp</dimen>
     <!-- End margin for header buttons, so they sit beside the full-height A–Z strip. -->
     <dimen name="alphabet_scrubber_strip_inset">60dp</dimen>
     <!-- Expanded catalogue header; kept short so a 480dp-tall car screen still shows the list. -->
     <dimen name="catalogue_header_height">104dp</dimen>
     <!-- The same header on a Home tab, where only its sort and filter buttons remain. -->
     <dimen name="embedded_header_height">64dp</dimen>
-    <!-- Mini player transport buttons, large enough to hit while driving (the bar is 56dp). -->
+    <!-- Mini player transport buttons, large enough to hit while driving (the bar is 78dp, timeline included). -->
     <dimen name="mini_player_button_size">44dp</dimen>
 </resources>

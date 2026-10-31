@@ -80,6 +80,9 @@ import java.util.concurrent.ExecutionException;
 
 @UnstableApi
 public class MainActivity extends BaseActivity {
+    /** Mini player bar, timeline included; matches @dimen/bottom_sheet_peek_height. */
+    private static final int MINI_PLAYER_HEIGHT_DP = 78;
+
     private static final String TAG = "MainActivityLogs";
 
     private LiveData<SubsonicResponse> outstandingProbe = null;
@@ -421,19 +424,19 @@ public class MainActivity extends BaseActivity {
         // Ignore orientation change, bottom navbar always hidden
         if (Preferences.getHideBottomNavbarOnPortrait()) {
             navigationController.setNavbarVisibility(false);
-            bottomSheetController.setPeekHeight(56, displayDensity);
+            bottomSheetController.setPeekHeight(MINI_PLAYER_HEIGHT_DP, displayDensity);
             navigationController.setSystemBarsVisibility(this, !isLandscape);
             return;
         }
 
         if (!isLandscape) {
             // Show app navbar + show system bars
-            bottomSheetController.setPeekHeight(136, displayDensity);
+            bottomSheetController.setPeekHeight(MINI_PLAYER_HEIGHT_DP + 80, displayDensity);
             navigationController.setNavbarVisibility(true);
             navigationController.setSystemBarsVisibility(this, true);
         } else {
             // Hide app navbar + hide system bars
-            bottomSheetController.setPeekHeight(56, displayDensity);
+            bottomSheetController.setPeekHeight(MINI_PLAYER_HEIGHT_DP, displayDensity);
             navigationController.setNavbarVisibility(false);
             navigationController.setSystemBarsVisibility(this, false);
         }

@@ -2,6 +2,7 @@ package com.eddyizm.tempus.ui.fragment;
 
 import android.content.ComponentName;
 import android.os.Bundle;
+import android.util.Log;
 import android.os.Handler;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -48,6 +49,7 @@ import java.util.stream.IntStream;
 
 @OptIn(markerClass = UnstableApi.class)
 public class PlayerBottomSheetFragment extends Fragment {
+    private static final String TAG = "PlayerBottomSheet";
     private boolean remoteVisible = false;
     private final android.content.SharedPreferences.OnSharedPreferenceChangeListener lanSwitchListener = (prefs, key) -> {
         if (Preferences.LAN_REMOTE_ENABLED.equals(key)) renderRemote(com.eddyizm.tempus.lan.LanRemoteSession.current());
@@ -130,6 +132,7 @@ public class PlayerBottomSheetFragment extends Fragment {
     private void customizeBottomSheetAction() {
         bind.playerHeaderLayout.playerHeaderRemoteButton.setOnClickListener(v -> com.eddyizm.tempus.lan.LanDevicePicker.toggle(requireActivity()));
         bind.playerHeaderLayout.getRoot().setOnClickListener(view -> ((MainActivity) requireActivity()).expandBottomSheet());
+        initHeaderSeekBar();
         bind.playerHeaderLayout.playerHeaderQueueButton.setOnClickListener(view -> {
             ((MainActivity) requireActivity()).expandBottomSheet();
             goToQueuePage();
@@ -324,17 +327,72 @@ public class PlayerBottomSheetFragment extends Fragment {
                     break;
                 case Constants.MEDIA_TYPE_MUSIC:
                 default:
-                    bind.playerHeaderLayout.playerHeaderFastForwardMediaButton.setVisibility(View.GONE);
-                    bind.playerHeaderLayout.playerHeaderRewindMediaButton.setVisibility(View.GONE);
+                    // Seek back/forward by the Settings amount sit around Play for music too.
+                    bind.playerHeaderLayout.playerHeaderFastForwardMediaButton.setVisibility(View.VISIBLE);
+                    bind.playerHeaderLayout.playerHeaderRewindMediaButton.setVisibility(View.VISIBLE);
                     bind.playerHeaderLayout.playerHeaderNextMediaButton.setVisibility(View.VISIBLE);
                     break;
             }
         }
     }
 
+    /** True while a finger is on the mini player timeline, so playback updates don't fight it. */
+    private boolean scrubbing;
+
+    private void initHeaderSeekBar() {
+        bind.playerHeaderLayout.playerHeaderSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) setHeaderTimes(progress, seekBar.getMax());
+            }
+
+            @Override
+            public void onStartTrackingTouch(android.widget.SeekBar seekBar) {
+                scrubbing = true;
+            }
+
+            @Override
+            public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
+                scrubbing = false;
+                long positionMs = seekBar.getProgress() * 1000L;
+                if (com.eddyizm.tempus.lan.LanRemoteSession.isActive() || mediaBrowserListenableFuture == null) return;
+                mediaBrowserListenableFuture.addListener(() -> {
+                    try {
+                        mediaBrowserListenableFuture.get().seekTo(positionMs);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Seek failed", e);
+                    }
+                }, MoreExecutors.directExecutor());
+            }
+        });
+    }
+
+    /** Jumps by the Settings amount (5–60 s, as in MiniCarHome's widget), clamped to the track. */
+    private void seekBy(int seconds) {
+        if (com.eddyizm.tempus.lan.LanRemoteSession.isActive() || mediaBrowserListenableFuture == null) return;
+        mediaBrowserListenableFuture.addListener(() -> {
+            try {
+                MediaBrowser browser = mediaBrowserListenableFuture.get();
+                long target = browser.getCurrentPosition() + seconds * 1000L;
+                long duration = browser.getDuration();
+                if (duration > 0) target = Math.min(target, duration - 500);
+                browser.seekTo(Math.max(0, target));
+            } catch (Exception e) {
+                Log.e(TAG, "Seek failed", e);
+            }
+        }, MoreExecutors.directExecutor());
+    }
+
+    private void setHeaderTimes(int positionSeconds, int durationSeconds) {
+        if (bind == null) return;
+        bind.playerHeaderLayout.playerHeaderElapsedText.setText(MusicUtil.getReadableDurationString((long) positionSeconds, false));
+        bind.playerHeaderLayout.playerHeaderDurationText.setText(MusicUtil.getReadableDurationString((long) durationSeconds, false));
+    }
+
     private void setContentDuration(long duration) {
         if (com.eddyizm.tempus.lan.LanRemoteSession.isActive() || bind == null) return;
         bind.playerHeaderLayout.playerHeaderSeekBar.setMax((int) (duration / 1000));
+        setHeaderTimes(bind.playerHeaderLayout.playerHeaderSeekBar.getProgress(), (int) (duration / 1000));
     }
 
     private void setProgress(MediaBrowser mediaBrowser) {
@@ -343,8 +401,11 @@ public class PlayerBottomSheetFragment extends Fragment {
                     (com.eddyizm.tempus.lan.LanRemoteSession.current().positionAt(android.os.SystemClock.elapsedRealtime()) / 1000), true);
             return;
         }
-        if (bind != null)
-            bind.playerHeaderLayout.playerHeaderSeekBar.setProgress((int) (mediaBrowser.getCurrentPosition() / 1000), true);
+        if (bind != null && !scrubbing) {
+            int position = (int) (mediaBrowser.getCurrentPosition() / 1000);
+            bind.playerHeaderLayout.playerHeaderSeekBar.setProgress(position, true);
+            setHeaderTimes(position, bind.playerHeaderLayout.playerHeaderSeekBar.getMax());
+        }
     }
 
     private void setPlayingState(boolean isPlaying) {
@@ -363,8 +424,8 @@ public class PlayerBottomSheetFragment extends Fragment {
             if (com.eddyizm.tempus.lan.LanRemoteSession.isActive()) com.eddyizm.tempus.lan.LanRemoteSession.command("next");
             else bind.getRoot().findViewById(R.id.exo_next).performClick();
         });
-        bind.playerHeaderLayout.playerHeaderRewindMediaButton.setOnClickListener(view -> bind.getRoot().findViewById(R.id.exo_rew).performClick());
-        bind.playerHeaderLayout.playerHeaderFastForwardMediaButton.setOnClickListener(view -> bind.getRoot().findViewById(R.id.exo_ffwd).performClick());
+        bind.playerHeaderLayout.playerHeaderRewindMediaButton.setOnClickListener(view -> seekBy(-Preferences.getSeekSeconds()));
+        bind.playerHeaderLayout.playerHeaderFastForwardMediaButton.setOnClickListener(view -> seekBy(Preferences.getSeekSeconds()));
     }
 
     private void setHeaderNextButtonState(boolean isEnabled) {

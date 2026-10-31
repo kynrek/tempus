@@ -321,12 +321,14 @@
     <string name="player_queue_clear">Clear</string>
     <string name="player_queue_clear_history">Remove played</string>
     <string name="player_queue_view_edit">View and edit queue</string>
+    <string name="player_header_seek">Playback position</string>
     <string name="track_add_to_queue">Add to queue</string>
     <string name="album_page_queue_button">Queue</string>
     <string name="settings_title_queue">Queue</string>
     <string name="settings_keep_played_in_queue">Keep played songs in queue</string>
     <string name="settings_keep_played_in_queue_summary">Played songs stay in the queue (shown dimmed) so you can go back or save them as a playlist</string>
     <string name="settings_queue_limit">Maximum queue length</string>
+    <string name="settings_seek_seconds">Seek back/forward seconds</string>
     <string name="track_added_to_queue">Queued \"%1$s\"</string>
     <plurals name="album_added_to_queue">
         <item quantity="one">Queued %d track</item>
