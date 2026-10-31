@@ -84,6 +84,7 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        bind.artistAlphabetScrubber.detach();
         bind = null;
     }
 
@@ -126,6 +127,8 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
         artistAdapter = new ArtistCatalogueAdapter(this);
         artistAdapter.setStateRestorationPolicy(RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY);
         bind.artistCatalogueRecyclerView.setAdapter(artistAdapter);
+        bind.artistAlphabetScrubber.attach(bind.artistCatalogueRecyclerView, artistAdapter);
+        bind.artistAlphabetScrubber.keepBelow(bind.appBarLayout);
         artistCatalogueViewModel.getArtistList().observe(getViewLifecycleOwner(), artistList -> {
             artistAdapter.setItems(artistList);
             artistAdapter.sort(Preferences.getArtistSortOrder());

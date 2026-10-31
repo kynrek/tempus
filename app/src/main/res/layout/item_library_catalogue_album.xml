@@ -15,7 +15,7 @@
 
     <TextView
         android:id="@+id/album_name_label"
-        style="@style/LabelMedium"
+        style="@style/CatalogueTileTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:ellipsize="marquee"
@@ -27,7 +27,7 @@
 
     <TextView
         android:id="@+id/artist_name_label"
-        style="@style/LabelSmall"
+        style="@style/CatalogueTileSubtitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:ellipsize="marquee"

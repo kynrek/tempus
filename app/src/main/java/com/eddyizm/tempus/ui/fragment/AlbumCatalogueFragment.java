@@ -107,6 +107,7 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        bind.albumAlphabetScrubber.detach();
         bind = null;
     }
 
@@ -149,6 +150,8 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
         albumAdapter = new AlbumCatalogueAdapter(this, true);
         albumAdapter.setStateRestorationPolicy(RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY);
         bind.albumCatalogueRecyclerView.setAdapter(albumAdapter);
+        bind.albumAlphabetScrubber.attach(bind.albumCatalogueRecyclerView, albumAdapter);
+        bind.albumAlphabetScrubber.keepBelow(bind.appBarLayout);
         albumCatalogueViewModel.getAlbumList().observe(getViewLifecycleOwner(), albums -> {
             originalAlbums = albums;
             currentSortOrder = Preferences.getAlbumSortOrder();

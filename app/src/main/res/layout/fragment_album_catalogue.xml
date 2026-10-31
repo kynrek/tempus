@@ -25,7 +25,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/album_info_sector"
                 android:layout_width="match_parent"
-                android:layout_height="172dp"
+                android:layout_height="@dimen/catalogue_header_height"
                 android:background="?attr/colorSurface"
                 app:layout_scrollFlags="scroll|exitUntilCollapsed|snap">
 
@@ -101,5 +101,14 @@
             android:paddingEnd="16dp"
             android:paddingBottom="@dimen/global_padding_bottom"
             app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+        <com.eddyizm.tempus.helper.recyclerview.AlphabetScrubber
+            android:id="@+id/album_alphabet_scrubber"
+            android:layout_width="@dimen/alphabet_scrubber_width"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:paddingEnd="4dp"
+            android:paddingBottom="@dimen/alphabet_scrubber_bottom_inset"
+            android:visibility="gone" />
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </LinearLayout>

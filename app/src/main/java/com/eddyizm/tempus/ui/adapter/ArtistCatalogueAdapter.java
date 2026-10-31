@@ -11,8 +11,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.eddyizm.tempus.databinding.ItemLibraryCatalogueArtistBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
+import com.eddyizm.tempus.helper.recyclerview.AlphabetScrubber;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.subsonic.models.ArtistID3;
+import com.eddyizm.tempus.util.AlphabetSort;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.MusicUtil;
 
@@ -21,8 +23,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-public class ArtistCatalogueAdapter extends RecyclerView.Adapter<ArtistCatalogueAdapter.ViewHolder> implements Filterable, StandardViewTypeAdapter {
+public class ArtistCatalogueAdapter extends RecyclerView.Adapter<ArtistCatalogueAdapter.ViewHolder> implements Filterable, StandardViewTypeAdapter, AlphabetScrubber.SectionProvider {
     private final ClickCallback click;
+    private String sortOrder;
 
     private final Filter filtering = new Filter() {
         @Override
@@ -138,10 +141,21 @@ public class ArtistCatalogueAdapter extends RecyclerView.Adapter<ArtistCatalogue
         }
     }
 
+    @Override
+    public boolean isAlphabetical() {
+        return Constants.ARTIST_ORDER_BY_NAME.equals(sortOrder);
+    }
+
+    @Override
+    public String getSectionName(int position) {
+        return artists.get(position).getName();
+    }
+
     public void sort(String order) {
+        sortOrder = order;
         switch (order) {
             case Constants.ARTIST_ORDER_BY_NAME:
-                artists.sort(Comparator.comparing(ArtistID3::getName,String.CASE_INSENSITIVE_ORDER));
+                artists.sort(Comparator.comparing(ArtistID3::getName, AlphabetSort.COMPARATOR));
                 break;
             case Constants.ARTIST_ORDER_BY_RANDOM:
                 Collections.shuffle(artists);

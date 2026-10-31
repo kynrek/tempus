@@ -91,4 +91,13 @@
         <item name="android:textFontWeight">400</item>
         <item name="android:textColor">@color/titleTextColor</item>
     </style>
+
+    <!-- Catalogue tile captions, sized to read at a glance on a car screen. -->
+    <style name="CatalogueTileTitle" parent="LabelMedium">
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="CatalogueTileSubtitle" parent="LabelSmall">
+        <item name="android:textSize">15sp</item>
+    </style>
 </resources>

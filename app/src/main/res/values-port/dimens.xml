@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="alphabet_scrubber_bottom_inset">144dp</dimen>
+</resources>

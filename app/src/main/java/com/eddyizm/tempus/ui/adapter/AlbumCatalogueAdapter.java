@@ -12,8 +12,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.eddyizm.tempus.databinding.ItemLibraryCatalogueAlbumBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
+import com.eddyizm.tempus.helper.recyclerview.AlphabetScrubber;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.subsonic.models.AlbumID3;
+import com.eddyizm.tempus.util.AlphabetSort;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.MusicUtil;
 
@@ -24,8 +26,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
 
-public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAdapter.ViewHolder> implements Filterable, StandardViewTypeAdapter {
+public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAdapter.ViewHolder> implements Filterable, StandardViewTypeAdapter, AlphabetScrubber.SectionProvider {
     private final ClickCallback click;
+    private String sortOrder;
     private String currentFilter;
     private boolean showArtist;
 
@@ -154,14 +157,35 @@ public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAd
         notifyDataSetChanged();
     }
 
+    @Override
+    public boolean isAlphabetical() {
+        return Constants.ALBUM_ORDER_BY_NAME.equals(sortOrder) || Constants.ALBUM_ORDER_BY_ARTIST.equals(sortOrder);
+    }
+
+    @Override
+    public String getSectionName(int position) {
+        AlbumID3 album = albums.get(position);
+        return Constants.ALBUM_ORDER_BY_ARTIST.equals(sortOrder) ? album.getArtist() : album.getName();
+    }
+
     public void sort(String order) {
         if (albums == null) return;
-        
+        sortOrder = order;
+
+        // Sort the unfiltered copy too, so the search filter keeps this order (and the A–Z index stays valid).
+        albumsFull = new ArrayList<>(albumsFull);
+        sortList(albumsFull, order);
+        sortList(albums, order);
+
+        notifyDataSetChanged();
+    }
+
+    private static void sortList(List<AlbumID3> albums, String order) {
         switch (order) {
             case Constants.ALBUM_ORDER_BY_NAME:
                 albums.sort(Comparator.comparing(
                     album -> album.getName() != null ? album.getName() : "",
-                    String.CASE_INSENSITIVE_ORDER
+                    AlphabetSort.COMPARATOR
                 ));
                 break;
             case Constants.ALBUM_ORDER_BY_ARTIST:
@@ -171,7 +195,7 @@ public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAd
                 Function<AlbumID3, String> getArtist = album -> album.getArtist() != null ? album.getArtist() : "";
                 albums.sort(Comparator.comparing(
                         getArtist,
-                        String.CASE_INSENSITIVE_ORDER
+                        AlphabetSort.COMPARATOR
                 ).thenComparing(AlbumID3::getYear));
                 break;
             case Constants.ALBUM_ORDER_BY_YEAR:
@@ -201,7 +225,5 @@ public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAd
                 Collections.reverse(albums);
                 break;
         }
-
-        notifyDataSetChanged();
     }
 }
