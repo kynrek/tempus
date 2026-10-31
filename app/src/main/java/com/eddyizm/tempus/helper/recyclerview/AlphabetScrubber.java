@@ -283,7 +283,11 @@ public class AlphabetScrubber extends View {
         if (recyclerView != null && recyclerView.getAdapter() != null) {
             recyclerView.getAdapter().unregisterAdapterDataObserver(dataObserver);
         }
-        if (recyclerView != null) recyclerView.removeOnScrollListener(pauseImagesWhileFlinging);
+        if (recyclerView != null) {
+            recyclerView.removeOnScrollListener(pauseImagesWhileFlinging);
+            recyclerView.removeCallbacks(applyPendingScroll);
+        }
+        pendingScroll = RecyclerView.NO_POSITION;
         setImagesPaused(false);
         cancelHold();
         resetZoom();
@@ -788,7 +792,25 @@ public class AlphabetScrubber extends View {
         return -1;
     }
 
+    /**
+     * Jumps at most once a frame. A fast drag crosses several sections between frames, and each
+     * jump lays out a whole page of new tiles; only the last one is ever seen.
+     */
     private void scrollTo(int position) {
+        if (recyclerView == null) return;
+        boolean posted = pendingScroll != RecyclerView.NO_POSITION;
+        pendingScroll = position;
+        if (!posted) recyclerView.postOnAnimation(applyPendingScroll);
+    }
+
+    private int pendingScroll = RecyclerView.NO_POSITION;
+    private final Runnable applyPendingScroll = () -> {
+        int position = pendingScroll;
+        pendingScroll = RecyclerView.NO_POSITION;
+        if (position != RecyclerView.NO_POSITION) jumpTo(position);
+    };
+
+    private void jumpTo(int position) {
         if (recyclerView == null) return;
         RecyclerView.LayoutManager layoutManager = recyclerView.getLayoutManager();
         if (layoutManager instanceof LinearLayoutManager) {

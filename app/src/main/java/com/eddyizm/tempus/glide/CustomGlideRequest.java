@@ -7,7 +7,6 @@ import android.graphics.drawable.Drawable;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.content.res.AppCompatResources;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.RequestBuilder;
@@ -49,20 +48,24 @@ public class CustomGlideRequest {
 
     public static RequestOptions createRequestOptions(Context context, String item, ResourceType type) {
         Placeholders placeholders = placeholdersFor(context);
-        Drawable missing = placeholders.get(context, type);
-        return new RequestOptions()
-                .placeholder(new ColorDrawable(placeholders.surfaceColor))
-                .fallback(missing)
-                .error(missing)
+        RequestOptions options = new RequestOptions().placeholder(new ColorDrawable(placeholders.surfaceColor));
+        // By resource id, so Glide only builds the missing-cover vector when a cover is missing,
+        // not on every row bound.
+        int missingRes = placeholderRes(type);
+        if (missingRes != 0) {
+            options = options.fallback(missingRes).error(missingRes);
+        } else {
+            Drawable missing = new ColorDrawable(placeholders.surfaceColor);
+            options = options.fallback(missing).error(missing);
+        }
+        return options
                 .diskCacheStrategy(DEFAULT_DISK_CACHE_STRATEGY)
                 .signature(new ObjectKey(item != null ? item : 0))
                 .transform(new CenterCrop(), new RoundedCorners(CustomGlideRequest.CORNER_RADIUS));
     }
 
     /**
-     * The placeholder colour and the missing-cover drawables, worked out once per themed context.
-     * Every grid row bound used to resolve the colour and inflate two vector drawables, though
-     * they only show when a cover is missing. Each request still gets its own drawable instance.
+     * The placeholder colour, worked out once per themed context instead of on every row bound.
      */
     private static final Map<Context, Placeholders> PLACEHOLDERS = new WeakHashMap<>();
 
@@ -79,23 +82,9 @@ public class CustomGlideRequest {
 
     private static final class Placeholders {
         final int surfaceColor;
-        private final Drawable.ConstantState[] states = new Drawable.ConstantState[ResourceType.values().length];
 
         Placeholders(int surfaceColor) {
             this.surfaceColor = surfaceColor;
-        }
-
-        @Nullable
-        synchronized Drawable get(Context context, ResourceType type) {
-            int res = placeholderRes(type);
-            if (res == 0) return new ColorDrawable(surfaceColor);
-
-            Drawable.ConstantState state = states[type.ordinal()];
-            if (state != null) return state.newDrawable(context.getResources(), context.getTheme());
-
-            Drawable drawable = AppCompatResources.getDrawable(context, res);
-            if (drawable != null) states[type.ordinal()] = drawable.getConstantState();
-            return drawable;
         }
     }
 
