@@ -7,10 +7,13 @@ import android.widget.Filter;
 import android.widget.Filterable;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.eddyizm.tempus.databinding.ItemHorizontalAlbumBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
+import com.eddyizm.tempus.helper.recyclerview.AlphabetScrubber;
+import com.eddyizm.tempus.helper.recyclerview.ScrubberSections;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.subsonic.models.Child;
@@ -20,11 +23,17 @@ import com.eddyizm.tempus.util.MusicUtil;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
+import java.util.function.Function;
 
-public class AlbumHorizontalAdapter extends RecyclerView.Adapter<AlbumHorizontalAdapter.ViewHolder> implements Filterable {
+public class AlbumHorizontalAdapter extends RecyclerView.Adapter<AlbumHorizontalAdapter.ViewHolder> implements Filterable, AlphabetScrubber.SectionProvider {
     private final ClickCallback click;
     private final boolean isOffline;
+    @Nullable
+    private Function<AlbumID3, Date> sectionDate;
 
     private List<AlbumID3> albumsFull;
     private List<AlbumID3> albums;
@@ -140,6 +149,22 @@ public class AlbumHorizontalAdapter extends RecyclerView.Adapter<AlbumHorizontal
 
             return true;
         }
+    }
+
+    /**
+     * Index the rows by month of {@code date} (e.g. when last played), for a list the server
+     * already returns newest first. Null, the default, shows no index.
+     */
+    public void setSectionDate(@Nullable Function<AlbumID3, Date> date) {
+        sectionDate = date;
+    }
+
+    @Override
+    public ScrubberSections buildSections() {
+        if (sectionDate == null) return null;
+        List<AlbumID3> rows = albums;
+        Function<AlbumID3, Date> date = sectionDate;
+        return ScrubberSections.months(rows.size(), i -> date.apply(rows.get(i)), Locale.getDefault(), TimeZone.getDefault());
     }
 
     public void sort(String order) {

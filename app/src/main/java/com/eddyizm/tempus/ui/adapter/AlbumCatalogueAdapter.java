@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.eddyizm.tempus.databinding.ItemLibraryCatalogueAlbumBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.helper.recyclerview.AlphabetScrubber;
+import com.eddyizm.tempus.helper.recyclerview.ScrubberSections;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.util.AlphabetSort;
@@ -24,6 +25,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAdapter.ViewHolder> implements Filterable, StandardViewTypeAdapter, AlphabetScrubber.SectionProvider {
     private final ClickCallback click;
@@ -160,15 +163,25 @@ public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAd
         notifyDataSetChanged();
     }
 
+    /** A–Z for the name orders, years for year, months (and days) for the recent orders. */
     @Override
-    public boolean isAlphabetical() {
-        return Constants.ALBUM_ORDER_BY_NAME.equals(sortOrder) || Constants.ALBUM_ORDER_BY_ARTIST.equals(sortOrder);
-    }
-
-    @Override
-    public String getSectionName(int position) {
-        AlbumID3 album = albums.get(position);
-        return Constants.ALBUM_ORDER_BY_ARTIST.equals(sortOrder) ? album.getArtist() : album.getName();
+    public ScrubberSections buildSections() {
+        if (sortOrder == null) return null;
+        List<AlbumID3> rows = albums;
+        switch (sortOrder) {
+            case Constants.ALBUM_ORDER_BY_NAME:
+                return ScrubberSections.letters(rows.size(), i -> rows.get(i).getName());
+            case Constants.ALBUM_ORDER_BY_ARTIST:
+                return ScrubberSections.letters(rows.size(), i -> rows.get(i).getArtist());
+            case Constants.ALBUM_ORDER_BY_YEAR:
+                return ScrubberSections.years(rows.size(), i -> rows.get(i).getYear());
+            case Constants.ALBUM_ORDER_BY_RECENTLY_ADDED:
+                return ScrubberSections.months(rows.size(), i -> rows.get(i).getCreated(), Locale.getDefault(), TimeZone.getDefault());
+            case Constants.ALBUM_ORDER_BY_RECENTLY_PLAYED:
+                return ScrubberSections.months(rows.size(), i -> rows.get(i).getPlayed(), Locale.getDefault(), TimeZone.getDefault());
+            default:
+                return null;
+        }
     }
 
     public void sort(String order) {

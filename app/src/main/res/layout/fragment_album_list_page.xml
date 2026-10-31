@@ -85,6 +85,17 @@
             android:clipToPadding="false"
             android:paddingBottom="@dimen/global_padding_bottom"
             app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+        <com.eddyizm.tempus.helper.recyclerview.AlphabetScrubber
+            android:id="@+id/album_list_scrubber"
+            android:layout_width="@dimen/alphabet_scrubber_width"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:elevation="16dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="4dp"
+            android:paddingBottom="@dimen/alphabet_scrubber_bottom_inset"
+            android:visibility="gone" />
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </LinearLayout>
 

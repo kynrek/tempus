@@ -75,6 +75,7 @@ public class AlbumListPageFragment extends Fragment implements ClickCallback {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        bind.albumListScrubber.detach();
         bind = null;
     }
 
@@ -157,6 +158,14 @@ public class AlbumListPageFragment extends Fragment implements ClickCallback {
         albumHorizontalAdapter.setStateRestorationPolicy(RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY);
 
         bind.albumListRecyclerView.setAdapter(albumHorizontalAdapter);
+        // These come from the server newest first, so they can be indexed by month and day.
+        if (Constants.ALBUM_RECENTLY_PLAYED.equals(albumListPageViewModel.title)) {
+            albumHorizontalAdapter.setSectionDate(AlbumID3::getPlayed);
+        } else if (Constants.ALBUM_RECENTLY_ADDED.equals(albumListPageViewModel.title)) {
+            albumHorizontalAdapter.setSectionDate(AlbumID3::getCreated);
+        }
+        bind.albumListScrubber.attach(bind.albumListRecyclerView, albumHorizontalAdapter);
+        bind.albumListScrubber.setOnScrubStartListener(() -> bind.appBarLayout.setExpanded(false));
         albumListPageViewModel.getAlbumList(getViewLifecycleOwner()).observe(getViewLifecycleOwner(), albums -> {
             albumHorizontalAdapter.setItems(albums);
             setAlbumListPageSubtitle(albums);
