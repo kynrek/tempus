@@ -325,6 +325,12 @@
     <string name="player_header_seek">Playback position</string>
     <string name="track_add_to_queue">Add to queue</string>
     <string name="album_page_queue_button">Queue</string>
+    <string name="artist_release_show_tracks">Show tracks</string>
+    <string name="artist_release_hide_tracks">Hide tracks</string>
+    <plurals name="artist_release_track_count">
+        <item quantity="one">%d track</item>
+        <item quantity="other">%d tracks</item>
+    </plurals>
     <string name="settings_title_queue">Queue</string>
     <string name="settings_keep_played_in_queue">Keep played songs in queue</string>
     <string name="settings_keep_played_in_queue_summary">Played songs stay in the queue (shown dimmed) so you can go back or save them as a playlist</string>

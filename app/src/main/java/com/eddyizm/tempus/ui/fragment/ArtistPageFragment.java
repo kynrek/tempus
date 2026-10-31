@@ -41,7 +41,7 @@ import com.eddyizm.tempus.subsonic.models.ArtistID3;
 import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.AlbumCarouselAdapter;
-import com.eddyizm.tempus.ui.adapter.AlbumSectionsAdapter;
+import com.eddyizm.tempus.ui.adapter.ArtistReleaseAdapter;
 import com.eddyizm.tempus.ui.adapter.ArtistCarouselAdapter;
 import com.eddyizm.tempus.ui.adapter.SongHorizontalAdapter;
 import com.eddyizm.tempus.util.Constants;
@@ -66,7 +66,7 @@ public class ArtistPageFragment extends Fragment implements ClickCallback {
     private PlaybackViewModel playbackViewModel;
 
     private SongHorizontalAdapter songHorizontalAdapter;
-    private AlbumSectionsAdapter allAlbumsAdapter;
+    private ArtistReleaseAdapter allAlbumsAdapter;
     private AlbumCarouselAdapter appearsOnAdapter;
     private ArtistCarouselAdapter similarArtistAdapter;
 
@@ -385,16 +385,14 @@ public class ArtistPageFragment extends Fragment implements ClickCallback {
     private void initCategorizedAlbumsView() {
 
         bind.allAlbumsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false));
-        bind.allAlbumsRecyclerView.setHasFixedSize(true);
         bind.allAlbumsRecyclerView.setNestedScrollingEnabled(false);
-        allAlbumsAdapter = new AlbumSectionsAdapter(requireContext(), this);
+        allAlbumsAdapter = new ArtistReleaseAdapter(getViewLifecycleOwner(), this);
+        if (mediaBrowserListenableFuture != null) allAlbumsAdapter.setMediaBrowserListenableFuture(mediaBrowserListenableFuture);
         bind.allAlbumsRecyclerView.setAdapter(allAlbumsAdapter);
-        artistPageViewModel.getMapOfAlbums().observe(getViewLifecycleOwner(), albums -> {
+        artistPageViewModel.getReleasesInOrder().observe(getViewLifecycleOwner(), albums -> {
             if (bind != null) {
                 bind.allAlbumsRecyclerView.setVisibility(albums != null && !albums.isEmpty() ? View.VISIBLE : View.GONE);
-                if (albums != null) {
-                    allAlbumsAdapter.setItems(albums);
-                }
+                if (albums != null) allAlbumsAdapter.setItems(albums);
             }
         });
 
@@ -522,6 +520,7 @@ public class ArtistPageFragment extends Fragment implements ClickCallback {
 
     private void setMediaBrowserListenableFuture() {
         songHorizontalAdapter.setMediaBrowserListenableFuture(mediaBrowserListenableFuture);
+        if (allAlbumsAdapter != null) allAlbumsAdapter.setMediaBrowserListenableFuture(mediaBrowserListenableFuture);
     }
 
     private void adjustButtonToFit(android.widget.Button btn, int textResId) {

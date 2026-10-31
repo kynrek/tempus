@@ -1,6 +1,5 @@
 package com.eddyizm.tempus.viewmodel;
 
-import static java.util.stream.Collectors.groupingBy;
 
 import android.app.Application;
 import android.content.Context;
@@ -28,11 +27,11 @@ import com.eddyizm.tempus.util.NetworkUtil;
 import com.eddyizm.tempus.util.Preferences;
 import com.eddyizm.tempus.util.FavoriteRegistry;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Set;
@@ -46,7 +45,7 @@ public class ArtistPageViewModel extends AndroidViewModel {
     private ArtistID3 artist;
 
     private final MutableLiveData<List<AlbumID3>> appearsOn = new MutableLiveData<>();
-    private final MutableLiveData<Map<String, List<AlbumID3>>> mapOfAlbums = new MutableLiveData<>();
+    private final MutableLiveData<List<AlbumID3>> releasesInOrder = new MutableLiveData<>();
 
     public ArtistPageViewModel(@NonNull Application application) {
         super(application);
@@ -68,12 +67,15 @@ public class ArtistPageViewModel extends AndroidViewModel {
                     List<AlbumID3> primaryAlbums = allAlbums.stream()
                             .filter(sameArtist)
                             .collect(Collectors.toList());
-                    mapOfAlbums.setValue(
-                            primaryAlbums.stream()
-                                    .collect(groupingBy(ArtistPageViewModel::sectionType)));
+                    // Oldest first; releases without a year go last.
+                    List<AlbumID3> ordered = new ArrayList<>(primaryAlbums);
+                    ordered.sort(Comparator.comparing((AlbumID3 a) -> a.getYear() <= 0)
+                            .thenComparingInt(AlbumID3::getYear)
+                            .thenComparing(a -> a.getName() != null ? a.getName() : "", String.CASE_INSENSITIVE_ORDER));
+                    releasesInOrder.setValue(ordered);
 
                 } else {
-                    mapOfAlbums.setValue(Collections.emptyMap());
+                    releasesInOrder.setValue(Collections.emptyList());
                     appearsOn.setValue(Collections.emptyList());
                 }
                 if (allAlbums != null) {
@@ -89,10 +91,10 @@ public class ArtistPageViewModel extends AndroidViewModel {
     }
 
     /**
-     * The section an album is filed under, never blank: AlbumSectionsAdapter titles a
-     * section outside its own list from the first character of this value.
+     * The kind of release (album, ep, single, live, ...), never blank: the artist page shows it
+     * beside each release, capitalised from the first character of this value.
      */
-    static String sectionType(AlbumID3 album) {
+    public static String sectionType(AlbumID3 album) {
         List<String> releaseTypes = album.getReleaseTypes();
 
         if (releaseTypes != null && !releaseTypes.isEmpty() && releaseTypes.get(0) != null) {
@@ -117,7 +119,7 @@ public class ArtistPageViewModel extends AndroidViewModel {
         }
     }
 
-    public LiveData<Map<String, List<AlbumID3>>> getMapOfAlbums() { return mapOfAlbums; }
+    public LiveData<List<AlbumID3>> getReleasesInOrder() { return releasesInOrder; }
     public LiveData<List<AlbumID3>> getAppearsOn() { return appearsOn; }
 
     public LiveData<ArtistInfo2> getArtistInfo(String id) {
