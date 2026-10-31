@@ -231,6 +231,7 @@ public class PlayerBottomSheetFragment extends Fragment {
             @Override
             public void onEvents(Player player, Player.Events events) {
                 setHeaderNextButtonState(mediaBrowser.hasNextMediaItem());
+                if (events.contains(Player.EVENT_TIMELINE_CHANGED)) setQueueCount(mediaBrowser);
             }
 
             @Override
@@ -314,8 +315,17 @@ public class PlayerBottomSheetFragment extends Fragment {
     }
 
 
+    private void setQueueCount(MediaBrowser mediaBrowser) {
+        if (bind == null) return;
+        int count = mediaBrowser.getMediaItemCount();
+        bind.playerHeaderLayout.playerHeaderQueueButton.setText(count > 0
+                ? getString(R.string.player_header_queue_count, count)
+                : getString(R.string.player_header_queue));
+    }
+
     private void setMediaControllerUI(MediaBrowser mediaBrowser) {
         if (com.eddyizm.tempus.lan.LanRemoteSession.isActive() || bind == null) return;
+        setQueueCount(mediaBrowser);
         if (mediaBrowser.getMediaMetadata().extras != null) {
             switch (mediaBrowser.getMediaMetadata().extras.getString("type", Constants.MEDIA_TYPE_MUSIC)) {
                 case Constants.MEDIA_TYPE_PODCAST:

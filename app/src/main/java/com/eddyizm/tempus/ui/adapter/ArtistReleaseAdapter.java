@@ -4,7 +4,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -170,7 +169,7 @@ public class ArtistReleaseAdapter extends RecyclerView.Adapter<ArtistReleaseAdap
                 withTracks(album, list -> {
                     if (list.isEmpty()) return;
                     MediaManager.enqueue(mediaBrowserListenableFuture, list, false);
-                    Toast.makeText(itemView.getContext(), itemView.getResources().getQuantityString(R.plurals.album_added_to_queue, list.size(), list.size()), Toast.LENGTH_SHORT).show();
+                    SongHorizontalAdapter.showQueued(itemView, itemView.getResources().getQuantityString(R.plurals.album_added_to_queue, list.size(), list.size()));
                 });
             });
         }

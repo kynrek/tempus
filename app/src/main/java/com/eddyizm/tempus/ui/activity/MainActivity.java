@@ -77,6 +77,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import com.google.android.material.snackbar.Snackbar;
+import androidx.fragment.app.Fragment;
 
 @UnstableApi
 public class MainActivity extends BaseActivity {
@@ -340,6 +342,22 @@ public class MainActivity extends BaseActivity {
 
     public void collapseBottomSheetDelayed() {
         bottomSheetController.collapseDelayed();
+    }
+
+    /** Opens the full-panel queue over the current screen. */
+    public void openQueue() {
+        Fragment player = getSupportFragmentManager().findFragmentByTag("PlayerBottomSheet");
+        if (player instanceof PlayerBottomSheetFragment) ((PlayerBottomSheetFragment) player).goToQueuePage();
+    }
+
+    /** "Queued …" note with a View button, so it's clear where the songs went. */
+    public void showQueuedMessage(CharSequence message) {
+        setBottomSheetInPeek(true);
+        View anchor = findViewById(R.id.player_bottom_sheet);
+        Snackbar bar = Snackbar.make(bind.getRoot(), message, 5000)
+                .setAction(R.string.queued_view_queue, v -> openQueue());
+        if (anchor != null && anchor.isShown()) bar.setAnchorView(anchor);
+        bar.show();
     }
 
     public void expandBottomSheet() {

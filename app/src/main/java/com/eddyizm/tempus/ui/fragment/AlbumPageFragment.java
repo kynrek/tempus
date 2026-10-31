@@ -382,8 +382,7 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
                 .comparing((Child song) -> song.getDiscNumber() != null ? song.getDiscNumber() : 1)
                 .thenComparing(song -> song.getTrack() != null ? song.getTrack() : 0));
         MediaManager.enqueue(mediaBrowserListenableFuture, inOrder, false);
-        activity.setBottomSheetInPeek(true);
-        Toast.makeText(requireContext(), getResources().getQuantityString(R.plurals.album_added_to_queue, inOrder.size(), inOrder.size()), Toast.LENGTH_SHORT).show();
+        activity.showQueuedMessage(getResources().getQuantityString(R.plurals.album_added_to_queue, inOrder.size(), inOrder.size()));
     }
 
     private void initMusicButton() {

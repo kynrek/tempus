@@ -36,6 +36,7 @@ import com.eddyizm.tempus.service.MediaManager;
 import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.subsonic.models.DiscTitle;
+import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.dialog.PlaylistChooserDialog;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.DownloadUtil;
@@ -341,6 +342,11 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
         return filtering;
     }
 
+    static void showQueued(View view, CharSequence message) {
+        if (view.getContext() instanceof MainActivity) ((MainActivity) view.getContext()).showQueuedMessage(message);
+        else Toast.makeText(view.getContext(), message, Toast.LENGTH_SHORT).show();
+    }
+
     public Child getItem(int id) {
         return differ.getCurrentList().get(id);
     }
@@ -376,7 +382,7 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
             Child song = song();
             if (song == null || mediaBrowserListenableFuture == null) return;
             MediaManager.enqueue(mediaBrowserListenableFuture, song, false);
-            Toast.makeText(itemView.getContext(), itemView.getContext().getString(R.string.track_added_to_queue, song.getTitle()), Toast.LENGTH_SHORT).show();
+            showQueued(itemView, itemView.getContext().getString(R.string.track_added_to_queue, song.getTitle()));
         }
 
         private void addToLastPlaylist() {
