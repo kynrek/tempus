@@ -35,6 +35,7 @@ import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.ArtistCatalogueAdapter;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.util.Preferences;
 import com.eddyizm.tempus.util.TileSizeManager;
 import com.eddyizm.tempus.viewmodel.ArtistCatalogueViewModel;
@@ -100,6 +101,7 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
     private void initAppBar() {
         if (isEmbedded()) {
             bind.toolbar.setVisibility(View.GONE);
+            UIUtil.compactEmbeddedHeader(bind.artistInfoSector);
             return;
         }
 

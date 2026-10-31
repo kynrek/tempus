@@ -4,6 +4,10 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.InsetDrawable;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.core.os.LocaleListCompat;
 import androidx.recyclerview.widget.DividerItemDecoration;
@@ -26,6 +30,19 @@ import java.util.Locale;
 import java.util.Map;
 
 public class UIUtil {
+    /**
+     * For a list shown as a Home tab, whose tab already names it: hides the large title (and
+     * any count beside it) in the list's header and shrinks the header to its buttons.
+     */
+    public static void compactEmbeddedHeader(ViewGroup header) {
+        for (int i = 0; i < header.getChildCount(); i++) {
+            View child = header.getChildAt(i);
+            if (child instanceof TextView && !(child instanceof Button)) child.setVisibility(View.GONE);
+        }
+        header.getLayoutParams().height = header.getResources().getDimensionPixelSize(R.dimen.embedded_header_height);
+        header.requestLayout();
+    }
+
     public static int getSpanCount(int itemCount, int maxSpan) {
         int itemSize = itemCount == 0 ? 1 : itemCount;
 

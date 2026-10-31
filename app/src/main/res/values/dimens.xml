@@ -20,6 +20,8 @@
     <dimen name="alphabet_scrubber_strip_inset">60dp</dimen>
     <!-- Expanded catalogue header; kept short so a 480dp-tall car screen still shows the list. -->
     <dimen name="catalogue_header_height">104dp</dimen>
+    <!-- The same header on a Home tab, where only its sort and filter buttons remain. -->
+    <dimen name="embedded_header_height">64dp</dimen>
     <!-- Mini player transport buttons, large enough to hit while driving (the bar is 56dp). -->
     <dimen name="mini_player_button_size">44dp</dimen>
 </resources>

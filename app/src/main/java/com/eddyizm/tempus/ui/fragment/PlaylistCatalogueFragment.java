@@ -29,6 +29,7 @@ import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.PlaylistHorizontalAdapter;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.viewmodel.PlaylistCatalogueViewModel;
 
 @UnstableApi
@@ -87,6 +88,7 @@ public class PlaylistCatalogueFragment extends Fragment implements ClickCallback
     private void initAppBar() {
         if (isEmbedded()) {
             bind.toolbar.setVisibility(View.GONE);
+            UIUtil.compactEmbeddedHeader(bind.albumInfoSector);
             return;
         }
 

@@ -200,7 +200,7 @@
         android:paddingEnd="0dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@+id/song_cover_image_view"
-        app:layout_constraintEnd_toStartOf="@+id/search_result_song_more_button"
+        app:layout_constraintEnd_toStartOf="@+id/search_result_song_album_button"
         app:layout_constraintTop_toTopOf="@+id/song_cover_image_view"
         tools:visibility="visible">
 
@@ -209,6 +209,25 @@
             android:layout_height="18dp"
             android:background="@drawable/ic_download"
             android:foreground="?android:attr/selectableItemBackgroundBorderless" />
+    </FrameLayout>
+
+    <!-- Go to album: a full 48dp target, hidden on the album's own page. -->
+    <FrameLayout
+        android:id="@+id/search_result_song_album_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/song_bottom_sheet_go_to_album"
+        app:layout_constraintBottom_toBottomOf="@+id/song_cover_image_view"
+        app:layout_constraintEnd_toStartOf="@+id/search_result_song_more_button"
+        app:layout_constraintTop_toTopOf="@+id/song_cover_image_view">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_albums" />
     </FrameLayout>
 
     <FrameLayout

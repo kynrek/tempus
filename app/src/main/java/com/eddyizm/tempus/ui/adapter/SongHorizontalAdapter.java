@@ -8,12 +8,17 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Filter;
 import android.widget.Filterable;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewTreeLifecycleOwner;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.session.MediaBrowser;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.AsyncListDiffer;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
@@ -23,6 +28,7 @@ import com.eddyizm.tempus.databinding.ItemHorizontalTrackBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.lan.LanRemoteSession;
+import com.eddyizm.tempus.repository.AlbumRepository;
 import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.subsonic.models.DiscTitle;
@@ -140,6 +146,9 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Child song = differ.getCurrentList().get(position);
+
+        // On an album's own page every row is already in that album.
+        holder.item.searchResultSongAlbumButton.setVisibility(album == null && song.getAlbumId() != null ? View.VISIBLE : View.GONE);
 
         holder.item.searchResultSongTitleTextView.setText(song.getTitle());
 
@@ -346,6 +355,32 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
             itemView.setOnLongClickListener(v -> onLongClick());
 
             item.searchResultSongMoreButton.setOnClickListener(v -> onLongClick());
+            item.searchResultSongAlbumButton.setOnClickListener(v -> openAlbum());
+        }
+
+        /** Fetches the track's album (as the song menu's "Go to album" does) and opens its page. */
+        private void openAlbum() {
+            int pos = getBindingAdapterPosition();
+            LifecycleOwner owner = ViewTreeLifecycleOwner.get(itemView);
+            if (pos == RecyclerView.NO_POSITION || owner == null) return;
+            String albumId = differ.getCurrentList().get(pos).getAlbumId();
+            if (albumId == null) return;
+
+            View anchor = itemView;
+            MutableLiveData<AlbumID3> albumData = new AlbumRepository().getAlbum(albumId);
+            albumData.observe(owner, new Observer<AlbumID3>() {
+                @Override
+                public void onChanged(AlbumID3 found) {
+                    albumData.removeObserver(this);
+                    if (found == null) {
+                        Toast.makeText(anchor.getContext(), R.string.song_bottom_sheet_error_retrieving_album, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    Bundle bundle = new Bundle();
+                    bundle.putParcelable(Constants.ALBUM_OBJECT, found.strippedForNav());
+                    Navigation.findNavController(anchor).navigate(R.id.albumPageFragment, bundle);
+                }
+            });
         }
 
         public void onClick() {

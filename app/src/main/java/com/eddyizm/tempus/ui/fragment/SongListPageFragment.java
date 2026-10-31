@@ -37,6 +37,7 @@ import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.SongHorizontalAdapter;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.viewmodel.PlaybackViewModel;
 import com.eddyizm.tempus.viewmodel.SongListPageViewModel;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -174,6 +175,7 @@ public class SongListPageFragment extends Fragment implements ClickCallback {
     private void initAppBar() {
         if (isEmbedded()) {
             bind.toolbar.setVisibility(View.GONE);
+            UIUtil.compactEmbeddedHeader(bind.albumInfoSector);
             return;
         }
 

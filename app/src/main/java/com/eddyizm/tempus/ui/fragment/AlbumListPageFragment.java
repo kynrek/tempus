@@ -32,6 +32,7 @@ import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.AlbumHorizontalAdapter;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.viewmodel.AlbumListPageViewModel;
 
 import java.util.List;
@@ -114,6 +115,7 @@ public class AlbumListPageFragment extends Fragment implements ClickCallback {
     private void initAppBar() {
         if (isEmbedded()) {
             bind.toolbar.setVisibility(View.GONE);
+            UIUtil.compactEmbeddedHeader(bind.albumInfoSector);
             return;
         }
 
