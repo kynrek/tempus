@@ -282,14 +282,6 @@ public class QueueRepository {
         });
     }
 
-    private boolean isMediaInQueue(List<Queue> queue, Child media) {
-        if (queue == null || media == null) return false;
-        return queue.stream().anyMatch(queueItem ->
-                queueItem != null && media.getId() != null &&
-                        queueItem.getId().equals(media.getId())
-        );
-    }
-
     public void insertAll(List<Child> toAdd, boolean reset, int afterIndex) {
         dbExecutor.execute(() -> {
             List<Queue> media = new ArrayList<>();
@@ -307,23 +299,17 @@ public class QueueRepository {
                 insertionIndex = media.size();
             }
 
-            final List<Queue> finalMedia = media;
-            List<Child> toAddCopy = new ArrayList<>(toAdd);
-            List<Child> filteredToAdd = toAddCopy.stream()
-                    .filter(child -> !isMediaInQueue(finalMedia, child))
-                    .collect(Collectors.toList());
+            // Keep songs that are already queued: the player holds them twice, so the saved queue
+            // has to as well, or a restore drops them. Rows are keyed by position, not song id.
+            List<Queue> toInsert = new ArrayList<>(toAdd.size());
+            for (Child child : toAdd) toInsert.add(new Queue(child));
+            media.addAll(insertionIndex, toInsert);
 
-            for (int i = 0; i < filteredToAdd.size(); i++) {
-                int idx = insertionIndex + i;
-                Queue queueItem = new Queue(filteredToAdd.get(i));
-                finalMedia.add(idx, queueItem);
+            for (int i = 0; i < media.size(); i++) {
+                media.get(i).setTrackOrder(i);
             }
 
-            for (int i = 0; i < finalMedia.size(); i++) {
-                finalMedia.get(i).setTrackOrder(i);
-            }
-
-            queueDao.replaceQueue(finalMedia);
+            queueDao.replaceQueue(media);
         });
     }
 

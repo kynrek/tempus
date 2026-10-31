@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.Insets;
 import androidx.core.splashscreen.SplashScreen;
+import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -314,6 +315,29 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onSlide(@NonNull View bottomSheet, float slideOffset) { }
         });
+
+        // Added last so it runs first: BACK with the ☰ drawer open closes the drawer instead of
+        // falling through to the system, which sends the app to the background.
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
+        if (drawer == null) return;
+        OnBackPressedCallback drawerCallback = new OnBackPressedCallback(drawer.isDrawerOpen(GravityCompat.START)) {
+            @Override
+            public void handleOnBackPressed() {
+                drawer.closeDrawer(GravityCompat.START);
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, drawerCallback);
+        drawer.addDrawerListener(new DrawerLayout.SimpleDrawerListener() {
+            @Override
+            public void onDrawerOpened(@NonNull View drawerView) {
+                drawerCallback.setEnabled(true);
+            }
+
+            @Override
+            public void onDrawerClosed(@NonNull View drawerView) {
+                drawerCallback.setEnabled(false);
+            }
+        });
     }
 
     public BottomSheetController getBottomSheetController() {
@@ -322,6 +346,20 @@ public class MainActivity extends BaseActivity {
 
     public void setBottomSheetInPeek(Boolean isVisible) {
         bottomSheetController.setStateInPeek(isVisible);
+    }
+
+    /**
+     * Hides the mini player when the queue is emptied (New queue), and brings it back when
+     * something is queued again, however it was queued.
+     */
+    public void syncBottomSheetWithQueue(int queueSize) {
+        if (bottomSheetBehavior == null) return;
+        int state = bottomSheetBehavior.getState();
+        if (queueSize == 0 && state != BottomSheetBehavior.STATE_HIDDEN) {
+            setBottomSheetInPeek(false);
+        } else if (queueSize > 0 && state == BottomSheetBehavior.STATE_HIDDEN) {
+            setBottomSheetInPeek(true);
+        }
     }
 
     public void setBottomSheetVisibility(boolean visibility) {

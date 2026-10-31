@@ -231,7 +231,12 @@ public class PlayerBottomSheetFragment extends Fragment {
             @Override
             public void onEvents(Player player, Player.Events events) {
                 setHeaderNextButtonState(mediaBrowser.hasNextMediaItem());
-                if (events.contains(Player.EVENT_TIMELINE_CHANGED)) setQueueCount(mediaBrowser);
+                if (events.contains(Player.EVENT_TIMELINE_CHANGED)) {
+                    setQueueCount(mediaBrowser);
+                    if (!com.eddyizm.tempus.lan.LanRemoteSession.isActive() && getActivity() instanceof MainActivity) {
+                        ((MainActivity) getActivity()).syncBottomSheetWithQueue(mediaBrowser.getMediaItemCount());
+                    }
+                }
             }
 
             @Override
