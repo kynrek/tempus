@@ -94,7 +94,7 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/album_catalogue_recycler_view"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:clipToPadding="false"
             android:paddingTop="16dp"
             android:paddingStart="16dp"

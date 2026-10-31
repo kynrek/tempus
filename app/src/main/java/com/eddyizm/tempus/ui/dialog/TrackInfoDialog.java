@@ -112,6 +112,7 @@ public class TrackInfoDialog extends DialogFragment {
 
             CustomGlideRequest.Builder
                     .from(requireContext(), mediaMetadata.extras.getString("coverArtId", ""), CustomGlideRequest.ResourceType.Song)
+                    .fullSize()
                     .build()
                     .into(bind.trackCoverInfoImageView);
 

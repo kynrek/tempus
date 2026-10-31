@@ -370,6 +370,15 @@
             app:title="@string/settings_image_size"
             app:useSimpleSummaryProvider="true" />
 
+        <ListPreference
+            app:defaultValue="300"
+            app:dialogTitle="@string/settings_list_image_size"
+            app:entries="@array/list_image_size_titles"
+            app:entryValues="@array/list_image_size_values"
+            app:key="list_image_size"
+            app:summary="@string/settings_list_image_size_summary"
+            app:title="@string/settings_list_image_size" />
+
         <SwitchPreference
             android:title="@string/settings_wifi_only_title"
             android:defaultValue="false"

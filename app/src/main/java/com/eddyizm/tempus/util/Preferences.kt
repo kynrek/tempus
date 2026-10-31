@@ -49,6 +49,7 @@ object Preferences {
     private const val ENABLE_DRAWER_ON_PORTRAIT = "enable_drawer_on_portrait"
     private const val HIDE_BOTTOM_NAVBAR_ON_PORTRAIT = "hide_bottom_navbar_on_portrait"
     private const val IMAGE_SIZE = "image_size"
+    private const val LIST_IMAGE_SIZE = "list_image_size"
     private const val MAX_BITRATE_WIFI = "max_bitrate_wifi"
     private const val MAX_BITRATE_MOBILE = "max_bitrate_mobile"
     private const val AUDIO_TRANSCODE_FORMAT_WIFI = "audio_transcode_format_wifi"
@@ -595,6 +596,12 @@ object Preferences {
     @JvmStatic
     fun getImageSize(): Int {
         return App.getInstance().preferences.getString(IMAGE_SIZE, "-1")!!.toInt()
+    }
+
+    /** Cover size (px) for lists and grids; the server scales and caches it. -1 = original. */
+    @JvmStatic
+    fun getListImageSize(): Int {
+        return App.getInstance().preferences.getString(LIST_IMAGE_SIZE, "300")?.toIntOrNull() ?: 300
     }
 
     @JvmStatic

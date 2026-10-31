@@ -21,6 +21,8 @@ import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.RequestManager;
 import com.eddyizm.tempus.R;
 import com.eddyizm.tempus.util.AlphabetSort;
 import com.google.android.material.color.MaterialColors;
@@ -102,6 +104,26 @@ public class AlphabetScrubber extends View {
         }
     };
 
+    /**
+     * Covers only load where the list comes to rest: none start for the rows flashing past
+     * during a fling or a scrub, so a jump across the library doesn't queue hundreds of them.
+     */
+    private final RecyclerView.OnScrollListener pauseImagesWhileFlinging = new RecyclerView.OnScrollListener() {
+        @Override
+        public void onScrollStateChanged(@NonNull RecyclerView rv, int newState) {
+            if (!touching) setImagesPaused(newState == RecyclerView.SCROLL_STATE_SETTLING);
+        }
+    };
+    private boolean imagesPaused;
+
+    private void setImagesPaused(boolean paused) {
+        if (paused == imagesPaused || getContext() == null) return;
+        imagesPaused = paused;
+        RequestManager glide = Glide.with(getContext());
+        if (paused) glide.pauseRequests();
+        else glide.resumeRequests();
+    }
+
     private boolean touching;
     private float touchY;
     private int currentLetter = -1;
@@ -149,6 +171,7 @@ public class AlphabetScrubber extends View {
         this.provider = provider;
         listPaddingEnd = recyclerView.getPaddingEnd();
         adapter.registerAdapterDataObserver(dataObserver);
+        recyclerView.addOnScrollListener(pauseImagesWhileFlinging);
         rebuildIndex();
     }
 
@@ -161,6 +184,8 @@ public class AlphabetScrubber extends View {
         if (recyclerView != null && recyclerView.getAdapter() != null) {
             recyclerView.getAdapter().unregisterAdapterDataObserver(dataObserver);
         }
+        if (recyclerView != null) recyclerView.removeOnScrollListener(pauseImagesWhileFlinging);
+        setImagesPaused(false);
         recyclerView = null;
         provider = null;
         onScrubStart = null;
@@ -337,6 +362,7 @@ public class AlphabetScrubber extends View {
                 getParent().requestDisallowInterceptTouchEvent(true);
                 if (recyclerView != null) recyclerView.stopScroll();
                 if (onScrubStart != null) onScrubStart.run();
+                setImagesPaused(true);
                 animatePress(1f);
                 onFingerAt(event.getY());
                 return true;
@@ -349,6 +375,7 @@ public class AlphabetScrubber extends View {
                 if (!touching) return false;
                 touching = false;
                 getParent().requestDisallowInterceptTouchEvent(false);
+                setImagesPaused(false);
                 animatePress(0f);
                 return true;
         }
@@ -386,7 +413,10 @@ public class AlphabetScrubber extends View {
         if (recyclerView == null) return;
         RecyclerView.LayoutManager layoutManager = recyclerView.getLayoutManager();
         if (layoutManager instanceof LinearLayoutManager) {
-            ((LinearLayoutManager) layoutManager).scrollToPositionWithOffset(position, 0);
+            // 1px past the padding edge: with the row above ending exactly on that edge, each
+            // later layout (e.g. a cover arriving) re-anchors to that row and the list creeps
+            // back one row at a time.
+            ((LinearLayoutManager) layoutManager).scrollToPositionWithOffset(position, -1);
         } else {
             recyclerView.scrollToPosition(position);
         }

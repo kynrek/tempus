@@ -127,13 +127,18 @@ public class CustomGlideRequest {
 
     public static class Builder {
         private final RequestManager requestManager;
+        private final String coverId;
         private String item;
+        @Nullable
+        private String preview;
 
         private Builder(Context context, String item, ResourceType type) {
             this.requestManager = Glide.with(context);
+            this.coverId = item;
 
+            // Lists and grids get the small copy; fullSize() asks for the big one.
             if (item != null) {
-                this.item = createUrl(item, Preferences.getImageSize());
+                this.item = createUrl(item, Preferences.getListImageSize());
             }
 
             requestManager.applyDefaultRequestOptions(createRequestOptions(context, item, type));
@@ -143,10 +148,29 @@ public class CustomGlideRequest {
             return new Builder(context, item, type);
         }
 
+        /**
+         * For a cover shown large (album or artist page, player): loads the Settings image size,
+         * showing the small list copy (usually already cached) until it arrives.
+         */
+        public Builder fullSize() {
+            if (coverId != null) {
+                int full = Preferences.getImageSize();
+                int list = Preferences.getListImageSize();
+                if (full != list) {
+                    preview = item;
+                    item = createUrl(coverId, full);
+                }
+            }
+            return this;
+        }
+
         public RequestBuilder<Drawable> build() {
             RequestBuilder<Drawable> builder = requestManager
                     .load(item)
                     .transition(DrawableTransitionOptions.withCrossFade());
+            if (preview != null) {
+                builder = builder.thumbnail(requestManager.load(preview));
+            }
             if (Preferences.isDataSavingMode()) {
                 builder = builder.onlyRetrieveFromCache(true);
             }

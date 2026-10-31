@@ -372,6 +372,7 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
 
             CustomGlideRequest.Builder
                     .from(requireContext(), playlistCoverId, CustomGlideRequest.ResourceType.Playlist)
+                    .fullSize()
                     .build()
                     .into(bind.playlistCoverImageViewSingle);
 

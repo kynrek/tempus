@@ -223,6 +223,7 @@ public class ArtistPageFragment extends Fragment implements ClickCallback {
                     
                     CustomGlideRequest.Builder
                             .from(requireContext(), primaryId, CustomGlideRequest.ResourceType.Artist)
+                            .fullSize()
                             .build()
                             .listener(new com.bumptech.glide.request.RequestListener<Drawable>() {
                                 @Override
@@ -238,6 +239,7 @@ public class ArtistPageFragment extends Fragment implements ClickCallback {
 
                                             CustomGlideRequest.Builder
                                                     .from(requireContext(), fallbackId, CustomGlideRequest.ResourceType.Artist)
+                                                    .fullSize()
                                                     .build()
                                                     .into(bind.artistBackdropImageView);
                                             return true;
