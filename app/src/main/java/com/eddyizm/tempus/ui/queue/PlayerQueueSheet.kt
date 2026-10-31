@@ -187,7 +187,8 @@ fun PlayerQueueSheet(
         }
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    // Full panel: no half-open state.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     LaunchedEffect(sheetState) {
         onSheetReady { sheetState.hide() }
     }
@@ -239,12 +240,13 @@ fun PlayerQueueSheet(
             sheetState = sheetState,
             containerColor = containerColor,
             contentColor = colorScheme.onSurface,
-            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+            shape = RoundedCornerShape(0.dp),
             dragHandle = null,
-            modifier = modifier
+            modifier = modifier.fillMaxSize()
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 PlayerQueueHeader(
+                    onBack = onDismissRequest,
                     songCount = currentSongs.size,
                     totalDurationSeconds = totalDurationSeconds,
                     upcomingSongsCount = upcomingCount,

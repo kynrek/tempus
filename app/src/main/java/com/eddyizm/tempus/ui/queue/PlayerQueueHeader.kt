@@ -35,6 +35,7 @@ import com.eddyizm.tempus.R
 
 @Composable
 fun PlayerQueueHeader(
+    onBack: () -> Unit,
     songCount: Int,
     totalDurationSeconds: Long,
     upcomingSongsCount: Int,
@@ -72,27 +73,21 @@ fun PlayerQueueHeader(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Centered pill drag handle
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp, bottom = 6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Surface(
-                modifier = Modifier.size(width = 36.dp, height = 4.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(2.dp)
-            ) {}
-        }
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 4.dp),
+                .padding(start = 4.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_arrow_back),
+                    contentDescription = stringResource(R.string.player_queue_back),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
             // Title and Subtitle Column
             Column(
                 modifier = Modifier

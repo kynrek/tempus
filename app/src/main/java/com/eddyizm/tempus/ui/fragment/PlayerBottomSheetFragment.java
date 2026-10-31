@@ -133,10 +133,8 @@ public class PlayerBottomSheetFragment extends Fragment {
         bind.playerHeaderLayout.playerHeaderRemoteButton.setOnClickListener(v -> com.eddyizm.tempus.lan.LanDevicePicker.toggle(requireActivity()));
         bind.playerHeaderLayout.getRoot().setOnClickListener(view -> ((MainActivity) requireActivity()).expandBottomSheet());
         initHeaderSeekBar();
-        bind.playerHeaderLayout.playerHeaderQueueButton.setOnClickListener(view -> {
-            ((MainActivity) requireActivity()).expandBottomSheet();
-            goToQueuePage();
-        });
+        // The queue opens over whatever is on screen, so Back returns there.
+        bind.playerHeaderLayout.playerHeaderQueueButton.setOnClickListener(view -> goToQueuePage());
     }
 
     private void initPlayerController() {

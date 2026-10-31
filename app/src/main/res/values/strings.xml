@@ -321,6 +321,7 @@
     <string name="player_queue_clear">Clear</string>
     <string name="player_queue_clear_history">Remove played</string>
     <string name="player_queue_view_edit">View and edit queue</string>
+    <string name="player_queue_back">Back</string>
     <string name="player_header_seek">Playback position</string>
     <string name="track_add_to_queue">Add to queue</string>
     <string name="album_page_queue_button">Queue</string>

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
@@ -289,6 +290,26 @@ fun PlayerQueueItem(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = textAlpha),
                                 modifier = Modifier.size(18.dp)
                             )
+                        }
+
+                        // Quick remove (the now-playing song stays).
+                        if (!isCurrent && canDismiss) {
+                            IconButton(
+                                onClick = {
+                                    if (!hasTriggeredDismiss) {
+                                        hasTriggeredDismiss = true
+                                        currentOnRemove(currentIndex, currentItem)
+                                    }
+                                },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_delete),
+                                    contentDescription = stringResource(R.string.player_queue_remove),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         }
 
                         // Trailing Reorder Handle (48dp minimum touch target)
