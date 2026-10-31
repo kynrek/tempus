@@ -1,12 +1,14 @@
 package com.eddyizm.tempus.ui.fragment;
 
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.media3.common.util.UnstableApi;
 
@@ -16,7 +18,6 @@ import com.eddyizm.tempus.navigation.NavigationController;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.fragment.pager.HomePager;
 import com.eddyizm.tempus.util.Constants;
-import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
@@ -32,7 +33,6 @@ public class HomeFragment extends Fragment {
     private NavigationController navigationController;
 
     private MaterialToolbar materialToolbar;
-    private AppBarLayout appBarLayout;
     private TabLayout tabLayout;
 
     @Nullable
@@ -67,7 +67,6 @@ public class HomeFragment extends Fragment {
     }
 
     private void initAppBar() {
-        appBarLayout = bind.getRoot().findViewById(R.id.toolbar_fragment);
         materialToolbar = bind.getRoot().findViewById(R.id.toolbar);
 
         activity.setSupportActionBar(materialToolbar);
@@ -79,7 +78,9 @@ public class HomeFragment extends Fragment {
         tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
         tabLayout.setTabMode(TabLayout.MODE_FIXED);
 
-        appBarLayout.addView(tabLayout);
+        // The tabs sit in the toolbar row itself, beside the drawer button, to keep the header to one row.
+        materialToolbar.addView(tabLayout, new Toolbar.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
     }
 
     private void initHomePager() {
@@ -89,9 +90,12 @@ public class HomeFragment extends Fragment {
         pager.addFragment(embedded(new AlbumCatalogueFragment()), getString(R.string.album_catalogue_title), R.drawable.ic_home);
         pager.addFragment(embedded(new ArtistCatalogueFragment()), getString(R.string.artist_catalogue_title), R.drawable.ic_home);
         pager.addFragment(embedded(new GenreCatalogueFragment()), getString(R.string.library_title_genre), R.drawable.ic_home);
+        Fragment playlists = embedded(new PlaylistCatalogueFragment());
+        playlists.requireArguments().putString(Constants.PLAYLIST_ALL, Constants.PLAYLIST_ALL);
+        pager.addFragment(playlists, getString(R.string.library_title_playlist), R.drawable.ic_home);
 
         bind.homeViewPager.setAdapter(pager);
-        bind.homeViewPager.setOffscreenPageLimit(3);
+        bind.homeViewPager.setOffscreenPageLimit(4);
         bind.homeViewPager.setUserInputEnabled(false);
 
         new TabLayoutMediator(tabLayout, bind.homeViewPager,
@@ -110,8 +114,8 @@ public class HomeFragment extends Fragment {
     }
 
     /**
-     * The music library line in the toolbar is a filter for library-scoped screens. The Albums,
-     * Artists and Genres tabs list the whole server, so the line would name a filter that isn't applied.
+     * The music library line in the drawer is a filter for library-scoped screens. The Albums,
+     * Artists, Genres and Playlists tabs list the whole server, so the line would name a filter that isn't applied.
      *
      * The toolbar reads this on every update instead of being pushed the page once.
      */

@@ -8,6 +8,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupMenu;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -27,6 +28,7 @@ import com.eddyizm.tempus.util.Preferences;
 import com.eddyizm.tempus.viewmodel.LibraryViewModel;
 import com.eddyizm.tempus.viewmodel.MainViewModel;
 import com.eddyizm.tempus.upnp.UpnpRouteSetup;
+import com.google.android.material.navigation.NavigationView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +49,8 @@ public class ToolbarFragment extends Fragment {
     private final List<MusicFolder> musicFolders = new ArrayList<>();
 
     private String serverName;
+    /** Several screens host a toolbar; only the one on screen may write the shared drawer line. */
+    private boolean onScreen;
 
     public ToolbarFragment() {
         // Required empty public constructor
@@ -94,8 +98,15 @@ public class ToolbarFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        onScreen = true;
         // Catches a restore that put the pager back on Podcast or Radio.
         updateMusicLibraryIndicator();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        onScreen = false;
     }
 
     @Override
@@ -119,8 +130,6 @@ public class ToolbarFragment extends Fragment {
 
     private void initMusicLibrarySwitcher() {
         if (!isLibraryScopedScreen()) return;
-
-        bind.toolbarTitleContainer.setOnClickListener(this::showMusicLibraryMenu);
 
         // The list is cached on the activity scoped LibraryViewModel, so once it has arrived the
         // Library tab and this share it. Until then either screen can be the one that fetches it.
@@ -177,8 +186,18 @@ public class ToolbarFragment extends Fragment {
         return !(getParentFragment() instanceof DownloadFragment);
     }
 
+    /** The line under the app name in the navigation drawer header, which this screen owns while resumed. */
+    @Nullable
+    private TextView drawerLibraryLine() {
+        NavigationView navigationView = activity.findViewById(R.id.nav_view);
+        if (navigationView == null || navigationView.getHeaderCount() == 0) return null;
+        return navigationView.getHeaderView(0).findViewById(R.id.nav_drawer_library_text_view);
+    }
+
     private void updateMusicLibraryIndicator() {
-        if (bind == null) return;
+        if (bind == null || !onScreen) return;
+        TextView line = drawerLibraryLine();
+        if (line == null) return;
 
         // One library offers no choice. A filter in force has to stay visible whatever the folder
         // list says, because this is the only way to clear one from outside Settings, and the list
@@ -190,20 +209,23 @@ public class ToolbarFragment extends Fragment {
         // server instead of nothing. No caret there, since nothing is tappable.
         boolean showServerName = !visible && serverName != null && isLibraryScopedScreen();
 
-        bind.toolbarTitleContainer.setClickable(visible);
-        bind.toolbarMusicLibraryTextView.setVisibility(visible || showServerName ? View.VISIBLE : View.GONE);
-        bind.toolbarMusicLibraryTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+        line.setOnClickListener(visible ? v -> {
+            if (bind != null) showMusicLibraryMenu(v);
+        } : null);
+        line.setClickable(visible);
+        line.setVisibility(visible || showServerName ? View.VISIBLE : View.GONE);
+        line.setCompoundDrawablesRelativeWithIntrinsicBounds(
                 0, 0, visible ? R.drawable.ic_expand_more_small : 0, 0);
 
         if (showServerName) {
-            bind.toolbarMusicLibraryTextView.setText(serverName);
+            line.setText(serverName);
             return;
         }
 
         if (!visible) return;
 
         String name = MusicFolderUtil.resolveMusicFolderName(musicFolders, Preferences.getActiveMusicFolderId());
-        bind.toolbarMusicLibraryTextView.setText(name != null ? name : getString(R.string.settings_music_library_all));
+        line.setText(name != null ? name : getString(R.string.settings_music_library_all));
     }
 
     private void showMusicLibraryMenu(View anchor) {

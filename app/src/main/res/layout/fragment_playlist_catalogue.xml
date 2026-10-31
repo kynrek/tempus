@@ -25,7 +25,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/album_info_sector"
                 android:layout_width="match_parent"
-                android:layout_height="172dp"
+                android:layout_height="@dimen/catalogue_header_height"
                 android:background="?attr/colorSurface"
                 app:layout_scrollFlags="scroll|exitUntilCollapsed|snap">
 

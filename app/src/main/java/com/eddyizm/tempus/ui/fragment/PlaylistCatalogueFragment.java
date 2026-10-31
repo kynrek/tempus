@@ -42,7 +42,7 @@ public class PlaylistCatalogueFragment extends Fragment implements ClickCallback
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
+        setHasOptionsMenu(!isEmbedded());
     }
 
     @Override
@@ -80,7 +80,16 @@ public class PlaylistCatalogueFragment extends Fragment implements ClickCallback
         }
     }
 
+    private boolean isEmbedded() {
+        return getArguments() != null && getArguments().getBoolean(Constants.EMBEDDED_IN_HOME);
+    }
+
     private void initAppBar() {
+        if (isEmbedded()) {
+            bind.toolbar.setVisibility(View.GONE);
+            return;
+        }
+
         activity.setSupportActionBar(bind.toolbar);
 
         if (activity.getSupportActionBar() != null) {
