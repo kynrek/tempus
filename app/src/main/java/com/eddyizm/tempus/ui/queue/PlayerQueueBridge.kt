@@ -282,8 +282,11 @@ class PlayerQueueBridge @JvmOverloads constructor(
                         }
                     },
                     onClearAll = { songs ->
-                        val browserFuture = fragment.mediaBrowserListenableFuture ?: return@PlayerQueueSheet
                         startNewQueue(songs) {
+                            // Looked up when the choice is made, not when the menu was tapped: if
+                            // Music went to the background with the dialog up, the browser it had
+                            // then has been released, and resetting that one does nothing.
+                            val browserFuture = fragment.mediaBrowserListenableFuture ?: return@startNewQueue
                             queueState = emptyList()
                             MediaManager.reset(browserFuture)
                             closeQueue()

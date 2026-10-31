@@ -47,6 +47,7 @@ public class PlaylistEditorFragment extends Fragment implements PlaylistEditorBr
     private FragmentPlaylistEditorBinding bind;
     private PlaylistEditorViewModel playlistEditorViewModel;
     private PlaylistEditorBridge editor;
+    private static final int UNDO_DURATION_MS = 8000;
     private Snackbar undoSnackbar;
     private AlertDialog openDialog;
 
@@ -227,7 +228,8 @@ public class PlaylistEditorFragment extends Fragment implements PlaylistEditorBr
         if (activity.bind == null) return;
 
         boolean[] undone = {false};
-        undoSnackbar = Snackbar.make(activity.bind.playerBottomSheet, R.string.playlist_editor_removed_track, Snackbar.LENGTH_LONG)
+        // Long enough to reach for in a car; the next removal replaces it anyway.
+        undoSnackbar = Snackbar.make(activity.bind.playerBottomSheet, R.string.playlist_editor_removed_track, UNDO_DURATION_MS)
                 .setAnchorView(activity.getSnackbarAnchor())
                 .setAction(R.string.song_bottom_sheet_undo, v -> {
                     if (editor == null || undone[0] || playlistEditorViewModel.isSavePending()) return;
