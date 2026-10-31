@@ -57,6 +57,8 @@
     <string name="app_name">Tempus</string>
     <!-- Name under the launcher icon, in system settings and in the navigation drawer header. -->
     <string name="launcher_label" translatable="false">Music</string>
+    <string name="home_tab_favorites">Favorites</string>
+    <string name="home_tab_recent">Recent</string>
     <string name="artist_adapter_radio_station_starting">Searching…</string>
     <string name="artist_bottom_sheet_instant_mix">Instant mix</string>
     <string name="artist_bottom_sheet_shuffle">Shuffle</string>

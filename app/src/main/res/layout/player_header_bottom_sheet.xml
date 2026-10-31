@@ -59,8 +59,8 @@
         app:layout_constraintBottom_toTopOf="@id/player_header_seek_bar" />
     <View
         android:id="@+id/placeholder_left_view"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
         android:layout_marginStart="4dp"
         android:layout_marginEnd="4dp"
         app:layout_constraintBottom_toTopOf="@+id/player_header_seek_bar"
@@ -69,8 +69,8 @@
 
     <View
         android:id="@+id/placeholder_right_view"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp"
         app:layout_constraintBottom_toTopOf="@+id/player_header_seek_bar"
@@ -79,8 +79,8 @@
 
     <ImageButton
         android:id="@+id/player_header_bookmark_media_button"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
         android:layout_marginStart="4dp"
         android:layout_marginEnd="4dp"
         android:background="@drawable/ic_bookmark_sync"
@@ -92,8 +92,8 @@
 
     <ImageButton
         android:id="@+id/player_header_rewind_media_button"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
         android:layout_marginStart="4dp"
         android:layout_marginEnd="4dp"
         android:background="@drawable/ic_replay"
@@ -105,8 +105,8 @@
 
     <ToggleButton
         android:id="@+id/player_header_button"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp"
         android:background="@drawable/button_play_pause_selector"
@@ -121,8 +121,8 @@
 
     <ImageButton
         android:id="@+id/player_header_next_media_button"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp"
         android:background="@drawable/ic_skip_next"
@@ -133,8 +133,8 @@
 
     <ImageButton
         android:id="@+id/player_header_fast_forward_media_button"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp"
         android:background="@drawable/ic_forward"

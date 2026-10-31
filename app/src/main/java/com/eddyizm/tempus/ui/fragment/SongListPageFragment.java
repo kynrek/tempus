@@ -62,7 +62,7 @@ public class SongListPageFragment extends Fragment implements ClickCallback {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
+        setHasOptionsMenu(!isEmbedded());
     }
 
     @Override
@@ -71,7 +71,8 @@ public class SongListPageFragment extends Fragment implements ClickCallback {
 
         bind = FragmentSongListPageBinding.inflate(inflater, container, false);
         View view = bind.getRoot();
-        songListPageViewModel = new ViewModelProvider(requireActivity()).get(SongListPageViewModel.class);
+        // Per screen, not per activity: Home embeds a song list (Favorites) while others open on top of it.
+        songListPageViewModel = new ViewModelProvider(this).get(SongListPageViewModel.class);
         playbackViewModel = new ViewModelProvider(requireActivity()).get(PlaybackViewModel.class);
 
         Bundle args = getArguments();
@@ -166,7 +167,16 @@ public class SongListPageFragment extends Fragment implements ClickCallback {
         }
     }
 
+    private boolean isEmbedded() {
+        return getArguments() != null && getArguments().getBoolean(Constants.EMBEDDED_IN_HOME);
+    }
+
     private void initAppBar() {
+        if (isEmbedded()) {
+            bind.toolbar.setVisibility(View.GONE);
+            return;
+        }
+
         activity.setSupportActionBar(bind.toolbar);
 
         if (activity.getSupportActionBar() != null) {

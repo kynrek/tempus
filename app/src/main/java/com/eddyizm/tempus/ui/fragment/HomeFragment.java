@@ -94,8 +94,16 @@ public class HomeFragment extends Fragment {
         playlists.requireArguments().putString(Constants.PLAYLIST_ALL, Constants.PLAYLIST_ALL);
         pager.addFragment(playlists, getString(R.string.library_title_playlist), R.drawable.ic_home);
 
+        Fragment favorites = embedded(new SongListPageFragment());
+        favorites.requireArguments().putString(Constants.MEDIA_STARRED, Constants.MEDIA_STARRED);
+        pager.addFragment(favorites, getString(R.string.home_tab_favorites), R.drawable.ic_home);
+
+        Fragment recent = embedded(new AlbumListPageFragment());
+        recent.requireArguments().putString(Constants.ALBUM_RECENTLY_PLAYED, Constants.ALBUM_RECENTLY_PLAYED);
+        pager.addFragment(recent, getString(R.string.home_tab_recent), R.drawable.ic_home);
+
         bind.homeViewPager.setAdapter(pager);
-        bind.homeViewPager.setOffscreenPageLimit(4);
+        bind.homeViewPager.setOffscreenPageLimit(6);
         bind.homeViewPager.setUserInputEnabled(false);
 
         new TabLayoutMediator(tabLayout, bind.homeViewPager,
@@ -114,8 +122,8 @@ public class HomeFragment extends Fragment {
     }
 
     /**
-     * The music library line in the drawer is a filter for library-scoped screens. The Albums,
-     * Artists, Genres and Playlists tabs list the whole server, so the line would name a filter that isn't applied.
+     * The music library line in the drawer is a filter for library-scoped screens. The Home
+     * tabs (Albums, Artists, Genres, Playlists, Favorites, Recent) list the whole server, so the line would name a filter that isn't applied.
      *
      * The toolbar reads this on every update instead of being pushed the page once.
      */
