@@ -5,6 +5,9 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#FFEC4A4A" 
+        android:fillColor="#F2C14E"
         android:pathData="M0,0h108v108h-108z" />
+    <path
+        android:fillColor="#E5AE34"
+        android:pathData="M0,0h6v6h-6zM42,0h6v6h-6zM84,0h6v6h-6zM24,6h6v6h-6zM66,6h6v6h-6zM6,12h6v6h-6zM48,12h6v6h-6zM90,12h6v6h-6zM30,18h6v6h-6zM72,18h6v6h-6zM12,24h6v6h-6zM54,24h6v6h-6zM96,24h6v6h-6zM36,30h6v6h-6zM78,30h6v6h-6zM18,36h6v6h-6zM60,36h6v6h-6zM102,36h6v6h-6zM0,42h6v6h-6zM42,42h6v6h-6zM84,42h6v6h-6zM24,48h6v6h-6zM66,48h6v6h-6zM6,54h6v6h-6zM48,54h6v6h-6zM90,54h6v6h-6zM30,60h6v6h-6zM72,60h6v6h-6zM12,66h6v6h-6zM54,66h6v6h-6zM96,66h6v6h-6zM36,72h6v6h-6zM78,72h6v6h-6zM18,78h6v6h-6zM60,78h6v6h-6zM102,78h6v6h-6zM0,84h6v6h-6zM42,84h6v6h-6zM84,84h6v6h-6zM24,90h6v6h-6zM66,90h6v6h-6zM6,96h6v6h-6zM48,96h6v6h-6zM90,96h6v6h-6zM30,102h6v6h-6zM72,102h6v6h-6z" />
 </vector>
