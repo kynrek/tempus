@@ -59,7 +59,7 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
+        setHasOptionsMenu(!isEmbedded());
 
         initData();
     }
@@ -93,7 +93,16 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
         artistCatalogueViewModel.loadArtists();
     }
 
+    private boolean isEmbedded() {
+        return getArguments() != null && getArguments().getBoolean(Constants.EMBEDDED_IN_HOME);
+    }
+
     private void initAppBar() {
+        if (isEmbedded()) {
+            bind.toolbar.setVisibility(View.GONE);
+            return;
+        }
+
         activity.setSupportActionBar(bind.toolbar);
 
         if (activity.getSupportActionBar() != null) {
@@ -128,7 +137,7 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
         artistAdapter.setStateRestorationPolicy(RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY);
         bind.artistCatalogueRecyclerView.setAdapter(artistAdapter);
         bind.artistAlphabetScrubber.attach(bind.artistCatalogueRecyclerView, artistAdapter);
-        bind.artistAlphabetScrubber.keepBelow(bind.appBarLayout);
+        bind.artistAlphabetScrubber.setOnScrubStartListener(() -> bind.appBarLayout.setExpanded(false));
         artistCatalogueViewModel.getArtistList().observe(getViewLifecycleOwner(), artistList -> {
             artistAdapter.setItems(artistList);
             artistAdapter.sort(Preferences.getArtistSortOrder());

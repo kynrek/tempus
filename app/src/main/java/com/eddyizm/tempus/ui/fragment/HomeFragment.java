@@ -9,14 +9,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.media3.common.util.UnstableApi;
-import androidx.viewpager2.widget.ViewPager2;
 
 import com.eddyizm.tempus.R;
 import com.eddyizm.tempus.databinding.FragmentHomeBinding;
 import com.eddyizm.tempus.navigation.NavigationController;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.fragment.pager.HomePager;
-import com.eddyizm.tempus.util.Preferences;
+import com.eddyizm.tempus.util.Constants;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.tabs.TabLayout;
@@ -86,13 +85,10 @@ public class HomeFragment extends Fragment {
     private void initHomePager() {
         HomePager pager = new HomePager(this);
 
-        pager.addFragment(new HomeTabMusicFragment(), getString(R.string.home_section_music), R.drawable.ic_home);
-
-        if (Preferences.isPodcastSectionVisible())
-            pager.addFragment(new HomeTabPodcastFragment(), getString(R.string.home_section_podcast), R.drawable.ic_graphic_eq);
-
-        if (Preferences.isRadioSectionVisible())
-            pager.addFragment(new HomeTabRadioFragment(), getString(R.string.home_section_radio), R.drawable.ic_play_for_work);
+        // Car layout: browse the library straight from Home instead of Music / Podcast / Radio.
+        pager.addFragment(embedded(new AlbumCatalogueFragment()), getString(R.string.album_catalogue_title), R.drawable.ic_home);
+        pager.addFragment(embedded(new ArtistCatalogueFragment()), getString(R.string.artist_catalogue_title), R.drawable.ic_home);
+        pager.addFragment(embedded(new GenreCatalogueFragment()), getString(R.string.library_title_genre), R.drawable.ic_home);
 
         bind.homeViewPager.setAdapter(pager);
         bind.homeViewPager.setOffscreenPageLimit(3);
@@ -104,31 +100,22 @@ public class HomeFragment extends Fragment {
                     // tab.setIcon(pager.getPageIcon(position));
                 }
         ).attach();
+    }
 
-        tabLayout.setVisibility(Preferences.isPodcastSectionVisible() || Preferences.isRadioSectionVisible() ? View.VISIBLE : View.GONE);
-
-        bind.homeViewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-            @Override
-            public void onPageSelected(int position) {
-                refreshToolbarLibraryScope();
-            }
-        });
+    private static Fragment embedded(Fragment fragment) {
+        Bundle args = new Bundle();
+        args.putBoolean(Constants.EMBEDDED_IN_HOME, true);
+        fragment.setArguments(args);
+        return fragment;
     }
 
     /**
-     * The music library line in the toolbar belongs to the Music tab. Podcast and Radio share the
-     * toolbar and are not filtered by library, so the line would name something with nothing to do
-     * with what is on screen. Music is always the first page; the other two are optional.
+     * The music library line in the toolbar is a filter for library-scoped screens. The Albums,
+     * Artists and Genres tabs list the whole server, so the line would name a filter that isn't applied.
      *
-     * The toolbar reads this on every update instead of being pushed the page once, so a page the
-     * pager put back on its own cannot leave the line naming the wrong tab.
+     * The toolbar reads this on every update instead of being pushed the page once.
      */
     public boolean isLibraryScopedTab() {
-        return bind != null && bind.homeViewPager.getCurrentItem() == 0;
-    }
-
-    private void refreshToolbarLibraryScope() {
-        ToolbarFragment toolbarFragment = (ToolbarFragment) getChildFragmentManager().findFragmentById(R.id.toolbar_fragment);
-        if (toolbarFragment != null) toolbarFragment.refreshMusicLibraryIndicator();
+        return false;
     }
 }

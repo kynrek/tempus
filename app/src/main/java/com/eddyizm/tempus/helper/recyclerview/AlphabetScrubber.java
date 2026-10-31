@@ -22,7 +22,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.eddyizm.tempus.util.AlphabetSort;
-import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.color.MaterialColors;
 
 import java.util.Arrays;
@@ -34,7 +33,7 @@ import java.util.Arrays;
  *
  * <p>The view is meant to be laid over the list (wider than the strip, so the bubble has room).
  * Touches outside the strip, or in the top/bottom padding, fall through to the views below; the
- * padding is how callers keep the letters clear of a collapsing header or the mini player.
+ * bottom padding is how callers keep the letters clear of the mini player.
  */
 public class AlphabetScrubber extends View {
     public interface SectionProvider {
@@ -58,6 +57,7 @@ public class AlphabetScrubber extends View {
     private final Paint bubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint bubbleTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF trackRect = new RectF();
+    private final int[] location = new int[2];
 
     private final float stripWidth = dp(52);
     private final float maxLetterSize = sp(17);
@@ -72,6 +72,8 @@ public class AlphabetScrubber extends View {
     private RecyclerView recyclerView;
     private SectionProvider provider;
     private int listPaddingEnd;
+    @Nullable
+    private Runnable onScrubStart;
     private final RecyclerView.AdapterDataObserver dataObserver = new RecyclerView.AdapterDataObserver() {
         @Override
         public void onChanged() {
@@ -144,10 +146,9 @@ public class AlphabetScrubber extends View {
         rebuildIndex();
     }
 
-    /** Keeps the letters below the visible part of a collapsing header. */
-    public void keepBelow(@NonNull AppBarLayout appBarLayout) {
-        appBarLayout.addOnOffsetChangedListener((bar, verticalOffset) -> setPadding(
-                getPaddingLeft(), bar.getHeight() + verticalOffset + (int) dp(4), getPaddingRight(), getPaddingBottom()));
+    /** Runs when a finger lands on the strip, e.g. to collapse a header and show more rows. */
+    public void setOnScrubStartListener(@Nullable Runnable listener) {
+        onScrubStart = listener;
     }
 
     public void detach() {
@@ -156,6 +157,7 @@ public class AlphabetScrubber extends View {
         }
         recyclerView = null;
         provider = null;
+        onScrubStart = null;
     }
 
     /** Re-reads the section of every row; call after the sort order changes without a notify. */
@@ -199,8 +201,21 @@ public class AlphabetScrubber extends View {
         return getWidth() - getPaddingRight() - stripWidth;
     }
 
+    /**
+     * Bottom of the on-screen part of the view. Inside a pager under a scrolling toolbar the view
+     * can be laid out taller than the window, and letters past the edge would be unreachable.
+     */
+    private float visibleBottom() {
+        getLocationInWindow(location);
+        return Math.min(getHeight(), getRootView().getHeight() - location[1]);
+    }
+
+    private float lettersBottom() {
+        return visibleBottom() - getPaddingBottom();
+    }
+
     private float cellHeight() {
-        return (getHeight() - getPaddingTop() - getPaddingBottom()) / (float) LETTERS.length;
+        return (lettersBottom() - getPaddingTop()) / LETTERS.length;
     }
 
     @Override
@@ -240,7 +255,7 @@ public class AlphabetScrubber extends View {
         if (press > 0f && currentLetter >= 0) {
             float radius = bubbleRadius * press * (1f + 0.12f * pop);
             float bubbleX = left - bubbleGap - bubbleRadius;
-            float bubbleY = Math.max(bubbleRadius, Math.min(getHeight() - bubbleRadius, touchY));
+            float bubbleY = Math.max(bubbleRadius, Math.min(visibleBottom() - bubbleRadius, touchY));
             canvas.drawCircle(bubbleX, bubbleY, radius, bubblePaint);
 
             bubbleTextPaint.setTextSize(sp(46) * press * (1f + 0.12f * pop));
@@ -255,12 +270,13 @@ public class AlphabetScrubber extends View {
             case MotionEvent.ACTION_DOWN:
                 if (event.getX() < stripLeft() - dp(8)
                         || event.getY() < getPaddingTop()
-                        || event.getY() > getHeight() - getPaddingBottom()) {
+                        || event.getY() > lettersBottom()) {
                     return false;
                 }
                 touching = true;
                 getParent().requestDisallowInterceptTouchEvent(true);
                 if (recyclerView != null) recyclerView.stopScroll();
+                if (onScrubStart != null) onScrubStart.run();
                 animatePress(1f);
                 onFingerAt(event.getY());
                 return true;

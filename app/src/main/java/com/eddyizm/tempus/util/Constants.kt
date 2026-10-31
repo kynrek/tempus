@@ -22,6 +22,8 @@ object Constants {
     const val MUSIC_DIRECTORY_ID = "MUSIC_DIRECTORY_ID"
     const val ALBUMS_OBJECT = "ALBUMS_OBJECT"
     const val ALBUM_LIST_TITLE = "ALBUM_LIST_TITLE"
+    /** Catalogue shown as a Home tab: no toolbar or menu of its own. */
+    const val EMBEDDED_IN_HOME = "EMBEDDED_IN_HOME"
 
     const val ALBUM_RECENTLY_PLAYED = "ALBUM_RECENTLY_PLAYED"
     const val ALBUM_MOST_PLAYED = "ALBUM_MOST_PLAYED"

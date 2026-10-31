@@ -58,7 +58,7 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
+        setHasOptionsMenu(!isEmbedded());
         currentSortOrder = Preferences.getAlbumSortOrder();
 
         initData();
@@ -116,7 +116,16 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
         albumCatalogueViewModel.loadAlbums();
     }
 
+    private boolean isEmbedded() {
+        return getArguments() != null && getArguments().getBoolean(Constants.EMBEDDED_IN_HOME);
+    }
+
     private void initAppBar() {
+        if (isEmbedded()) {
+            bind.toolbar.setVisibility(View.GONE);
+            return;
+        }
+
         activity.setSupportActionBar(bind.toolbar);
 
         if (activity.getSupportActionBar() != null) {
@@ -151,7 +160,7 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
         albumAdapter.setStateRestorationPolicy(RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY);
         bind.albumCatalogueRecyclerView.setAdapter(albumAdapter);
         bind.albumAlphabetScrubber.attach(bind.albumCatalogueRecyclerView, albumAdapter);
-        bind.albumAlphabetScrubber.keepBelow(bind.appBarLayout);
+        bind.albumAlphabetScrubber.setOnScrubStartListener(() -> bind.appBarLayout.setExpanded(false));
         albumCatalogueViewModel.getAlbumList().observe(getViewLifecycleOwner(), albums -> {
             originalAlbums = albums;
             currentSortOrder = Preferences.getAlbumSortOrder();
