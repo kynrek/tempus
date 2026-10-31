@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.eddyizm.tempus.databinding.ItemLibraryCatalogueArtistBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.helper.recyclerview.AlphabetScrubber;
+import com.eddyizm.tempus.helper.recyclerview.ScrubberSections;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.subsonic.models.ArtistID3;
 import com.eddyizm.tempus.util.AlphabetSort;
@@ -146,13 +147,10 @@ public class ArtistCatalogueAdapter extends RecyclerView.Adapter<ArtistCatalogue
     }
 
     @Override
-    public boolean isAlphabetical() {
-        return Constants.ARTIST_ORDER_BY_NAME.equals(sortOrder);
-    }
-
-    @Override
-    public String getSectionName(int position) {
-        return artists.get(position).getName();
+    public ScrubberSections buildSections() {
+        if (!Constants.ARTIST_ORDER_BY_NAME.equals(sortOrder)) return null;
+        List<ArtistID3> rows = artists;
+        return ScrubberSections.letters(rows.size(), i -> rows.get(i).getName());
     }
 
     public void sort(String order) {
