@@ -13,7 +13,7 @@
     <dimen name="activity_horizontal_margin">16dp</dimen>
     <dimen name="activity_vertical_margin">16dp</dimen>
     <!-- A–Z scrubber overlay: the strip itself is 52dp, the rest is room for the letter bubble. -->
-    <dimen name="alphabet_scrubber_width">200dp</dimen>
+    <dimen name="alphabet_scrubber_width">240dp</dimen>
     <!-- Room left under the A–Z strip for the mini player (landscape hides the bottom navbar). -->
     <dimen name="alphabet_scrubber_bottom_inset">64dp</dimen>
     <!-- End margin for header buttons, so they sit beside the full-height A–Z strip. -->
