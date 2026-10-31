@@ -245,6 +245,21 @@
                                 app:icon="@drawable/ic_shuffle"
                                 app:iconGravity="textStart"
                                 app:iconPadding="18dp" />
+
+                            <!-- Adds the whole album to the end of the queue, in track order. -->
+                            <Button
+                                android:id="@+id/album_page_queue_button"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="4dp"
+                                android:layout_marginEnd="4dp"
+                                android:layout_weight="1"
+                                android:padding="10dp"
+                                android:text="@string/album_page_queue_button"
+                                android:textAllCaps="false"
+                                app:icon="@drawable/ic_queue_q"
+                                app:iconGravity="textStart"
+                                app:iconPadding="12dp" />
                         </LinearLayout>
 
                         <ToggleButton

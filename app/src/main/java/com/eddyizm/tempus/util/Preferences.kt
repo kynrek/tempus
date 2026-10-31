@@ -103,6 +103,10 @@ object Preferences {
     private const val FALLBACK_TO_RANDOM_TRACKS = "fallback_to_random_tracks"
     private const val LAST_INSTANT_MIX = "last_instant_mix"
     private const val ALLOW_PLAYLIST_DUPLICATES = "allow_playlist_duplicates"
+    private const val LAST_PLAYLIST_ID = "last_playlist_id"
+    private const val QUEUE_LIMIT = "queue_limit"
+    private const val KEEP_PLAYED_IN_QUEUE = "keep_played_in_queue"
+    private const val LAST_PLAYLIST_NAME = "last_playlist_name"
     private const val HOME_SORT_PLAYLISTS = "home_sort_playlists"
     private const val DEFAULT_HOME_SORT_PLAYLISTS_SORT_ORDER = Constants.PLAYLIST_ORDER_BY_NAME
     private const val SELECTED_EQUALIZER = "selected_equalizer"
@@ -1031,6 +1035,37 @@ object Preferences {
             ALLOW_PLAYLIST_DUPLICATES,
             allowDuplicates.toString()
         ).apply()
+    }
+
+    /** Most songs the queue holds, played history included; the oldest played songs go first. */
+    @JvmStatic
+    fun getQueueLimit(): Int {
+        val parsed = App.getInstance().preferences.getString(QUEUE_LIMIT, "500")?.toIntOrNull()
+        return parsed?.takeIf { it >= 10 } ?: 500
+    }
+
+    @JvmStatic
+    fun keepPlayedInQueue(): Boolean {
+        return App.getInstance().preferences.getBoolean(KEEP_PLAYED_IN_QUEUE, true)
+    }
+
+    /** The playlist the one-tap "add to playlist" button on track rows adds to. */
+    @JvmStatic
+    fun setLastPlaylist(id: String, name: String?) {
+        App.getInstance().preferences.edit()
+            .putString(LAST_PLAYLIST_ID, id)
+            .putString(LAST_PLAYLIST_NAME, name)
+            .apply()
+    }
+
+    @JvmStatic
+    fun getLastPlaylistId(): String? {
+        return App.getInstance().preferences.getString(LAST_PLAYLIST_ID, null)
+    }
+
+    @JvmStatic
+    fun getLastPlaylistName(): String? {
+        return App.getInstance().preferences.getString(LAST_PLAYLIST_NAME, null)
     }
 
     @JvmStatic

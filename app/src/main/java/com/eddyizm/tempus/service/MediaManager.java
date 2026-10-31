@@ -273,6 +273,12 @@ public class MediaManager {
 
     @OptIn(markerClass = UnstableApi.class)
     public static void startQueue(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture, List<Child> media, int startIndex, long startPositionMs) {
+        startQueue(mediaBrowserListenableFuture, media, startIndex, startPositionMs, true);
+    }
+
+    /** keepHistory: put the songs already played ahead of the new list (see {@link #withHistory}). */
+    @OptIn(markerClass = UnstableApi.class)
+    public static void startQueue(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture, List<Child> media, int startIndex, long startPositionMs, boolean keepHistory) {
         if (LanRemoteSession.routeSongs(media, "replace", startIndex, startPositionMs)) return;
         if (mediaBrowserListenableFuture != null) {
 
@@ -280,31 +286,35 @@ public class MediaManager {
                 try {
                     if (mediaBrowserListenableFuture.isDone()) {
                         final MediaBrowser browser = mediaBrowserListenableFuture.get();
+                        // Read on the player's thread, before the queue is replaced.
+                        final int playedThrough = keepHistory && browser.getMediaItemCount() > 0 ? browser.getCurrentMediaItemIndex() : C.INDEX_UNSET;
 
                         // Map off the caller thread. getUri does a blocking DB lookup per song
                         // (each one spawns a Thread and joins it), and this listener runs via
                         // directExecutor on the click thread, so a large list froze the UI.
                         // Only the player calls go back to main.
                         backgroundExecutor.execute(() -> {
-                            final List<MediaItem> items = MappingUtil.mapMediaItems(media);
+                            final List<Child> queue = withHistory(media, playedThrough);
+                            final int start = startIndex + queue.size() - media.size();
+                            final List<MediaItem> items = MappingUtil.mapMediaItems(queue);
 
                             new Handler(Looper.getMainLooper()).post(() -> {
                                 if (LanRemoteSession.isActive()) return;
                                 justStarted.set(true);
-                                browser.setMediaItems(items, startIndex, startPositionMs);
+                                browser.setMediaItems(items, start, startPositionMs);
                                 browser.prepare();
 
                                 Player.Listener timelineListener = new Player.Listener() {
                                     @Override
                                     public void onTimelineChanged(Timeline timeline, int reason) {
                                         int itemCount = browser.getMediaItemCount();
-                                        if (itemCount > 0 && startIndex >= 0 && startIndex < itemCount) {
+                                        if (itemCount > 0 && start >= 0 && start < itemCount) {
                                             if (LanRemoteSession.isActive()) { browser.removeListener(this); return; }
-                                            browser.seekTo(startIndex, startPositionMs);
+                                            browser.seekTo(start, startPositionMs);
                                             browser.play();
                                             browser.removeListener(this);
                                         } else {
-                                            Log.d(TAG, "Cannot start playback: itemCount=" + itemCount + ", startIndex=" + startIndex);
+                                            Log.d(TAG, "Cannot start playback: itemCount=" + itemCount + ", start=" + start);
                                         }
                                     }
                                 };
@@ -312,7 +322,7 @@ public class MediaManager {
                                 browser.addListener(timelineListener);
                             });
 
-                            if (!LanRemoteSession.isActive()) enqueueDatabase(media, true, 0);
+                            if (!LanRemoteSession.isActive()) enqueueDatabase(queue, true, 0);
                         });
                     }
                 } catch (ExecutionException | InterruptedException e) {
@@ -323,24 +333,7 @@ public class MediaManager {
     }
 
     public static void startQueue(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture, Child media) {
-        if (LanRemoteSession.routeSongs(Collections.singletonList(media), "replace", 0)) return;
-        if (mediaBrowserListenableFuture != null) {
-            mediaBrowserListenableFuture.addListener(() -> {
-                try {
-                    if (mediaBrowserListenableFuture.isDone()) {
-                        if (LanRemoteSession.isActive()) return;
-                        MediaBrowser browser = mediaBrowserListenableFuture.get();
-                        justStarted.set(true);
-                        browser.setMediaItem(MappingUtil.mapMediaItem(media));
-                        browser.prepare();
-                        browser.play();
-                        enqueueDatabase(media, true, 0);
-                    }
-                } catch (ExecutionException | InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }, MoreExecutors.directExecutor());
-        }
+        startQueue(mediaBrowserListenableFuture, Collections.singletonList(media), 0);
     }
 
     public static void playDownloadedMediaItem(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture, MediaItem mediaItem) {
@@ -433,9 +426,12 @@ public class MediaManager {
             enqueueDatabase(media, false, current + 1);
             insertPlayNext(queueTarget, player, MappingUtil.mapMediaItems(media));
         } else {
-            enqueueDatabase(media, false, player.getMediaItemCount());
+            int firstNew = player.getMediaItemCount();
+            enqueueDatabase(media, false, firstNew);
             player.addMediaItems(MappingUtil.mapMediaItems(media));
+            keepPlaying(player, firstNew);
         }
+        trimHistory(player);
     }
 
     public static void enqueue(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture, Child media, boolean playImmediatelyAfter) {
@@ -452,14 +448,52 @@ public class MediaManager {
                             enqueueDatabase(media, false, current + 1);
                             insertPlayNext(queueTargetFor(browser), browser, Collections.singletonList(MappingUtil.mapMediaItem(media)));
                         } else {
-                            enqueueDatabase(media, false, mediaBrowserListenableFuture.get().getMediaItemCount());
-                            mediaBrowserListenableFuture.get().addMediaItem(MappingUtil.mapMediaItem(media));
+                            int firstNew = browser.getMediaItemCount();
+                            enqueueDatabase(media, false, firstNew);
+                            browser.addMediaItem(MappingUtil.mapMediaItem(media));
+                            keepPlaying(browser, firstNew);
                         }
+                        trimHistory(browser);
                     }
                 } catch (ExecutionException | InterruptedException e) {
                     e.printStackTrace();
                 }
             }, MoreExecutors.directExecutor());
+        }
+    }
+
+    /**
+     * The new list, preceded by what was played of the old queue (through the current song),
+     * so starting something new keeps a history to go back to. Runs off the main thread.
+     */
+    private static List<Child> withHistory(List<Child> media, int playedThrough) {
+        if (playedThrough == C.INDEX_UNSET || playedThrough < 0 || !Preferences.keepPlayedInQueue()) return media;
+        List<Child> old = getQueueRepository().getMedia();
+        List<Child> history = old.subList(0, Math.min(playedThrough + 1, old.size()));
+        int room = Math.max(0, Preferences.getQueueLimit() - media.size());
+        if (history.size() > room) history = history.subList(history.size() - room, history.size());
+        if (history.isEmpty()) return media;
+        List<Child> queue = new ArrayList<>(history);
+        queue.addAll(media);
+        return queue;
+    }
+
+    /** Drops the oldest played songs while the queue is over the limit set in Settings. */
+    private static void trimHistory(Player player) {
+        int drop = Math.min(player.getMediaItemCount() - Preferences.getQueueLimit(), player.getCurrentMediaItemIndex());
+        if (drop <= 0) return;
+        player.removeMediaItems(0, drop);
+        getQueueRepository().deleteRange(0, drop);
+    }
+
+    /** Adding to an empty or finished queue starts the first added song; otherwise playback carries on. */
+    private static void keepPlaying(Player player, int firstNew) {
+        if (firstNew == 0) {
+            player.prepare();
+            player.play();
+        } else if (player.getPlaybackState() == Player.STATE_ENDED) {
+            player.seekTo(firstNew, 0);
+            player.play();
         }
     }
 

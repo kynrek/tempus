@@ -200,7 +200,7 @@
         android:paddingEnd="0dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@+id/song_cover_image_view"
-        app:layout_constraintEnd_toStartOf="@+id/search_result_song_album_button"
+        app:layout_constraintEnd_toStartOf="@+id/search_result_song_queue_button"
         app:layout_constraintTop_toTopOf="@+id/song_cover_image_view"
         tools:visibility="visible">
 
@@ -209,6 +209,62 @@
             android:layout_height="18dp"
             android:background="@drawable/ic_download"
             android:foreground="?android:attr/selectableItemBackgroundBorderless" />
+    </FrameLayout>
+
+    <!-- Add to queue: appends the track; playback carries on. -->
+    <FrameLayout
+        android:id="@+id/search_result_song_queue_button"
+        android:layout_width="44dp"
+        android:layout_height="48dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/track_add_to_queue"
+        app:layout_constraintBottom_toBottomOf="@+id/song_cover_image_view"
+        app:layout_constraintEnd_toStartOf="@+id/search_result_song_playlist_button"
+        app:layout_constraintTop_toTopOf="@+id/song_cover_image_view">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_queue_q" />
+    </FrameLayout>
+
+    <!-- Add to playlist: tap adds to the last playlist used, the arrow picks another. -->
+    <FrameLayout
+        android:id="@+id/search_result_song_playlist_button"
+        android:layout_width="40dp"
+        android:layout_height="48dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/track_add_to_last_playlist"
+        app:layout_constraintBottom_toBottomOf="@+id/song_cover_image_view"
+        app:layout_constraintEnd_toStartOf="@+id/search_result_song_playlist_choose_button"
+        app:layout_constraintTop_toTopOf="@+id/song_cover_image_view">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_playlist_add" />
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/search_result_song_playlist_choose_button"
+        android:layout_width="24dp"
+        android:layout_height="48dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/track_choose_playlist"
+        app:layout_constraintBottom_toBottomOf="@+id/song_cover_image_view"
+        app:layout_constraintEnd_toStartOf="@+id/search_result_song_album_button"
+        app:layout_constraintTop_toTopOf="@+id/song_cover_image_view">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_expand_more" />
     </FrameLayout>
 
     <!-- Go to album: a full 48dp target, hidden on the album's own page. -->

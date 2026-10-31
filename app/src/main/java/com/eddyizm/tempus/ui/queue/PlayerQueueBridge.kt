@@ -3,6 +3,8 @@ package com.eddyizm.tempus.ui.queue
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +25,7 @@ import com.eddyizm.tempus.R
 import com.eddyizm.tempus.lan.LanRemoteSession
 import com.eddyizm.tempus.model.Download
 import com.eddyizm.tempus.repository.DownloadRepository
+import com.eddyizm.tempus.repository.PlaylistRepository
 import com.eddyizm.tempus.service.MediaManager
 import com.eddyizm.tempus.subsonic.models.Child
 import com.eddyizm.tempus.subsonic.models.PlayQueue
@@ -36,10 +39,14 @@ import com.eddyizm.tempus.util.MappingUtil
 import com.eddyizm.tempus.util.Preferences
 import com.eddyizm.tempus.viewmodel.PlaybackViewModel
 import com.eddyizm.tempus.viewmodel.PlayerBottomSheetViewModel
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlayerQueueBridge @JvmOverloads constructor(
@@ -187,7 +194,7 @@ class PlayerQueueBridge @JvmOverloads constructor(
                                         mediaBrowser.seekTo(clickedIndex, 0)
                                         mediaBrowser.play()
                                     } else {
-                                        MediaManager.startQueue(browserFuture, currentSnapshot, clickedIndex)
+                                        MediaManager.startQueue(browserFuture, currentSnapshot, clickedIndex, 0L, false)
                                     }
                                 }
                             } catch (e: Exception) {
@@ -259,6 +266,29 @@ class PlayerQueueBridge @JvmOverloads constructor(
                             MediaManager.removeRange(browserFuture, ArrayList(songs), startPos, endPos)
                         }
                     },
+                    onClearHistory = { songs, curIdx ->
+                        val browserFuture = fragment.mediaBrowserListenableFuture ?: return@PlayerQueueSheet
+                        val endPos = if (LanRemoteSession.isActive()) {
+                            LanRemoteSession.current().index
+                        } else {
+                            browserSnapshot()?.currentMediaItemIndex ?: curIdx
+                        }
+                        if (endPos in 1..songs.size) {
+                            if (!LanRemoteSession.isActive()) {
+                                watchConvergence(latestRaw.map { it.id })
+                                queueState = queueState.drop(endPos)
+                            }
+                            MediaManager.removeRange(browserFuture, ArrayList(songs), 0, endPos)
+                        }
+                    },
+                    onClearAll = { songs ->
+                        val browserFuture = fragment.mediaBrowserListenableFuture ?: return@PlayerQueueSheet
+                        startNewQueue(songs) {
+                            queueState = emptyList()
+                            MediaManager.reset(browserFuture)
+                            closeQueue()
+                        }
+                    },
                     onShuffleUpcoming = { songs, curIdx ->
                         val browserFuture = fragment.mediaBrowserListenableFuture ?: return@PlayerQueueSheet
                         val startPos = if (LanRemoteSession.isActive()) {
@@ -325,12 +355,74 @@ class PlayerQueueBridge @JvmOverloads constructor(
         if (isQueueOpen) closeQueue() else openQueue()
     }
 
-    private fun saveToPlaylist(songs: List<Child>) {
+    /**
+     * "New queue": offers to keep the current queue as a playlist named with the date and time
+     * (editable), then empties the queue.
+     */
+    private fun startNewQueue(songs: List<Child>, clear: () -> Unit) {
+        val context = fragment.context ?: return
+        if (songs.isEmpty()) {
+            clear()
+            return
+        }
+        val defaultName = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+        val name = EditText(context).apply {
+            setText(defaultName)
+            setSingleLine()
+            setSelectAllOnFocus(true)
+        }
+        val padding = (20 * context.resources.displayMetrics.density).toInt()
+        val frame = FrameLayout(context).apply {
+            setPadding(padding, padding / 2, padding, 0)
+            addView(name)
+        }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.player_queue_new_title)
+            .setMessage(context.resources.getQuantityString(R.plurals.player_queue_new_message, songs.size, songs.size))
+            .setView(frame)
+            .setPositiveButton(R.string.player_queue_new_save) { _, _ ->
+                val title = name.text.toString().trim().ifEmpty { defaultName }
+                PlaylistRepository().createPlaylist(null, title, ArrayList(songs.mapNotNull { it.id }),
+                    object : PlaylistRepository.PlaylistActionCallback {
+                        override fun onSuccess() {
+                            Toast.makeText(context, context.getString(R.string.player_queue_new_saved, title), Toast.LENGTH_SHORT).show()
+                        }
+
+                        override fun onFailure() {
+                            Toast.makeText(context, R.string.player_queue_new_save_failed, Toast.LENGTH_LONG).show()
+                        }
+                    })
+                clear()
+            }
+            .setNeutralButton(R.string.player_queue_new_discard) { _, _ -> clear() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Asks whether to include the played history when there is any, then picks the playlist. */
+    private fun saveToPlaylist(songs: List<Child>, currentIndex: Int) {
         val context = fragment.context ?: return
         if (songs.isEmpty()) {
             Toast.makeText(context, R.string.player_queue_empty, Toast.LENGTH_SHORT).show()
             return
         }
+        if (currentIndex <= 0 || currentIndex >= songs.size) {
+            choosePlaylist(songs)
+            return
+        }
+        val fromNow = songs.subList(currentIndex, songs.size)
+        val options = arrayOf(
+            context.resources.getQuantityString(R.plurals.player_queue_save_with_history, songs.size, songs.size),
+            context.resources.getQuantityString(R.plurals.player_queue_save_without_history, fromNow.size, fromNow.size)
+        )
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.player_queue_save_to_playlist)
+            .setItems(options) { _, which -> choosePlaylist(if (which == 0) songs else fromNow) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun choosePlaylist(songs: List<Child>) {
         val bundle = Bundle().apply {
             putParcelableArrayList(Constants.TRACKS_OBJECT, ArrayList(songs))
         }
@@ -413,7 +505,7 @@ class PlayerQueueBridge @JvmOverloads constructor(
                     val matchIndex = entries.indexOfFirst { it.id == currentId }
                     val targetIndex = matchIndex.coerceAtLeast(0)
                     val startPositionMs = if (matchIndex >= 0) (value?.position ?: 0L) else 0L
-                    MediaManager.startQueue(fragment.mediaBrowserListenableFuture, entries, targetIndex, startPositionMs)
+                    MediaManager.startQueue(fragment.mediaBrowserListenableFuture, entries, targetIndex, startPositionMs, false)
                     Toast.makeText(context, R.string.player_queue_loaded, Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(context, R.string.player_queue_no_saved_queue, Toast.LENGTH_SHORT).show()

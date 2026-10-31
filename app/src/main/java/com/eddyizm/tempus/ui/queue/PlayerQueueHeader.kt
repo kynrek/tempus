@@ -39,7 +39,10 @@ fun PlayerQueueHeader(
     totalDurationSeconds: Long,
     upcomingSongsCount: Int,
     isSyncEnabled: Boolean,
+    playedSongsCount: Int,
     onClearUpcoming: () -> Unit,
+    onClearHistory: () -> Unit,
+    onClearAll: () -> Unit,
     onShuffleUpcoming: () -> Unit,
     onSaveToPlaylist: () -> Unit,
     onDownloadAll: () -> Unit,
@@ -159,6 +162,34 @@ fun PlayerQueueHeader(
                                 onShuffleUpcoming()
                             },
                             enabled = upcomingSongsCount > 1
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.player_queue_clear_history)) },
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_history),
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onClearHistory()
+                            },
+                            enabled = playedSongsCount > 0
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.player_queue_clear_all)) },
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_close),
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onClearAll()
+                            },
+                            enabled = songCount > 0
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.player_queue_save_to_playlist)) },

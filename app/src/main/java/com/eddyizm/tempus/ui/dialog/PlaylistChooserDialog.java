@@ -16,6 +16,7 @@ import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.subsonic.models.Playlist;
 import com.eddyizm.tempus.ui.adapter.PlaylistDialogHorizontalAdapter;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.Preferences;
 import com.eddyizm.tempus.viewmodel.PlaylistChooserViewModel;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -106,7 +107,9 @@ public class PlaylistChooserDialog extends DialogFragment implements ClickCallba
     public void onPlaylistClick(Bundle bundle) {
         if (playlistChooserViewModel.getSongsToAdd() != null && !playlistChooserViewModel.getSongsToAdd().isEmpty()) {
             Playlist playlist = bundle.getParcelable(Constants.PLAYLIST_OBJECT);
+            Preferences.setLastPlaylist(playlist.getId(), playlist.getName());
             playlistChooserViewModel.addSongsToPlaylist(this, getDialog(), playlist.getId());
+            Toast.makeText(requireContext(), getString(R.string.track_added_to_playlist, playlist.getName()), Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(requireContext(), R.string.playlist_chooser_dialog_toast_add_failure, Toast.LENGTH_SHORT).show();
         }

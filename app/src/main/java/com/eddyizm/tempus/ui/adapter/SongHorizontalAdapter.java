@@ -11,6 +11,8 @@ import android.widget.Filterable;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentActivity;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.MutableLiveData;
@@ -29,9 +31,12 @@ import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.lan.LanRemoteSession;
 import com.eddyizm.tempus.repository.AlbumRepository;
+import com.eddyizm.tempus.repository.PlaylistRepository;
+import com.eddyizm.tempus.service.MediaManager;
 import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.subsonic.models.DiscTitle;
+import com.eddyizm.tempus.ui.dialog.PlaylistChooserDialog;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.DownloadUtil;
 import com.eddyizm.tempus.util.ExternalAudioReader;
@@ -356,6 +361,44 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
 
             item.searchResultSongMoreButton.setOnClickListener(v -> onLongClick());
             item.searchResultSongAlbumButton.setOnClickListener(v -> openAlbum());
+            item.searchResultSongQueueButton.setOnClickListener(v -> addToQueue());
+            item.searchResultSongPlaylistButton.setOnClickListener(v -> addToLastPlaylist());
+            item.searchResultSongPlaylistChooseButton.setOnClickListener(v -> choosePlaylist());
+        }
+
+        @Nullable
+        private Child song() {
+            int pos = getBindingAdapterPosition();
+            return pos == RecyclerView.NO_POSITION ? null : differ.getCurrentList().get(pos);
+        }
+
+        private void addToQueue() {
+            Child song = song();
+            if (song == null || mediaBrowserListenableFuture == null) return;
+            MediaManager.enqueue(mediaBrowserListenableFuture, song, false);
+            Toast.makeText(itemView.getContext(), itemView.getContext().getString(R.string.track_added_to_queue, song.getTitle()), Toast.LENGTH_SHORT).show();
+        }
+
+        private void addToLastPlaylist() {
+            Child song = song();
+            if (song == null) return;
+            String playlistId = Preferences.getLastPlaylistId();
+            if (playlistId == null) {
+                choosePlaylist();
+                return;
+            }
+            new PlaylistRepository().addSongToPlaylist(playlistId, new ArrayList<>(Collections.singletonList(song.getId())), null);
+            Toast.makeText(itemView.getContext(), itemView.getContext().getString(R.string.track_added_to_playlist, Preferences.getLastPlaylistName()), Toast.LENGTH_SHORT).show();
+        }
+
+        private void choosePlaylist() {
+            Child song = song();
+            if (song == null || !(itemView.getContext() instanceof FragmentActivity)) return;
+            Bundle bundle = new Bundle();
+            bundle.putParcelableArrayList(Constants.TRACKS_OBJECT, new ArrayList<>(Collections.singletonList(song)));
+            PlaylistChooserDialog dialog = new PlaylistChooserDialog();
+            dialog.setArguments(bundle);
+            dialog.show(((FragmentActivity) itemView.getContext()).getSupportFragmentManager(), null);
         }
 
         /** Fetches the track's album (as the song menu's "Go to album" does) and opens its page. */

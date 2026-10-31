@@ -303,6 +303,22 @@
         android:title="@string/lan_title"
         android:icon="@drawable/ic_navigate_next" />
 
+    <com.eddyizm.tempus.util.ClickablePreferenceCategory app:title="@string/settings_title_queue">
+        <SwitchPreference
+            android:title="@string/settings_keep_played_in_queue"
+            android:defaultValue="true"
+            android:summary="@string/settings_keep_played_in_queue_summary"
+            android:key="keep_played_in_queue" />
+        <ListPreference
+            app:defaultValue="500"
+            app:dialogTitle="@string/settings_queue_limit"
+            app:entries="@array/queue_limit_values"
+            app:entryValues="@array/queue_limit_values"
+            app:key="queue_limit"
+            app:title="@string/settings_queue_limit"
+            app:useSimpleSummaryProvider="true" />
+    </com.eddyizm.tempus.util.ClickablePreferenceCategory>
+
     <com.eddyizm.tempus.util.ClickablePreferenceCategory app:title="@string/settings_title_playlist">
         <SwitchPreference
             android:title="@string/settings_allow_playlist_duplicates"

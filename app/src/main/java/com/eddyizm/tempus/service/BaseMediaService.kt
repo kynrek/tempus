@@ -370,6 +370,7 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
                     scheduleQueueSync()
                 }
                 ReplayGainUtil.applyGain(player, mediaItem)
+                dropPlayedIfNotKept(player, reason)
 
                 // --- Add for AA : Constants.AA_START_INDEX if présent ---
                 val extras = mediaItem.mediaMetadata.extras
@@ -1012,6 +1013,16 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
             albumLink,
             artistLink
         )
+    }
+
+    /** With "Keep played songs in queue" off, a song that finishes on its own leaves the queue. */
+    private fun dropPlayedIfNotKept(player: Player, reason: Int) {
+        if (Preferences.keepPlayedInQueue() || reason != Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) return
+        if (player.shuffleModeEnabled || player.repeatMode == Player.REPEAT_MODE_ALL) return
+        val played = player.currentMediaItemIndex
+        if (played <= 0) return
+        player.removeMediaItems(0, played)
+        QueueRepository().deleteRange(0, played)
     }
 
     private fun scheduleQueueSync() {

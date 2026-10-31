@@ -319,6 +319,40 @@
     <string name="player_queue_load_queue">Load Queue</string>
     <string name="player_queue_playing_next">Playing Next</string>
     <string name="player_queue_clear">Clear</string>
+    <string name="player_queue_clear_history">Remove played</string>
+    <string name="player_queue_view_edit">View and edit queue</string>
+    <string name="track_add_to_queue">Add to queue</string>
+    <string name="album_page_queue_button">Queue</string>
+    <string name="settings_title_queue">Queue</string>
+    <string name="settings_keep_played_in_queue">Keep played songs in queue</string>
+    <string name="settings_keep_played_in_queue_summary">Played songs stay in the queue (shown dimmed) so you can go back or save them as a playlist</string>
+    <string name="settings_queue_limit">Maximum queue length</string>
+    <string name="track_added_to_queue">Queued \"%1$s\"</string>
+    <plurals name="album_added_to_queue">
+        <item quantity="one">Queued %d track</item>
+        <item quantity="other">Queued %d tracks</item>
+    </plurals>
+    <string name="track_add_to_last_playlist">Add to last playlist</string>
+    <string name="track_choose_playlist">Choose playlist</string>
+    <string name="track_added_to_playlist">Added to \"%1$s\"</string>
+    <string name="player_queue_clear_all">New queue</string>
+    <string name="player_queue_new_title">Start a new queue?</string>
+    <plurals name="player_queue_new_message">
+        <item quantity="one">Save the current queue (%d song, played history included) as a playlist first?</item>
+        <item quantity="other">Save the current queue (%d songs, played history included) as a playlist first?</item>
+    </plurals>
+    <string name="player_queue_new_save">Save and start new</string>
+    <string name="player_queue_new_discard">Don\'t save</string>
+    <string name="player_queue_new_saved">Saved playlist \"%1$s\"</string>
+    <string name="player_queue_new_save_failed">Couldn\'t save the playlist; the queue was still cleared</string>
+    <plurals name="player_queue_save_with_history">
+        <item quantity="one">Whole queue, with played history (%d song)</item>
+        <item quantity="other">Whole queue, with played history (%d songs)</item>
+    </plurals>
+    <plurals name="player_queue_save_without_history">
+        <item quantity="one">From the current song on (%d song)</item>
+        <item quantity="other">From the current song on (%d songs)</item>
+    </plurals>
     <string name="player_queue_shuffle_upcoming">Shuffle upcoming</string>
     <string name="player_queue_download_all">Download all</string>
     <string name="player_queue_empty">Queue is empty</string>

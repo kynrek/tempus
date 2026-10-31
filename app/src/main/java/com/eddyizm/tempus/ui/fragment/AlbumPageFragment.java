@@ -56,6 +56,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -158,6 +159,14 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
         /** @noinspection deprecation*/
         @Override
         public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+            if (item.getItemId() == R.id.action_play_album) {
+                playAlbum();
+                return true;
+            }
+            if (item.getItemId() == R.id.action_queue_album) {
+                queueAlbum();
+                return true;
+            }
             if (item.getItemId() == R.id.action_rate_album) {
                 Bundle bundle = new Bundle();
                 AlbumID3 album = albumPageViewModel.getAlbum().getValue();
@@ -357,24 +366,45 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
         });
     }
 
+    private void playAlbum() {
+        List<Child> songs = albumPageViewModel.getAlbumSongLiveList().getValue();
+        if (songs == null || songs.isEmpty()) return;
+        MediaManager.startQueue(mediaBrowserListenableFuture, songs, 0);
+        activity.setBottomSheetInPeek(true);
+    }
+
+    /** Adds every track to the end of the queue in album order (disc, then track number). */
+    private void queueAlbum() {
+        List<Child> songs = albumPageViewModel.getAlbumSongLiveList().getValue();
+        if (songs == null || songs.isEmpty()) return;
+        List<Child> inOrder = new ArrayList<>(songs);
+        inOrder.sort(Comparator
+                .comparing((Child song) -> song.getDiscNumber() != null ? song.getDiscNumber() : 1)
+                .thenComparing(song -> song.getTrack() != null ? song.getTrack() : 0));
+        MediaManager.enqueue(mediaBrowserListenableFuture, inOrder, false);
+        activity.setBottomSheetInPeek(true);
+        Toast.makeText(requireContext(), getResources().getQuantityString(R.plurals.album_added_to_queue, inOrder.size(), inOrder.size()), Toast.LENGTH_SHORT).show();
+    }
+
     private void initMusicButton() {
         albumPageViewModel.getAlbumSongLiveList().observe(getViewLifecycleOwner(), songs -> {
             if (bind != null && songs != null && !songs.isEmpty()) {
-                bind.albumPagePlayButton.setOnClickListener(v -> {
-                    MediaManager.startQueue(mediaBrowserListenableFuture, songs, 0);
+                bind.albumPagePlayButton.setOnClickListener(v -> playAlbum());
+
+                bind.albumPageShuffleButton.setOnClickListener(v -> {
+                    List<Child> shuffled = new ArrayList<>(songs);
+                    Collections.shuffle(shuffled);
+                    MediaManager.startQueue(mediaBrowserListenableFuture, shuffled, 0);
                     activity.setBottomSheetInPeek(true);
                 });
 
-                bind.albumPageShuffleButton.setOnClickListener(v -> {
-                    Collections.shuffle(songs);
-                    MediaManager.startQueue(mediaBrowserListenableFuture, songs, 0);
-                    activity.setBottomSheetInPeek(true);
-                });
+                bind.albumPageQueueButton.setOnClickListener(v -> queueAlbum());
             }
 
             if (bind != null && (songs == null || songs.isEmpty())) {
                 bind.albumPagePlayButton.setEnabled(false);
                 bind.albumPageShuffleButton.setEnabled(false);
+                bind.albumPageQueueButton.setEnabled(false);
             }
         });
     }

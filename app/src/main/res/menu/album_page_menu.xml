@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    <!-- Always beside the album title: play the whole album, or queue it in track order. -->
+    <item
+        android:id="@+id/action_play_album"
+        android:icon="@drawable/ic_play"
+        android:title="@string/album_page_play_button"
+        app:iconTint="?attr/colorOnSurface"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_queue_album"
+        android:icon="@drawable/ic_queue_q"
+        android:title="@string/album_page_queue_button"
+        app:showAsAction="always" />
     <item
         android:id="@+id/action_download_album"
         android:icon="@drawable/ic_file_download"
