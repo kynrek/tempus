@@ -81,7 +81,7 @@ import java.util.concurrent.ExecutionException;
 @UnstableApi
 public class MainActivity extends BaseActivity {
     /** Mini player bar, timeline included; matches @dimen/bottom_sheet_peek_height. */
-    private static final int MINI_PLAYER_HEIGHT_DP = 78;
+    private static final int MINI_PLAYER_HEIGHT_DP = 72;
 
     private static final String TAG = "MainActivityLogs";
 

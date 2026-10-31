@@ -21,6 +21,7 @@ import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.eddyizm.tempus.R;
 import com.eddyizm.tempus.util.AlphabetSort;
 import com.google.android.material.color.MaterialColors;
 
@@ -32,8 +33,8 @@ import java.util.Arrays;
  * and shows the current letter in a large bubble beside it.
  *
  * <p>The view is meant to be laid over the list (wider than the strip, so the bubble has room).
- * Touches outside the strip, or in the top/bottom padding, fall through to the views below; the
- * bottom padding is how callers keep the letters clear of the mini player.
+ * Touches outside the strip, or in the top/bottom padding, fall through to the views below. The
+ * letters stop above the mini player (R.id.player_bottom_sheet) when it is showing.
  */
 public class AlphabetScrubber extends View {
     public interface SectionProvider {
@@ -58,6 +59,9 @@ public class AlphabetScrubber extends View {
     private final Paint bubbleTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF trackRect = new RectF();
     private final int[] location = new int[2];
+    private final int[] playerLocation = new int[2];
+    /** Redraws when the mini player appears, hides or resizes, since that moves the bottom edge. */
+    private final android.view.ViewTreeObserver.OnGlobalLayoutListener layoutListener = this::invalidate;
     private final float[] letterScale = new float[LETTERS.length];
     private final float[] letterY = new float[LETTERS.length];
 
@@ -209,7 +213,14 @@ public class AlphabetScrubber extends View {
      */
     private float visibleBottom() {
         getLocationInWindow(location);
-        return Math.min(getHeight(), getRootView().getHeight() - location[1]);
+        float bottom = Math.min(getHeight(), getRootView().getHeight() - location[1]);
+        // Stop above the mini player, whatever its height (it grows with the timeline and insets).
+        View player = getRootView().findViewById(R.id.player_bottom_sheet);
+        if (player != null && player.isShown()) {
+            player.getLocationInWindow(playerLocation);
+            if (playerLocation[1] > location[1]) bottom = Math.min(bottom, playerLocation[1] - location[1]);
+        }
+        return bottom;
     }
 
     private float lettersBottom() {
@@ -218,6 +229,18 @@ public class AlphabetScrubber extends View {
 
     private float cellHeight() {
         return (lettersBottom() - getPaddingTop()) / LETTERS.length;
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        getViewTreeObserver().addOnGlobalLayoutListener(layoutListener);
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        getViewTreeObserver().removeOnGlobalLayoutListener(layoutListener);
+        super.onDetachedFromWindow();
     }
 
     @Override
