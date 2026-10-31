@@ -48,8 +48,8 @@ public class AlphabetScrubber extends View {
     private static final String[] LETTERS = {
             AlphabetSort.OTHER, "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
             "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"};
-    private static final float MAX_LETTER_SCALE = 1.9f;
-    private static final float MAGNIFY_SPREAD_CELLS = 3.5f;
+    private static final float MAX_LETTER_SCALE = 3.2f;
+    private static final float MAGNIFY_SPREAD_CELLS = 4.5f;
 
     private final int[] firstPosition = new int[LETTERS.length];
     private final Paint letterPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -58,12 +58,14 @@ public class AlphabetScrubber extends View {
     private final Paint bubbleTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF trackRect = new RectF();
     private final int[] location = new int[2];
+    private final float[] letterScale = new float[LETTERS.length];
+    private final float[] letterY = new float[LETTERS.length];
 
     private final float stripWidth = dp(52);
     private final float maxLetterSize = sp(17);
-    private final float magnifyShift = dp(30);
+    private final float magnifyShift = dp(44);
     private final float bubbleRadius = dp(46);
-    private final float bubbleGap = dp(40);
+    private final float bubbleGap = dp(56);
 
     private final int letterColor;
     private final int activeLetterColor;
@@ -234,21 +236,18 @@ public class AlphabetScrubber extends View {
         canvas.drawRoundRect(trackRect, stripWidth / 2f, stripWidth / 2f, trackPaint);
 
         float baseSize = Math.min(cell * 0.8f, maxLetterSize);
+        layoutLetters(top, cell);
 
         for (int i = 0; i < LETTERS.length; i++) {
-            float y = top + cell * (i + 0.5f);
-            float magnify = 0f;
-            if (press > 0f) {
-                float t = Math.max(0f, 1f - Math.abs(y - touchY) / (cell * MAGNIFY_SPREAD_CELLS));
-                magnify = press * t * t * (3f - 2f * t);
-            }
-
-            letterPaint.setTextSize(baseSize * (1f + (MAX_LETTER_SCALE - 1f) * magnify));
+            float magnify = (letterScale[i] - 1f) / (MAX_LETTER_SCALE - 1f);
+            float slot = Math.min(i > 0 ? letterY[i] - letterY[i - 1] : Float.MAX_VALUE,
+                    i < LETTERS.length - 1 ? letterY[i + 1] - letterY[i] : Float.MAX_VALUE);
+            letterPaint.setTextSize(Math.min(baseSize * letterScale[i], Math.max(baseSize * 0.6f, slot * 1.1f)));
             int color = i == currentLetter && touching ? activeLetterColor : letterColor;
             int alpha = firstPosition[i] == -1 ? 0x55 : 0xFF;
             letterPaint.setColor(ColorUtils.setAlphaComponent(color, Color.alpha(color) * alpha / 0xFF));
 
-            float baseline = y - (letterPaint.descent() + letterPaint.ascent()) / 2f;
+            float baseline = letterY[i] - (letterPaint.descent() + letterPaint.ascent()) / 2f;
             canvas.drawText(LETTERS[i], centerX - magnifyShift * magnify, baseline, letterPaint);
         }
 
@@ -261,6 +260,44 @@ public class AlphabetScrubber extends View {
             bubbleTextPaint.setTextSize(sp(46) * press * (1f + 0.12f * pop));
             float baseline = bubbleY - (bubbleTextPaint.descent() + bubbleTextPaint.ascent()) / 2f;
             canvas.drawText(LETTERS[currentLetter], bubbleX, baseline, bubbleTextPaint);
+        }
+    }
+
+    /**
+     * Dock-style magnification: letters near the finger grow and take more room, the letters
+     * further away squeeze together, and the letter under the finger stays under the finger.
+     * Hit testing still uses the even cells, so what you see under your finger is what you get.
+     */
+    private void layoutLetters(float top, float cell) {
+        float bottom = top + cell * LETTERS.length;
+        float fingerCell = (touchY - top) / cell;
+        for (int i = 0; i < LETTERS.length; i++) {
+            float t = press > 0f ? Math.max(0f, 1f - Math.abs(i + 0.5f - fingerCell) / MAGNIFY_SPREAD_CELLS) : 0f;
+            letterScale[i] = 1f + (MAX_LETTER_SCALE - 1f) * press * t * t * (3f - 2f * t);
+        }
+
+        int anchor = currentLetter >= 0 ? currentLetter : 0;
+        float evenY = top + cell * (anchor + 0.5f);
+        float anchorY = evenY + (Math.max(top, Math.min(bottom, touchY)) - evenY) * press;
+        letterY[anchor] = anchorY;
+
+        // Share the room above and below the anchor in proportion to each letter's size.
+        float above = letterScale[anchor] / 2f;
+        for (int i = 0; i < anchor; i++) above += letterScale[i];
+        float unit = (anchorY - top) / above;
+        float y = anchorY - unit * letterScale[anchor] / 2f;
+        for (int i = anchor - 1; i >= 0; i--) {
+            letterY[i] = y - unit * letterScale[i] / 2f;
+            y -= unit * letterScale[i];
+        }
+
+        float below = letterScale[anchor] / 2f;
+        for (int i = anchor + 1; i < LETTERS.length; i++) below += letterScale[i];
+        unit = (bottom - anchorY) / below;
+        y = anchorY + unit * letterScale[anchor] / 2f;
+        for (int i = anchor + 1; i < LETTERS.length; i++) {
+            letterY[i] = y + unit * letterScale[i] / 2f;
+            y += unit * letterScale[i];
         }
     }
 
