@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
-            android:text="@string/app_name" />
+            android:text="@string/launcher_label" />
 
     </LinearLayout>
 
