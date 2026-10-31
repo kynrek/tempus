@@ -134,6 +134,9 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
         bind.artistCatalogueRecyclerView.setLayoutManager(new GridLayoutManager(requireContext(), spanCount));
         bind.artistCatalogueRecyclerView.addItemDecoration(new GridItemDecoration(spanCount, tileSpacing, false));
         bind.artistCatalogueRecyclerView.setHasFixedSize(true);
+        // A refresh (each page of the library arriving, a re-sort) parks every tile on screen in
+        // the pool, which by default keeps 5 and drops the rest to be inflated again.
+        bind.artistCatalogueRecyclerView.getRecycledViewPool().setMaxRecycledViews(0, spanCount * 4);
 
         artistAdapter = new ArtistCatalogueAdapter(this);
         artistAdapter.setStateRestorationPolicy(RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY);

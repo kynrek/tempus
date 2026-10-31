@@ -55,6 +55,9 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
     private AlbumCatalogueAdapter albumAdapter;
     private String currentSortOrder;
     private List<com.eddyizm.tempus.subsonic.models.AlbumID3> originalAlbums;
+    /** What the list on screen was last sorted from, so returning to the tab can skip an identical re-sort. */
+    private String appliedSortOrder;
+    private int appliedAlbumCount = -1;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -73,9 +76,12 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
         if (!latestSort.equals(currentSortOrder)) {
             currentSortOrder = latestSort;
         }
-        // Re-apply sort when returning to fragment
+        // Re-apply sort when returning to fragment (only if it would change anything: a shuffle always does)
         if (originalAlbums != null && currentSortOrder != null) {
-            applySortToAlbums(currentSortOrder);
+            boolean unchanged = currentSortOrder.equals(appliedSortOrder)
+                    && originalAlbums.size() == appliedAlbumCount
+                    && !Constants.ALBUM_ORDER_BY_RANDOM.equals(currentSortOrder);
+            if (!unchanged) applySortToAlbums(currentSortOrder);
         } else {
             Log.d(TAG, "onResume - Cannot re-sort, missing data");
         }
@@ -157,6 +163,9 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
         bind.albumCatalogueRecyclerView.setLayoutManager(new GridLayoutManager(requireContext(), spanCount));
         bind.albumCatalogueRecyclerView.addItemDecoration(new GridItemDecoration(spanCount, tileSpacing, false));
         bind.albumCatalogueRecyclerView.setHasFixedSize(true);
+        // A refresh (each page of the library arriving, a re-sort) parks every tile on screen in
+        // the pool, which by default keeps 5 and drops the rest to be inflated again.
+        bind.albumCatalogueRecyclerView.getRecycledViewPool().setMaxRecycledViews(0, spanCount * 4);
 
         albumAdapter = new AlbumCatalogueAdapter(this, true);
         albumAdapter.setStateRestorationPolicy(RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY);
@@ -182,10 +191,9 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
         if (originalAlbums == null) {
             return;
         }
-        albumAdapter.setItemsWithoutFilter(originalAlbums);
-        if (sortOrder != null) {
-            albumAdapter.sort(sortOrder);
-        }
+        albumAdapter.setItemsSorted(originalAlbums, sortOrder);
+        appliedSortOrder = sortOrder;
+        appliedAlbumCount = originalAlbums.size();
     }
 
     private void initProgressLoader() {

@@ -217,10 +217,14 @@ public class MediaManager {
                             // and reaching a browser means that restore is already in flight.
                             if (ConnectionUtil.pingsOutstanding()) return;
 
-                            List<Child> media = getQueueRepository().getMedia();
-                            if (media != null && media.size() >= 1) {
-                                init(mediaBrowserListenableFuture, media);
-                            }
+                            // Read the saved queue off the main thread; init re-checks the player is
+                            // still empty on the main thread before loading it.
+                            backgroundExecutor.execute(() -> {
+                                List<Child> media = getQueueRepository().getMedia();
+                                if (media != null && media.size() >= 1) {
+                                    init(mediaBrowserListenableFuture, media);
+                                }
+                            });
                         }
                     }
                 } catch (ExecutionException | InterruptedException e) {

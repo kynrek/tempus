@@ -125,15 +125,19 @@ public class ArtistCatalogueAdapter extends RecyclerView.Adapter<ArtistCatalogue
         }
 
         public void onClick() {
+            int position = getBindingAdapterPosition();
+            if (position == RecyclerView.NO_POSITION) return;
             Bundle bundle = new Bundle();
-            bundle.putParcelable(Constants.ARTIST_OBJECT, artists.get(getBindingAdapterPosition()));
+            bundle.putParcelable(Constants.ARTIST_OBJECT, artists.get(position));
 
             click.onArtistClick(bundle);
         }
 
         public boolean onLongClick() {
+            int position = getBindingAdapterPosition();
+            if (position == RecyclerView.NO_POSITION) return false;
             Bundle bundle = new Bundle();
-            bundle.putParcelable(Constants.ARTIST_OBJECT, artists.get(getBindingAdapterPosition()));
+            bundle.putParcelable(Constants.ARTIST_OBJECT, artists.get(position));
 
             click.onArtistLongClick(bundle);
 
@@ -155,7 +159,7 @@ public class ArtistCatalogueAdapter extends RecyclerView.Adapter<ArtistCatalogue
         sortOrder = order;
         switch (order) {
             case Constants.ARTIST_ORDER_BY_NAME:
-                artists.sort(Comparator.comparing(ArtistID3::getName, AlphabetSort.COMPARATOR));
+                AlphabetSort.sort(artists, ArtistID3::getName, null);
                 break;
             case Constants.ARTIST_ORDER_BY_RANDOM:
                 Collections.shuffle(artists);

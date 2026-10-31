@@ -1,6 +1,8 @@
 package com.eddyizm.tempus.ui.fragment;
 
 import android.os.Bundle;
+import android.os.Looper;
+import android.os.MessageQueue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,6 +13,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.media3.common.util.UnstableApi;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.eddyizm.tempus.R;
 import com.eddyizm.tempus.databinding.FragmentHomeBinding;
@@ -103,8 +106,8 @@ public class HomeFragment extends Fragment {
         pager.addFragment(recent, getString(R.string.home_tab_recent), R.drawable.ic_home);
 
         bind.homeViewPager.setAdapter(pager);
-        bind.homeViewPager.setOffscreenPageLimit(6);
         bind.homeViewPager.setUserInputEnabled(false);
+        buildTabsInTurn(bind.homeViewPager, pager.getItemCount() - 1);
 
         new TabLayoutMediator(tabLayout, bind.homeViewPager,
                 (tab, position) -> {
@@ -112,6 +115,33 @@ public class HomeFragment extends Fragment {
                     // tab.setIcon(pager.getPageIcon(position));
                 }
         ).attach();
+    }
+
+    /**
+     * All the tabs stay alive so that switching between them is instant, but building all six
+     * (and starting their loads) before the first frame held up opening the app. The shown tab
+     * is built first, then one more each time the main thread goes idle; switching tabs before
+     * that's done builds the rest at once.
+     */
+    private void buildTabsInTurn(ViewPager2 viewPager, int allOthers) {
+        viewPager.setOffscreenPageLimit(1);
+        Looper.myQueue().addIdleHandler(new MessageQueue.IdleHandler() {
+            @Override
+            public boolean queueIdle() {
+                if (bind == null || bind.homeViewPager != viewPager) return false;
+                int limit = Math.min(viewPager.getOffscreenPageLimit() + 1, allOthers);
+                if (limit > viewPager.getOffscreenPageLimit()) viewPager.setOffscreenPageLimit(limit);
+                return limit < allOthers;
+            }
+        });
+        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageScrollStateChanged(int state) {
+                if (state != ViewPager2.SCROLL_STATE_IDLE && viewPager.getOffscreenPageLimit() < allOthers) {
+                    viewPager.setOffscreenPageLimit(allOthers);
+                }
+            }
+        });
     }
 
     private static Fragment embedded(Fragment fragment) {

@@ -202,7 +202,8 @@ fun PlayerQueueItem(
                     // Artwork with play/pause overlay
                     QueueArtwork(
                         coverArtId = item.song.coverArtId,
-                        size = 160,
+                        // The list size, so a queue row reuses the cover the album and track lists already cached.
+                        size = Preferences.getListImageSize(),
                         cornerRadius = cornerRadius,
                         modifier = Modifier.size(52.dp),
                         overlayContent = if (isCurrent) {

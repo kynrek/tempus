@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
-import java.util.function.Function;
 
 public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAdapter.ViewHolder> implements Filterable, StandardViewTypeAdapter, AlphabetScrubber.SectionProvider {
     private final ClickCallback click;
@@ -135,15 +134,19 @@ public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAd
         }
 
         private void onClick() {
+            int position = getBindingAdapterPosition();
+            if (position == RecyclerView.NO_POSITION) return;
             Bundle bundle = new Bundle();
-            bundle.putParcelable(Constants.ALBUM_OBJECT, albums.get(getBindingAdapterPosition()).strippedForNav());
+            bundle.putParcelable(Constants.ALBUM_OBJECT, albums.get(position).strippedForNav());
 
             click.onAlbumClick(bundle);
         }
 
         private boolean onLongClick() {
+            int position = getBindingAdapterPosition();
+            if (position == RecyclerView.NO_POSITION) return false;
             Bundle bundle = new Bundle();
-            bundle.putParcelable(Constants.ALBUM_OBJECT, albums.get(getBindingAdapterPosition()).strippedForNav());
+            bundle.putParcelable(Constants.ALBUM_OBJECT, albums.get(position).strippedForNav());
 
             click.onAlbumLongClick(bundle);
 
@@ -180,23 +183,28 @@ public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAd
         notifyDataSetChanged();
     }
 
+    /**
+     * {@link #setItemsWithoutFilter} followed by {@link #sort}, with one sort and one refresh
+     * instead of two of each. Called for every page of albums that arrives.
+     */
+    public void setItemsSorted(List<AlbumID3> albums, String order) {
+        List<AlbumID3> sorted = new ArrayList<>(albums);
+        if (order != null) {
+            sortOrder = order;
+            sortList(sorted, order);
+        }
+        this.albumsFull = sorted;
+        this.albums = new ArrayList<>(sorted);
+        notifyDataSetChanged();
+    }
+
     private static void sortList(List<AlbumID3> albums, String order) {
         switch (order) {
             case Constants.ALBUM_ORDER_BY_NAME:
-                albums.sort(Comparator.comparing(
-                    album -> album.getName() != null ? album.getName() : "",
-                    AlphabetSort.COMPARATOR
-                ));
+                AlphabetSort.sort(albums, AlbumID3::getName, null);
                 break;
             case Constants.ALBUM_ORDER_BY_ARTIST:
-                // If we call thenComparing() on the Comparator, the Java compiler seems unable
-                // to figure out that album is supposed to be an AlbumID3, so we explicitly assign
-                // the lambda to a variable so that we can specify the type.
-                Function<AlbumID3, String> getArtist = album -> album.getArtist() != null ? album.getArtist() : "";
-                albums.sort(Comparator.comparing(
-                        getArtist,
-                        AlphabetSort.COMPARATOR
-                ).thenComparing(AlbumID3::getYear));
+                AlphabetSort.sort(albums, AlbumID3::getArtist, Comparator.comparing(AlbumID3::getYear));
                 break;
             case Constants.ALBUM_ORDER_BY_YEAR:
                 albums.sort(Comparator.comparing(AlbumID3::getYear));

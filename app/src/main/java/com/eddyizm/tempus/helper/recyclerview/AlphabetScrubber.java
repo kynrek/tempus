@@ -1,12 +1,15 @@
 package com.eddyizm.tempus.helper.recyclerview;
 
 import android.animation.ValueAnimator;
+import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.HapticFeedbackConstants;
@@ -62,8 +65,21 @@ public class AlphabetScrubber extends View {
     private final RectF trackRect = new RectF();
     private final int[] location = new int[2];
     private final int[] playerLocation = new int[2];
-    /** Redraws when the mini player appears, hides or resizes, since that moves the bottom edge. */
-    private final android.view.ViewTreeObserver.OnGlobalLayoutListener layoutListener = this::invalidate;
+    private float lastVisibleBottom = -1f;
+    /** The mini player, found once rather than searched for through the whole window on every draw. */
+    @Nullable
+    private View player;
+    /**
+     * Redraws when the mini player appears, hides or resizes, since that moves the bottom edge.
+     * Only then: global layouts also fire for every row bound while the list scrolls.
+     */
+    private final android.view.ViewTreeObserver.OnGlobalLayoutListener layoutListener = () -> {
+        float bottom = visibleBottom();
+        if (bottom != lastVisibleBottom) {
+            lastVisibleBottom = bottom;
+            invalidate();
+        }
+    };
     private final float[] letterScale = new float[LETTERS.length];
     private final float[] letterY = new float[LETTERS.length];
 
@@ -119,6 +135,9 @@ public class AlphabetScrubber extends View {
     private void setImagesPaused(boolean paused) {
         if (paused == imagesPaused || getContext() == null) return;
         imagesPaused = paused;
+        // Glide refuses a destroyed activity, and its requests are being cleared anyway.
+        Activity activity = findActivity(getContext());
+        if (activity != null && activity.isDestroyed()) return;
         RequestManager glide = Glide.with(getContext());
         if (paused) glide.pauseRequests();
         else glide.resumeRequests();
@@ -160,7 +179,9 @@ public class AlphabetScrubber extends View {
         bubbleTextPaint.setTextSize(sp(46));
 
         Arrays.fill(firstPosition, -1);
-        setLayerType(LAYER_TYPE_SOFTWARE, null); // for the bubble's shadow
+        // The bubble's shadow needs a software layer before Android 9; since then the GPU draws
+        // it, and a full-height software layer would be re-rendered and uploaded on every redraw.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) setLayerType(LAYER_TYPE_SOFTWARE, null);
         setContentDescription("A to Z index");
     }
 
@@ -240,7 +261,7 @@ public class AlphabetScrubber extends View {
         getLocationInWindow(location);
         float bottom = Math.min(getHeight(), getRootView().getHeight() - location[1]);
         // Stop above the mini player, whatever its height (it grows with the timeline and insets).
-        View player = getRootView().findViewById(R.id.player_bottom_sheet);
+        if (player == null || !player.isAttachedToWindow()) player = getRootView().findViewById(R.id.player_bottom_sheet);
         if (player != null && player.isShown()) {
             player.getLocationInWindow(playerLocation);
             if (playerLocation[1] > location[1]) bottom = Math.min(bottom, playerLocation[1] - location[1]);
@@ -265,7 +286,18 @@ public class AlphabetScrubber extends View {
     @Override
     protected void onDetachedFromWindow() {
         getViewTreeObserver().removeOnGlobalLayoutListener(layoutListener);
+        player = null;
+        lastVisibleBottom = -1f;
         super.onDetachedFromWindow();
+    }
+
+    @Nullable
+    private static Activity findActivity(Context context) {
+        while (context instanceof ContextWrapper) {
+            if (context instanceof Activity) return (Activity) context;
+            context = ((ContextWrapper) context).getBaseContext();
+        }
+        return null;
     }
 
     @Override
@@ -280,7 +312,8 @@ public class AlphabetScrubber extends View {
         float centerX = left + stripWidth / 2f;
 
         trackRect.set(left + dp(6), top, left + stripWidth - dp(6), top + cell * LETTERS.length);
-        trackPaint.setColor(ColorUtils.setAlphaComponent(trackColor, (int) (0x99 + 0x66 * press)));
+        // press overshoots past 1 as the finger lands (OvershootInterpolator); an alpha over 255 throws.
+        trackPaint.setColor(ColorUtils.setAlphaComponent(trackColor, (int) (0x99 + 0x66 * Math.min(1f, press))));
         canvas.drawRoundRect(trackRect, stripWidth / 2f, stripWidth / 2f, trackPaint);
 
         float baseSize = Math.min(cell * 0.8f, maxLetterSize);

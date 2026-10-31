@@ -26,6 +26,7 @@ import com.eddyizm.tempus.util.Util;
 import com.google.android.material.elevation.SurfaceColors;
 
 import java.util.Map;
+import java.util.WeakHashMap;
 
 public class CustomGlideRequest {
     private static final String TAG = "CustomGlideRequest";
@@ -47,37 +48,78 @@ public class CustomGlideRequest {
     }
 
     public static RequestOptions createRequestOptions(Context context, String item, ResourceType type) {
+        Placeholders placeholders = placeholdersFor(context);
+        Drawable missing = placeholders.get(context, type);
         return new RequestOptions()
-                .placeholder(new ColorDrawable(SurfaceColors.SURFACE_5.getColor(context)))
-                .fallback(getPlaceholder(context, type))
-                .error(getPlaceholder(context, type))
+                .placeholder(new ColorDrawable(placeholders.surfaceColor))
+                .fallback(missing)
+                .error(missing)
                 .diskCacheStrategy(DEFAULT_DISK_CACHE_STRATEGY)
                 .signature(new ObjectKey(item != null ? item : 0))
                 .transform(new CenterCrop(), new RoundedCorners(CustomGlideRequest.CORNER_RADIUS));
     }
 
-    @Nullable
-    private static Drawable getPlaceholder(Context context, ResourceType type) {
+    /**
+     * The placeholder colour and the missing-cover drawables, worked out once per themed context.
+     * Every grid row bound used to resolve the colour and inflate two vector drawables, though
+     * they only show when a cover is missing. Each request still gets its own drawable instance.
+     */
+    private static final Map<Context, Placeholders> PLACEHOLDERS = new WeakHashMap<>();
+
+    private static Placeholders placeholdersFor(Context context) {
+        synchronized (PLACEHOLDERS) {
+            Placeholders placeholders = PLACEHOLDERS.get(context);
+            if (placeholders == null) {
+                placeholders = new Placeholders(SurfaceColors.SURFACE_5.getColor(context));
+                PLACEHOLDERS.put(context, placeholders);
+            }
+            return placeholders;
+        }
+    }
+
+    private static final class Placeholders {
+        final int surfaceColor;
+        private final Drawable.ConstantState[] states = new Drawable.ConstantState[ResourceType.values().length];
+
+        Placeholders(int surfaceColor) {
+            this.surfaceColor = surfaceColor;
+        }
+
+        @Nullable
+        synchronized Drawable get(Context context, ResourceType type) {
+            int res = placeholderRes(type);
+            if (res == 0) return new ColorDrawable(surfaceColor);
+
+            Drawable.ConstantState state = states[type.ordinal()];
+            if (state != null) return state.newDrawable(context.getResources(), context.getTheme());
+
+            Drawable drawable = AppCompatResources.getDrawable(context, res);
+            if (drawable != null) states[type.ordinal()] = drawable.getConstantState();
+            return drawable;
+        }
+    }
+
+    private static int placeholderRes(ResourceType type) {
         switch (type) {
             case Album:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_album);
+                return R.drawable.ic_placeholder_album;
             case Artist:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_artist);
+                return R.drawable.ic_placeholder_artist;
             case Folder:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_folder);
+                return R.drawable.ic_placeholder_folder;
             case Directory:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_directory);
+                return R.drawable.ic_placeholder_directory;
             case Playlist:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_playlist);
+                return R.drawable.ic_placeholder_playlist;
             case Podcast:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_podcast);
+                return R.drawable.ic_placeholder_podcast;
             case Radio:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_radio);
+                return R.drawable.ic_placeholder_radio;
             case Song:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_song);
+                return R.drawable.ic_placeholder_song;
             default:
             case Unknown:
-                return new ColorDrawable(SurfaceColors.SURFACE_5.getColor(context));
+                return 0;
         }
     }
 
@@ -127,6 +169,7 @@ public class CustomGlideRequest {
 
     public static class Builder {
         private final RequestManager requestManager;
+        private final RequestOptions options;
         private final String coverId;
         private String item;
         @Nullable
@@ -141,7 +184,9 @@ public class CustomGlideRequest {
                 this.item = createUrl(item, Preferences.getListImageSize());
             }
 
-            requestManager.applyDefaultRequestOptions(createRequestOptions(context, item, type));
+            // Applied per request: setting them as the RequestManager's defaults (shared by the
+            // whole activity) cost a synchronized merge on every row bound.
+            options = createRequestOptions(context, item, type);
         }
 
         public static Builder from(Context context, String item, ResourceType type) {
@@ -167,9 +212,10 @@ public class CustomGlideRequest {
         public RequestBuilder<Drawable> build() {
             RequestBuilder<Drawable> builder = requestManager
                     .load(item)
+                    .apply(options)
                     .transition(DrawableTransitionOptions.withCrossFade());
             if (preview != null) {
-                builder = builder.thumbnail(requestManager.load(preview));
+                builder = builder.thumbnail(requestManager.load(preview).apply(options));
             }
             if (Preferences.isDataSavingMode()) {
                 builder = builder.onlyRetrieveFromCache(true);

@@ -4,9 +4,15 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Random;
+import java.util.regex.Pattern;
 
 public class AlphabetSortTest {
 
@@ -47,5 +53,47 @@ public class AlphabetSortTest {
                 previous = letter;
             }
         }
+    }
+
+    /** The original regex version of sortKey, kept here to check the fast one against. */
+    private static String regexSortKey(String name) {
+        if (name == null) return "";
+        String key = name.trim();
+        String stripped = Pattern.compile("^the\\s+", Pattern.CASE_INSENSITIVE).matcher(key).replaceFirst("");
+        if (!stripped.isEmpty()) key = stripped;
+        key = Pattern.compile("\\p{M}+").matcher(Normalizer.normalize(key, Normalizer.Form.NFD)).replaceAll("");
+        return key.toLowerCase(Locale.ROOT);
+    }
+
+    private static final List<String> SAMPLES = Arrays.asList(
+            null, "", " ", "the", "The", "the ", "The  Who", "the\tWho", "THE\u000BEnd", "Thee Oh Sees",
+            "Therapy?", "theatre", "The\u00A0Band", "  The Beatles  ", "Édith Piaf", "The Édith", "Beyoncé",
+            "Sigur Rós", "Mötley Crüe", "坂本龍一", "2Pac", "~tilde", "ÅMB", "the The", "Ωmega", "ǅemal");
+
+    @Test
+    public void sortKey_matchesTheRegexVersion() {
+        for (String name : SAMPLES) {
+            assertEquals(String.valueOf(name), regexSortKey(name), AlphabetSort.sortKey(name));
+        }
+    }
+
+    @Test
+    public void sort_matchesSortingWithTheComparator() {
+        List<String> names = new ArrayList<>();
+        for (String name : SAMPLES) if (name != null) names.add(name);
+        for (int i = 0; i < 6; i++) names.addAll(new ArrayList<>(names));
+        Collections.shuffle(names, new Random(7));
+
+        List<String> expected = new ArrayList<>(names);
+        expected.sort(AlphabetSort.COMPARATOR);
+        List<String> actual = new ArrayList<>(names);
+        AlphabetSort.sort(actual, name -> name, null);
+        assertEquals(expected, actual);
+
+        // With a tie-break: same as Comparator.comparing(...).thenComparing(...).
+        Comparator<String> byLength = Comparator.comparingInt(String::length);
+        expected.sort(Comparator.comparing((String name) -> name, AlphabetSort.COMPARATOR).thenComparing(byLength));
+        AlphabetSort.sort(actual, name -> name, byLength);
+        assertEquals(expected, actual);
     }
 }
