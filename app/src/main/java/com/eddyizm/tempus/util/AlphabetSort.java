@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 
 /**
  * Name ordering shared by the sorted lists and the A–Z scrubber, so that the letter a row is
@@ -20,7 +19,6 @@ import java.util.regex.Pattern;
 public final class AlphabetSort {
     public static final String OTHER = "#";
 
-    private static final Pattern DIACRITICS = Pattern.compile("\\p{M}+");
 
     public static final Comparator<String> COMPARATOR = (a, b) -> {
         String ka = sortKey(a);
@@ -81,7 +79,7 @@ public final class AlphabetSort {
         String key = name.trim();
         int articleEnd = leadingArticleEnd(key);
         if (articleEnd > 0 && articleEnd < key.length()) key = key.substring(articleEnd);
-        if (!isAscii(key)) key = DIACRITICS.matcher(Normalizer.normalize(key, Normalizer.Form.NFD)).replaceAll("");
+        if (!isAscii(key)) key = stripMarks(Normalizer.normalize(key, Normalizer.Form.NFD));
         return key.toLowerCase(Locale.ROOT);
     }
 
@@ -91,6 +89,21 @@ public final class AlphabetSort {
         int end = 3;
         while (end < key.length() && isRegexSpace(key.charAt(end))) end++;
         return end > 3 ? end : 0;
+    }
+
+    /** Drops what {@code \p{M}} matches (combining marks), the accents NFD splits off letters. */
+    private static String stripMarks(String s) {
+        StringBuilder out = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); ) {
+            int c = s.codePointAt(i);
+            int type = Character.getType(c);
+            if (type != Character.NON_SPACING_MARK && type != Character.ENCLOSING_MARK
+                    && type != Character.COMBINING_SPACING_MARK) {
+                out.appendCodePoint(c);
+            }
+            i += Character.charCount(c);
+        }
+        return out.toString();
     }
 
     /** {@code \s} in a Java regex: space, tab, newline, vertical tab, form feed, carriage return. */

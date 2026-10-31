@@ -12,6 +12,7 @@ import androidx.preference.PreferenceManager;
 import com.eddyizm.tempus.github.Github;
 import com.eddyizm.tempus.helper.ThemeHelper;
 import com.eddyizm.tempus.model.Server;
+import com.eddyizm.tempus.subsonic.RetrofitClient;
 import com.eddyizm.tempus.subsonic.Subsonic;
 import com.eddyizm.tempus.subsonic.SubsonicPreferences;
 import com.eddyizm.tempus.ui.crash.CrashActivity;
@@ -57,6 +58,8 @@ public class App extends Application {
         preferences = PreferenceManager.getDefaultSharedPreferences(context);
 
         ClientCertManager.setupSslSocketFactory(context);
+
+        new Thread(RetrofitClient::warmUp, "gson-warm-up").start();
     }
 
     public static App getInstance() {

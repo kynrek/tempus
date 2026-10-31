@@ -2,6 +2,7 @@ package com.eddyizm.tempus.subsonic
 
 import com.eddyizm.tempus.App
 import com.eddyizm.tempus.BuildConfig
+import com.eddyizm.tempus.subsonic.base.ApiResponse
 import com.eddyizm.tempus.subsonic.models.Bookmarks
 import com.eddyizm.tempus.subsonic.models.BookmarksDeserializer
 import com.eddyizm.tempus.subsonic.utils.CacheUtil
@@ -22,12 +23,6 @@ class RetrofitClient(subsonic: Subsonic) {
     val retrofit: Retrofit
 
     init {
-        val gson = GsonBuilder()
-            .registerTypeAdapter(Date::class.java, EmptyDateTypeAdapter())
-            .registerTypeAdapter(Bookmarks::class.java, BookmarksDeserializer())
-            .setLenient()
-            .create()
-
         retrofit = Retrofit.Builder()
             .baseUrl(sanitizeBaseUrl(subsonic.url))
             .addConverterFactory(GsonConverterFactory.create(gson))
@@ -62,6 +57,27 @@ class RetrofitClient(subsonic: Subsonic) {
     companion object {
         /** Syntactically valid but unreachable; used only when no usable server URL is configured. */
         private const val PLACEHOLDER_BASE_URL = "https://localhost/rest/"
+
+        /**
+         * Shared by every client: Gson caches the reflective adapter for [ApiResponse], which takes
+         * hundreds of ms to build on a slow device, so a Gson per client rebuilt it on each first call.
+         */
+        private val gson by lazy {
+            GsonBuilder()
+                .registerTypeAdapter(Date::class.java, EmptyDateTypeAdapter())
+                .registerTypeAdapter(Bookmarks::class.java, BookmarksDeserializer())
+                .setLenient()
+                .create()
+        }
+
+        /** OkHttp allows only one [Cache] per directory, so the clients share it. */
+        private val cache by lazy { Cache(App.getContext().cacheDir, 10L * 1024 * 1024) }
+
+        /** Builds the [ApiResponse] adapter off the main thread before the first request needs it. */
+        @JvmStatic
+        fun warmUp() {
+            gson.getAdapter(ApiResponse::class.java)
+        }
     }
 
     private fun getOkHttpClient(): OkHttpClient {
@@ -86,7 +102,7 @@ class RetrofitClient(subsonic: Subsonic) {
             .addInterceptor(cacheUtil.offlineInterceptor)
             .addNetworkInterceptor(ServerHeaders.createInterceptor())
             // .addNetworkInterceptor(cacheUtil.onlineInterceptor)
-            .cache(getCache())
+            .cache(cache)
             .setupSsl()
             .build()
     }
@@ -99,11 +115,6 @@ class RetrofitClient(subsonic: Subsonic) {
             loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.NONE)
         }
         return loggingInterceptor
-    }
-
-    private fun getCache(): Cache {
-        val cacheSize = 10 * 1024 * 1024
-        return Cache(App.getContext().cacheDir, cacheSize.toLong())
     }
 
     private fun OkHttpClient.Builder.setupSsl(): OkHttpClient.Builder {

@@ -68,7 +68,8 @@ public class AlphabetSortTest {
     private static final List<String> SAMPLES = Arrays.asList(
             null, "", " ", "the", "The", "the ", "The  Who", "the\tWho", "THE\u000BEnd", "Thee Oh Sees",
             "Therapy?", "theatre", "The\u00A0Band", "  The Beatles  ", "Édith Piaf", "The Édith", "Beyoncé",
-            "Sigur Rós", "Mötley Crüe", "坂本龍一", "2Pac", "~tilde", "ÅMB", "the The", "Ωmega", "ǅemal");
+            "Sigur Rós", "Mötley Crüe", "坂本龍一", "2Pac", "~tilde", "ÅMB", "the The", "Ωmega", "ǅemal",
+            "Sơn Tùng M-TP", "हिन्दी", "a\u20DDb", "Don’t Stop", "e\uD834\uDD65x", "Ｆｕｌｌ");
 
     @Test
     public void sortKey_matchesTheRegexVersion() {
