@@ -20,8 +20,9 @@
         app:showAsAction="never" />
     <item
         android:id="@+id/action_edit_playlist"
+        android:icon="@drawable/ic_edit"
         android:title="@string/menu_edit_playlist_button"
-        app:showAsAction="never" />
+        app:showAsAction="always|withText" />
     <item
         android:id="@+id/action_edit_playlist_details"
         android:title="@string/menu_edit_playlist_details_button"

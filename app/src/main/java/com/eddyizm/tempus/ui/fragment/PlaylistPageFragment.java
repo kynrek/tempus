@@ -79,6 +79,16 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+
+        // A save in the editor refetches the tracks through the repository's update trigger, but
+        // a rename has to reach the header from here. Delivered once this page is started again.
+        getParentFragmentManager().setFragmentResultListener(PlaylistEditorFragment.RESULT_SAVED, this, (key, result) -> {
+            Playlist playlist = playlistPageViewModel != null ? playlistPageViewModel.getPlaylist() : null;
+            String name = result.getString(Constants.PLAYLIST_NAME);
+            if (playlist != null && name != null && playlist.getId().equals(result.getString(Constants.PLAYLIST_ID))) {
+                showName(name);
+            }
+        });
     }
 
     @Override
@@ -233,12 +243,7 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
             PlaylistEditorDialog dialog = new PlaylistEditorDialog(new PlaylistCallback() {
                 @Override
                 public void onRenamed(String name) {
-                    playlistPageViewModel.getPlaylist().setName(name);
-
-                    if (bind != null) {
-                        bind.animToolbar.setTitle(name);
-                        bind.playlistNameLabel.setText(name);
-                    }
+                    showName(name);
                 }
             });
             dialog.setArguments(bundle);
@@ -247,6 +252,15 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
         }
 
         return false;
+    }
+
+    private void showName(String name) {
+        playlistPageViewModel.getPlaylist().setName(name);
+
+        if (bind != null) {
+            bind.animToolbar.setTitle(name);
+            bind.playlistNameLabel.setText(name);
+        }
     }
 
     private void init(Playlist playlist) {

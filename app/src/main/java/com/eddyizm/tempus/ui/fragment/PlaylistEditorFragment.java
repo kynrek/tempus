@@ -1,48 +1,54 @@
 package com.eddyizm.tempus.ui.fragment;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.util.UnstableApi;
 import androidx.navigation.fragment.NavHostFragment;
-import androidx.recyclerview.widget.ItemTouchHelper;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.eddyizm.tempus.R;
 import com.eddyizm.tempus.databinding.FragmentPlaylistEditorBinding;
 import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.subsonic.models.Playlist;
 import com.eddyizm.tempus.ui.activity.MainActivity;
-import com.eddyizm.tempus.ui.adapter.PlaylistDialogSongHorizontalAdapter;
+import com.eddyizm.tempus.ui.playlist.PlaylistEditorBridge;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.viewmodel.PlaylistEditorViewModel;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 
-import java.util.List;
-
 /**
- * Reorders and removes the tracks of one playlist, then sends the whole list on Save through
- * PlaylistEditorViewModel.updatePlaylist, a rename followed by a full replace, since Subsonic has
- * no reorder call. Leaving the screen discards every change.
+ * Renames, reorders and removes the tracks of one playlist in a full-panel Compose screen laid out
+ * like the queue, then sends the whole list on Save through PlaylistEditorViewModel.saveTracks, a
+ * rename followed by a full replace, since Subsonic has no reorder call. Leaving with unsaved
+ * changes asks whether to save or discard them.
  * <p>
  * The view model belongs to this fragment, not the activity, so the edited list survives rotation
- * and is dropped with the screen or on process death. The adapter and the view model share one
- * list, so a remove or a move edits it in place and nothing is posted back through LiveData.
+ * and is dropped with the screen or on process death. The screen's rows and the view model's list
+ * are edited together, so nothing is posted back through LiveData.
  */
 @UnstableApi
-public class PlaylistEditorFragment extends Fragment implements PlaylistDialogSongHorizontalAdapter.Listener {
+public class PlaylistEditorFragment extends Fragment implements PlaylistEditorBridge.Listener {
+    /** Set on the parent fragment manager after a save, with the playlist's id and name. */
+    public static final String RESULT_SAVED = "playlist_editor_saved";
+
     private FragmentPlaylistEditorBinding bind;
     private PlaylistEditorViewModel playlistEditorViewModel;
-    private PlaylistDialogSongHorizontalAdapter adapter;
-    private ItemTouchHelper itemTouchHelper;
+    private PlaylistEditorBridge editor;
     private Snackbar undoSnackbar;
+    private AlertDialog openDialog;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -62,7 +68,11 @@ public class PlaylistEditorFragment extends Fragment implements PlaylistDialogSo
             playlistEditorViewModel.setPlaylistToEdit(playlist);
         }
 
-        initToolbar();
+        editor = new PlaylistEditorBridge(bind.playlistEditorComposeView, this);
+        editor.init(playlistEditorViewModel.getEditedName());
+        editor.setSaving(playlistEditorViewModel.isSavePending());
+
+        initBackPressed();
         initSongsView();
         observeSaveResult();
 
@@ -73,25 +83,29 @@ public class PlaylistEditorFragment extends Fragment implements PlaylistDialogSo
     public void onDestroyView() {
         super.onDestroyView();
         // The snackbar is shown on the activity's view, not on this screen's own, and its action
-        // reaches the adapter that is nulled just below.
+        // reaches the editor that is nulled just below.
         if (undoSnackbar != null) undoSnackbar.dismiss();
         undoSnackbar = null;
+        if (openDialog != null) openDialog.dismiss();
+        openDialog = null;
         bind = null;
-        adapter = null;
-        itemTouchHelper = null;
+        editor = null;
     }
 
-    private void initToolbar() {
-        bind.toolbar.setNavigationOnClickListener(v -> NavHostFragment.findNavController(this).navigateUp());
-        bind.toolbar.getMenu().findItem(R.id.action_save_playlist).setEnabled(!playlistEditorViewModel.isSavePending());
-        bind.toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_save_playlist) {
-                item.setEnabled(false);
-                if (undoSnackbar != null) undoSnackbar.dismiss();
-                playlistEditorViewModel.saveTracks();
-                return true;
+    private void initBackPressed() {
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                // The player, expanded over this screen, takes the back press first.
+                MainActivity activity = (MainActivity) requireActivity();
+                if (activity.isBottomSheetExpanded()) {
+                    setEnabled(false);
+                    activity.getOnBackPressedDispatcher().onBackPressed();
+                    setEnabled(true);
+                    return;
+                }
+                onBack();
             }
-            return false;
         });
     }
 
@@ -107,23 +121,23 @@ public class PlaylistEditorFragment extends Fragment implements PlaylistDialogSo
             playlistEditorViewModel.clearSaveResult();
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
             playlistEditorViewModel.clearSavePending();
-            bind.toolbar.getMenu().findItem(R.id.action_save_playlist).setEnabled(true);
+            editor.setSaving(false);
             if (message == R.string.playlist_editor_dialog_action_save_success) {
+                // The page refetches its tracks on its own, the name it learns from here.
+                Playlist playlist = playlistEditorViewModel.getPlaylistToEdit();
+                Bundle result = new Bundle();
+                result.putString(Constants.PLAYLIST_ID, playlist.getId());
+                result.putString(Constants.PLAYLIST_NAME, playlist.getName());
+                getParentFragmentManager().setFragmentResult(RESULT_SAVED, result);
                 NavHostFragment.findNavController(this).navigateUp();
             }
         });
     }
 
     private void initSongsView() {
-        bind.playlistSongRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        bind.playlistSongRecyclerView.setHasFixedSize(true);
-
-        adapter = new PlaylistDialogSongHorizontalAdapter(this);
-        bind.playlistSongRecyclerView.setAdapter(adapter);
-
         playlistEditorViewModel.getPlaylistSongLiveList().observe(getViewLifecycleOwner(), songs -> {
             if (songs != null) {
-                adapter.setItems(songs);
+                editor.setSongs(songs);
             } else {
                 // With the allowCache false the view model passes, the repository publishes null
                 // when the fetch fails or the playlist is gone, so there is nothing to edit and a
@@ -132,39 +146,82 @@ public class PlaylistEditorFragment extends Fragment implements PlaylistDialogSo
                 NavHostFragment.findNavController(this).navigateUp();
             }
         });
+    }
 
-        itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
-            @Override
-            public boolean isLongPressDragEnabled() {
-                return false;
-            }
+    /** Leaves at once when there is nothing to lose. A save already sent carries on without the screen. */
+    @Override
+    public void onBack() {
+        if (bind == null) return;
 
-            @Override
-            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
-                if (playlistEditorViewModel.isSavePending()) return false;
+        if (playlistEditorViewModel.isSavePending() || !playlistEditorViewModel.hasUnsavedChanges()) {
+            NavHostFragment.findNavController(this).navigateUp();
+            return;
+        }
 
-                int from = viewHolder.getBindingAdapterPosition();
-                int to = target.getBindingAdapterPosition();
-                // The drop target can be more than one row away, and notifyItemMoved means the
-                // rows in between shift by one, so the list has to move, not swap.
-                List<Child> items = adapter.getItems();
-                items.add(to, items.remove(from));
-                adapter.notifyItemMoved(from, to);
-                return true;
-            }
+        if (openDialog != null && openDialog.isShowing()) return;
+        openDialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.playlist_editor_unsaved_title)
+                .setMessage(getString(R.string.playlist_editor_unsaved_message, playlistEditorViewModel.getEditedName()))
+                .setPositiveButton(R.string.playlist_editor_dialog_positive_button, (dialog, which) -> onSave())
+                .setNegativeButton(R.string.playlist_editor_discard, (dialog, which) -> {
+                    if (bind != null) NavHostFragment.findNavController(this).navigateUp();
+                })
+                .setNeutralButton(R.string.playlist_editor_keep_editing, null)
+                .show();
+    }
 
-            @Override
-            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) { }
-        });
-        itemTouchHelper.attachToRecyclerView(bind.playlistSongRecyclerView);
+    @Override
+    public void onSave() {
+        if (bind == null || playlistEditorViewModel.isSavePending()) return;
+
+        if (undoSnackbar != null) undoSnackbar.dismiss();
+        editor.setSaving(true);
+        playlistEditorViewModel.saveTracks();
+    }
+
+    /** The new name is kept with the other edits and goes out with the next save. */
+    @Override
+    public void onRename() {
+        if (bind == null || playlistEditorViewModel.isSavePending()) return;
+        if (openDialog != null && openDialog.isShowing()) return;
+
+        Context context = requireContext();
+        EditText name = new EditText(context);
+        name.setSingleLine();
+        name.setHint(R.string.playlist_editor_dialog_hint_name);
+        name.setText(playlistEditorViewModel.getEditedName());
+        name.setSelectAllOnFocus(true);
+        int padding = (int) (20 * context.getResources().getDisplayMetrics().density);
+        FrameLayout frame = new FrameLayout(context);
+        frame.setPadding(padding, padding / 2, padding, 0);
+        frame.addView(name);
+
+        openDialog = new MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.playlist_editor_rename)
+                .setView(frame)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    String newName = name.getText().toString().trim();
+                    if (newName.isEmpty() || editor == null) return;
+                    playlistEditorViewModel.setEditedName(newName);
+                    editor.setName(newName);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .create();
+        if (openDialog.getWindow() != null) {
+            openDialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        }
+        openDialog.show();
+        name.requestFocus();
+    }
+
+    @Override
+    public void onMove(int from, int to) {
+        playlistEditorViewModel.moveInPlaylistSongLiveList(from, to);
     }
 
     @Override
     public void onRemove(int position) {
-        if (playlistEditorViewModel.isSavePending()) return;
-
         Child removed = playlistEditorViewModel.removeFromPlaylistSongLiveList(position);
-        adapter.notifyItemRemoved(position);
 
         MainActivity activity = (MainActivity) requireActivity();
         if (activity.bind == null) return;
@@ -173,19 +230,17 @@ public class PlaylistEditorFragment extends Fragment implements PlaylistDialogSo
         undoSnackbar = Snackbar.make(activity.bind.playerBottomSheet, R.string.playlist_editor_removed_track, Snackbar.LENGTH_LONG)
                 .setAnchorView(activity.getSnackbarAnchor())
                 .setAction(R.string.song_bottom_sheet_undo, v -> {
-                    if (adapter == null || undone[0] || playlistEditorViewModel.isSavePending()) return;
+                    if (editor == null || undone[0] || playlistEditorViewModel.isSavePending()) return;
                     undone[0] = true;
 
                     int at = playlistEditorViewModel.restoreToPlaylistSongLiveList(position, removed);
-                    if (at >= 0) adapter.notifyItemInserted(at);
+                    if (at >= 0) editor.restore(at, removed);
                 });
         undoSnackbar.show();
     }
 
     @Override
-    public void onStartDrag(@NonNull RecyclerView.ViewHolder viewHolder) {
-        if (playlistEditorViewModel.isSavePending()) return;
-
-        itemTouchHelper.startDrag(viewHolder);
+    public boolean hasUnsavedChanges() {
+        return playlistEditorViewModel.hasUnsavedChanges();
     }
 }

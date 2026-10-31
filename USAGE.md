@@ -366,10 +366,10 @@ Connections use mutual TLS, and each phone is approved by hand. There is no unen
 
 ### Editing a playlist
 
-Open a playlist and pick Edit playlist from its menu to rename it, drag tracks into a new order, or remove tracks. Saving writes the list exactly as it stands on screen, so a removal or a reorder takes effect on the server instead of being added on top of the tracks already there.
+Open a playlist and tap **Edit playlist** (the pencil) in its title bar. The editor fills the screen like the queue does: drag a track by its handle on the right to move it, tap its trash button (or swipe it left) to remove it, and tap the name or the pencil beside it to rename the playlist. Nothing reaches the server until you tap **Save**; the line under the name says "Not saved" while there are changes. Saving writes the list exactly as it stands on screen, so a removal or a reorder takes effect on the server instead of being added on top of the tracks already there, and the playlist page shows the new order when you are back on it. The back arrow leaves at once when nothing changed, and otherwise asks whether to save, discard or keep editing.
 
 Two things to know:
-- A playlist has to keep at least one track. A save that would leave it empty is refused and the editor says so, use Delete if you want the playlist gone.
+- A playlist has to keep at least one track, so the last track has no trash button. Use Delete under Edit details if you want the playlist gone.
 - Saving needs the server. The editor will not save from the offline cache, because writing that older copy back would drop anything added to the playlist since it was cached.
 
 ### Sorting playlists

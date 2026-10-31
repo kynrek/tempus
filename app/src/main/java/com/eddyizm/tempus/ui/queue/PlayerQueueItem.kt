@@ -2,6 +2,7 @@ package com.eddyizm.tempus.ui.queue
 
 import android.net.Uri
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -84,7 +85,8 @@ fun PlayerQueueItem(
     dragHandleModifier: Modifier = Modifier,
     downloadedIds: Set<String> = emptySet(),
     canDismiss: Boolean = true,
-    externalRefreshTrigger: Any? = null
+    externalRefreshTrigger: Any? = null,
+    @StringRes removeLabel: Int = R.string.player_queue_remove
 ) {
     val context = LocalContext.current
     val textAlpha = if (isPrior) 0.45f else 1.0f
@@ -171,7 +173,7 @@ fun PlayerQueueItem(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_delete),
-                        contentDescription = stringResource(R.string.player_queue_remove),
+                        contentDescription = stringResource(removeLabel),
                         tint = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
@@ -306,7 +308,7 @@ fun PlayerQueueItem(
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_delete),
-                                    contentDescription = stringResource(R.string.player_queue_remove),
+                                    contentDescription = stringResource(removeLabel),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                     modifier = Modifier.size(22.dp)
                                 )

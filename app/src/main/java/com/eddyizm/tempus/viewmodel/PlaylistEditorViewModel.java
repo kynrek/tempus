@@ -36,8 +36,9 @@ public class PlaylistEditorViewModel extends AndroidViewModel {
     private final MutableLiveData<Integer> saveResult = new MutableLiveData<>();
     private boolean savePending;
 
-    private Integer loadedSongCount;
-    private Observer<List<Child>> loadedCountObserver;
+    private List<String> loadedSongIds;
+    private Observer<List<Child>> loadedIdsObserver;
+    private String editedName;
 
     public PlaylistEditorViewModel(@NonNull Application application) {
         super(application);
@@ -58,7 +59,7 @@ public class PlaylistEditorViewModel extends AndroidViewModel {
             return;
         }
 
-        if (songsId.isEmpty() && loadedSongCount != null && loadedSongCount > 0) {
+        if (songsId.isEmpty() && loadedSongIds != null && !loadedSongIds.isEmpty()) {
             if (callback != null) callback.onEmptied();
             return;
         }
@@ -97,38 +98,61 @@ public class PlaylistEditorViewModel extends AndroidViewModel {
         this.toEdit = playlist;
 
         // Detach before reassigning, while songLiveList still points at the list being observed.
-        detachLoadedCountObserver();
-        loadedSongCount = null;
+        detachLoadedIdsObserver();
+        loadedSongIds = null;
+        editedName = playlist != null ? playlist.getName() : null;
 
         if (playlist != null) {
             this.songLiveList = playlistRepository.getPlaylistSongs(toEdit.getId(), false);
-            attachLoadedCountObserver();
+            attachLoadedIdsObserver();
         } else {
             this.songLiveList = new MutableLiveData<>();
         }
     }
 
-    private void attachLoadedCountObserver() {
-        loadedCountObserver = songs -> {
+    // The ids as loaded, before any edit, so the editor can tell whether there is anything to save.
+    private void attachLoadedIdsObserver() {
+        loadedIdsObserver = songs -> {
             if (songs == null) return;
 
-            loadedSongCount = songs.size();
-            detachLoadedCountObserver();
+            loadedSongIds = getPlaylistSongIds();
+            detachLoadedIdsObserver();
         };
 
-        songLiveList.observeForever(loadedCountObserver);
+        songLiveList.observeForever(loadedIdsObserver);
     }
 
-    private void detachLoadedCountObserver() {
-        if (loadedCountObserver == null) return;
+    private void detachLoadedIdsObserver() {
+        if (loadedIdsObserver == null) return;
 
-        songLiveList.removeObserver(loadedCountObserver);
-        loadedCountObserver = null;
+        songLiveList.removeObserver(loadedIdsObserver);
+        loadedIdsObserver = null;
     }
 
     @Override
     protected void onCleared() {
-        detachLoadedCountObserver();
+        detachLoadedIdsObserver();
+    }
+
+    /** The name the editor shows, sent with the next save. */
+    public String getEditedName() {
+        return editedName;
+    }
+
+    public void setEditedName(String name) {
+        editedName = name;
+    }
+
+    /**
+     * True when the name or the tracks differ from what was loaded. A track moved away and back
+     * again is no change.
+     */
+    public boolean hasUnsavedChanges() {
+        if (toEdit == null) return false;
+        if (!Objects.equals(editedName, toEdit.getName())) return true;
+
+        ArrayList<String> ids = getPlaylistSongIds();
+        return ids != null && loadedSongIds != null && !ids.equals(loadedSongIds);
     }
 
     public LiveData<List<Child>> getPlaylistSongLiveList() {
@@ -158,9 +182,15 @@ public class PlaylistEditorViewModel extends AndroidViewModel {
         return at;
     }
 
+    /** Moves a track in the loaded list in place, the same way the editor's rows moved. */
+    public void moveInPlaylistSongLiveList(int from, int to) {
+        List<Child> songs = Objects.requireNonNull(songLiveList.getValue());
+        songs.add(to, songs.remove(from));
+    }
+
     /**
-     * Sends the loaded list under the playlist's current name. The outcome arrives through
-     * {@link #getSaveResult()} instead of a callback.
+     * Sends the loaded list under the edited name. When only the name changed the tracks are not
+     * resent. The outcome arrives through {@link #getSaveResult()} instead of a callback.
      */
     @OptIn(markerClass = UnstableApi.class)
     public void saveTracks() {
@@ -168,9 +198,14 @@ public class PlaylistEditorViewModel extends AndroidViewModel {
         // lose to the earlier one.
         if (savePending) return;
         savePending = true;
-        updatePlaylist(toEdit.getName(), new PlaylistRepository.PlaylistActionCallback() {
+        String name = editedName;
+        ArrayList<String> sentIds = getPlaylistSongIds();
+        PlaylistRepository.PlaylistActionCallback callback = new PlaylistRepository.PlaylistActionCallback() {
             @Override
             public void onSuccess() {
+                // Retrofit answers on the main thread, where the editor reads these.
+                toEdit.setName(name);
+                if (sentIds != null) loadedSongIds = sentIds;
                 saveResult.postValue(R.string.playlist_editor_dialog_action_save_success);
             }
 
@@ -183,7 +218,13 @@ public class PlaylistEditorViewModel extends AndroidViewModel {
             public void onEmptied() {
                 saveResult.postValue(R.string.playlist_editor_dialog_action_save_empty);
             }
-        });
+        };
+
+        if (sentIds != null && sentIds.equals(loadedSongIds)) {
+            renamePlaylist(name, callback);
+        } else {
+            updatePlaylist(name, callback);
+        }
     }
 
     /**
