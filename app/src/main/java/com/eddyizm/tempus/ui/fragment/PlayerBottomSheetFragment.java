@@ -65,6 +65,7 @@ public class PlayerBottomSheetFragment extends Fragment {
 
     private Handler progressBarHandler;
     private Runnable progressBarRunnable;
+    private MediaBrowser progressBarBrowser;
 
     @Nullable
     @Override
@@ -122,6 +123,7 @@ public class PlayerBottomSheetFragment extends Fragment {
         if (progressBarHandler != null) {
             progressBarHandler.removeCallbacks(progressBarRunnable);
         }
+        progressBarBrowser = null;
         com.eddyizm.tempus.App.getInstance().getPreferences().unregisterOnSharedPreferenceChangeListener(lanSwitchListener);
         remoteVisible = false;
         remoteCover = null;
@@ -202,6 +204,7 @@ public class PlayerBottomSheetFragment extends Fragment {
                 setMediaControllerUI(mediaBrowser);
                 setMetadata(mediaBrowser.getMediaMetadata());
                 setContentDuration(mediaBrowser.getContentDuration());
+                setProgress(mediaBrowser);
             }
 
             @Override
@@ -209,6 +212,8 @@ public class PlayerBottomSheetFragment extends Fragment {
                 setMediaControllerUI(mediaBrowser);
                 setMetadata(mediaBrowser.getMediaMetadata());
                 setContentDuration(mediaBrowser.getContentDuration());
+                // Seeks and track changes while paused don't tick the timer, so redraw now.
+                setProgress(mediaBrowser);
             }
 
             @Override
@@ -572,17 +577,20 @@ public class PlayerBottomSheetFragment extends Fragment {
 
     private void defineProgressBarHandler(MediaBrowser mediaBrowser) {
         progressBarHandler = new Handler();
+        progressBarBrowser = mediaBrowser;
         progressBarRunnable = () -> {
             setProgress(mediaBrowser);
             progressBarHandler.postDelayed(progressBarRunnable, 1000);
         };
     }
 
+    /** Ticks once a second while playing; on pause, shows where it stopped instead of the last tick. */
     private void runProgressBarHandler(boolean isPlaying) {
+        progressBarHandler.removeCallbacks(progressBarRunnable);
         if (isPlaying) {
-            progressBarHandler.postDelayed(progressBarRunnable, 1000);
-        } else {
-            progressBarHandler.removeCallbacks(progressBarRunnable);
+            progressBarHandler.post(progressBarRunnable);
+        } else if (progressBarBrowser != null) {
+            setProgress(progressBarBrowser);
         }
     }
 

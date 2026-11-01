@@ -106,9 +106,11 @@ public class AlphabetScrubber extends View {
     private final Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint bandPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint holdPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint shadePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF trackRect = new RectF();
     private final RectF bubbleRect = new RectF();
     private final RectF bandRect = new RectF();
+    private final RectF shadeRect = new RectF();
     private final int[] location = new int[2];
     private final int[] playerLocation = new int[2];
     private float lastVisibleBottom = -1f;
@@ -132,6 +134,8 @@ public class AlphabetScrubber extends View {
     private final float magnifyShift = dp(44);
     private final float bubbleRadius = dp(46);
     private final float bubbleGap = dp(56);
+    /** How far left of the strip the panel behind the magnified labels reaches, up to the bubble. */
+    private final float shadeReach = dp(54);
     /** Years and months: the smallest label drawn, and the size at rest when they don't all fit. */
     private final float minLabelSize = sp(10);
     private final float restLabelSize = sp(12);
@@ -149,6 +153,7 @@ public class AlphabetScrubber extends View {
     private final int activeLetterColor;
     private final int trackColor;
     private final int bandColor;
+    private final int surfaceColor;
 
     private RecyclerView recyclerView;
     private SectionProvider provider;
@@ -243,6 +248,7 @@ public class AlphabetScrubber extends View {
         activeLetterColor = primary;
         trackColor = container;
         bandColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSecondaryContainer, container);
+        surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.WHITE);
 
         letterPaint.setTextAlign(Paint.Align.CENTER);
         letterPaint.setTypeface(Typeface.DEFAULT_BOLD);
@@ -382,6 +388,14 @@ public class AlphabetScrubber extends View {
         float top = getPaddingTop();
         float left = stripLeft();
         float centerX = left + stripWidth / 2f;
+
+        if (press > 0f) {
+            // Magnified labels reach out over the list; a panel in the list's own colour keeps
+            // row text and ⋮ buttons from showing through them.
+            shadeRect.set(left - shadeReach, top - dp(6), left + stripWidth, top + cell * n + dp(6));
+            shadePaint.setColor(withAlpha(surfaceColor, 0.94f * Math.min(1f, press)));
+            canvas.drawRoundRect(shadeRect, dp(20), dp(20), shadePaint);
+        }
 
         trackRect.set(left + dp(6), top, left + stripWidth - dp(6), top + cell * n);
         // press overshoots past 1 as the finger lands (OvershootInterpolator); an alpha over 255 throws.

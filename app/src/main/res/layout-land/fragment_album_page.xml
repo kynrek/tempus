@@ -225,12 +225,17 @@
                                 android:layout_marginStart="4dp"
                                 android:layout_marginEnd="4dp"
                                 android:layout_weight="1"
-                                android:padding="10dp"
+                                android:minWidth="0dp"
+                                android:paddingStart="4dp"
+                                android:paddingTop="6dp"
+                                android:paddingEnd="4dp"
+                                android:paddingBottom="6dp"
                                 android:text="@string/album_page_play_button"
                                 android:textAllCaps="false"
                                 app:icon="@drawable/ic_play"
-                                app:iconGravity="textStart"
-                                app:iconPadding="18dp" />
+                                android:maxLines="1"
+                                app:iconGravity="top"
+                                app:iconPadding="2dp" />
 
                             <Button
                                 android:id="@+id/album_page_shuffle_button"
@@ -239,14 +244,20 @@
                                 android:layout_marginStart="4dp"
                                 android:layout_marginEnd="4dp"
                                 android:layout_weight="1"
-                                android:padding="10dp"
+                                android:minWidth="0dp"
+                                android:paddingStart="4dp"
+                                android:paddingTop="6dp"
+                                android:paddingEnd="4dp"
+                                android:paddingBottom="6dp"
                                 android:text="@string/album_page_shuffle_button"
                                 android:textAllCaps="false"
                                 app:icon="@drawable/ic_shuffle"
-                                app:iconGravity="textStart"
-                                app:iconPadding="18dp" />
+                                android:maxLines="1"
+                                app:iconGravity="top"
+                                app:iconPadding="2dp" />
 
-                            <!-- Adds the whole album to the end of the queue, in track order. -->
+                            <!-- Adds the whole album to the end of the queue, in track order. Icons sit above the
+                                 labels here: side by side, the narrow column cut "Shuffle" to "Shu". -->
                             <Button
                                 android:id="@+id/album_page_queue_button"
                                 android:layout_width="0dp"
@@ -254,12 +265,17 @@
                                 android:layout_marginStart="4dp"
                                 android:layout_marginEnd="4dp"
                                 android:layout_weight="1"
-                                android:padding="10dp"
+                                android:minWidth="0dp"
+                                android:paddingStart="4dp"
+                                android:paddingTop="6dp"
+                                android:paddingEnd="4dp"
+                                android:paddingBottom="6dp"
                                 android:text="@string/album_page_queue_button"
                                 android:textAllCaps="false"
                                 app:icon="@drawable/ic_queue_q"
-                                app:iconGravity="textStart"
-                                app:iconPadding="12dp" />
+                                android:maxLines="1"
+                                app:iconGravity="top"
+                                app:iconPadding="2dp" />
                         </LinearLayout>
 
                         <ToggleButton
