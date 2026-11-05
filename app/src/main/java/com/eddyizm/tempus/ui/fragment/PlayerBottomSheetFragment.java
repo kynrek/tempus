@@ -606,6 +606,10 @@ public class PlayerBottomSheetFragment extends Fragment {
         int progress = bar.getProgress();
         bar.setProgressDrawable(headerLine);
         bar.setProgress(progress);
+        // In the narrow side column the thumb would cover the start of the wave; the wave's end
+        // marks the position, and the thumb shows only while dragging.
+        boolean thumbOnlyWhileDragging = !"bottom".equals(Preferences.getPanelPosition());
+        if (thumbOnlyWhileDragging && bar.getThumb() != null) bar.getThumb().mutate().setAlpha(0);
         bind.playerHeaderLayout.playerHeaderSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
@@ -615,11 +619,13 @@ public class PlayerBottomSheetFragment extends Fragment {
             @Override
             public void onStartTrackingTouch(android.widget.SeekBar seekBar) {
                 scrubbing = true;
+                if (thumbOnlyWhileDragging && seekBar.getThumb() != null) seekBar.getThumb().setAlpha(255);
             }
 
             @Override
             public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
                 scrubbing = false;
+                if (thumbOnlyWhileDragging && seekBar.getThumb() != null) seekBar.getThumb().setAlpha(0);
                 long positionMs = seekBar.getProgress() * 1000L;
                 if (com.eddyizm.tempus.lan.LanRemoteSession.isActive() || mediaBrowserListenableFuture == null) return;
                 mediaBrowserListenableFuture.addListener(() -> {

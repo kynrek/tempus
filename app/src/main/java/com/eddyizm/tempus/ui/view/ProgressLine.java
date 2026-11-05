@@ -75,7 +75,9 @@ public final class ProgressLine {
             canvas.drawLine(left, cy, x, cy, played);
             return;
         }
-        float wavelength = WAVELENGTH_DP * density;
+        // A narrow line (the side panel's) gets shorter waves, or the first part of a song would
+        // show no wave at all: at most a tenth of the line, but not under 8 dp.
+        float wavelength = Math.min(WAVELENGTH_DP * density, Math.max(8 * density, (right - left) / 10));
         float phase = moving ? (SystemClock.uptimeMillis() % WAVE_PERIOD_MS) / (float) WAVE_PERIOD_MS : 0f;
         float a = amplitude();
         path.rewind();
@@ -83,8 +85,8 @@ public final class ProgressLine {
         boolean first = true;
         for (float px = left; ; px += step) {
             if (px > x) px = x;
-            // Eases in over the first half wave so the line starts on the centre.
-            float ease = Math.min(1f, (px - left) / (wavelength / 2));
+            // Eases in over the first quarter wave so the line starts on the centre.
+            float ease = Math.min(1f, (px - left) / (wavelength / 4));
             float y = cy + (float) (a * ease * Math.sin(2 * Math.PI * ((px - left) / wavelength - phase)));
             if (first) { path.moveTo(px, y); first = false; } else path.lineTo(px, y);
             if (px >= x) break;
