@@ -320,11 +320,9 @@ public class PlayerBottomSheetFragment extends Fragment {
         initHeaderSeekBar();
         // The queue opens over whatever is on screen, so Back returns there.
         bind.playerHeaderLayout.playerHeaderQueueButton.setOnClickListener(view -> goToQueuePage());
-        // Long press: queue mode on/off (also a switch at the top of the queue screen).
-        bind.playerHeaderLayout.playerHeaderQueueButton.setOnLongClickListener(view -> {
-            setQueueMode(!Preferences.isQueueMode());
-            return true;
-        });
+        // Slide it like a switch: right turns queue mode on, left turns it off; a tap still opens
+        // the queue (the same switch is at the top of the queue screen).
+        bind.playerHeaderLayout.playerHeaderQueueButton.setOnTouchListener(new QueueSlide());
     }
 
     private void initPlayerController() {
@@ -531,7 +529,59 @@ public class PlayerBottomSheetFragment extends Fragment {
         bind.playerHeaderLayout.playerHeaderQueueButton.setAlpha(on ? 1f : 0.6f);
     }
 
-    /** Queue mode switched (long press on Queue, or the switch on the queue screen). */
+    /**
+     * Horizontal slide on the Queue button: past a short distance it sets queue mode (right on,
+     * left off) instead of opening the queue. The button follows the finger a little and snaps back.
+     */
+    private final class QueueSlide implements View.OnTouchListener {
+        private float downX;
+        private float downY;
+        private boolean sliding;
+
+        @Override
+        public boolean onTouch(View v, android.view.MotionEvent e) {
+            float density = v.getResources().getDisplayMetrics().density;
+            float threshold = 24 * density;
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    downX = e.getRawX();
+                    downY = e.getRawY();
+                    sliding = false;
+                    return false;   // let the button show its press and handle a tap
+                case android.view.MotionEvent.ACTION_MOVE: {
+                    float dx = e.getRawX() - downX;
+                    float dy = e.getRawY() - downY;
+                    if (!sliding && Math.abs(dx) > 8 * density && Math.abs(dx) > Math.abs(dy) * 1.5f) {
+                        sliding = true;
+                        v.getParent().requestDisallowInterceptTouchEvent(true);
+                        v.setPressed(false);
+                        v.cancelLongPress();
+                    }
+                    if (sliding) {
+                        v.setTranslationX(Math.max(-threshold, Math.min(threshold, dx * 0.5f)));
+                        return true;
+                    }
+                    return false;
+                }
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    if (!sliding) return false;
+                    float dx = e.getRawX() - downX;
+                    v.animate().translationX(0).setDuration(150).start();
+                    v.getParent().requestDisallowInterceptTouchEvent(false);
+                    sliding = false;
+                    if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP && Math.abs(dx) >= threshold) {
+                        v.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
+                        setQueueMode(dx > 0);
+                    }
+                    return true;   // a slide is never also a tap
+                default:
+                    return false;
+            }
+        }
+    }
+
+    /** Queue mode switched (a slide on the Queue button, or the switch on the queue screen). */
     public void setQueueMode(boolean on) {
         if (Preferences.isQueueMode() == on) return;
         Preferences.setQueueMode(on);

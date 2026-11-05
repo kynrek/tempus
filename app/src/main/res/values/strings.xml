@@ -340,8 +340,8 @@
     <string name="queue_mode_title">Queue mode</string>
     <string name="queue_mode_on_summary">On: songs you add with Q play next, then the album carries on</string>
     <string name="queue_mode_off_summary">Off: Next follows the album; songs you add wait at the end</string>
-    <string name="queue_mode_now_on">Queue on: songs you add play next</string>
-    <string name="queue_mode_now_off">Queue off: Next follows the album</string>
+    <string name="queue_mode_now_on">Queue on: songs you add play next (slide Queue left to turn off)</string>
+    <string name="queue_mode_now_off">Queue off: Next follows the album (slide Queue right to turn on)</string>
     <string name="player_header_queue_off">Queue off</string>
     <string name="queue_bar_rewind">Back a few seconds</string>
     <string name="queue_bar_forward">Ahead a few seconds</string>
