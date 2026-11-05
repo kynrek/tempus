@@ -741,7 +741,7 @@ object Preferences {
      */
     @JvmStatic
     fun getMiniPlayerLandscape(): String {
-        val fallback = App.getInstance().getString(com.eddyizm.tempus.R.string.default_mini_player_landscape)
+        val fallback = App.getContext().getString(com.eddyizm.tempus.R.string.default_mini_player_landscape)
         return App.getInstance().preferences.getString(MINI_PLAYER_LANDSCAPE, fallback) ?: fallback
     }
 
@@ -878,7 +878,7 @@ object Preferences {
     fun getCustomCommandSecondButton(): String? {
         // Default from resources: repeat, or Close in the phone build (launcher media cards show these two).
         return App.getInstance().preferences.getString(CUSTOM_COMMAND_SECOND_BUTTON,
-            App.getInstance().getString(com.eddyizm.tempus.R.string.default_custom_command_second_button))
+            App.getContext().getString(com.eddyizm.tempus.R.string.default_custom_command_second_button))
     }
 
     @JvmStatic

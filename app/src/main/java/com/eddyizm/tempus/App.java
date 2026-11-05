@@ -57,6 +57,16 @@ public class App extends Application {
         instance = new App();
         context = getApplicationContext();
         preferences = PreferenceManager.getDefaultSharedPreferences(context);
+        // Phone build, once: the second media-control button becomes Close, so launcher media cards
+        // (which show the first two) can close the player. An earlier visit to Settings had already
+        // stored the old default (repeat) there. Changing it in Settings afterwards sticks.
+        if ("phone".equals(com.eddyizm.tempus.BuildConfig.BUILD_TYPE)
+                && !preferences.getBoolean("phone_close_button_applied", false)) {
+            String second = preferences.getString("custom_command_second_button", null);
+            SharedPreferences.Editor editor = preferences.edit().putBoolean("phone_close_button_applied", true);
+            if (second == null || "[repeatID]".equals(second)) editor.putString("custom_command_second_button", "[closeID]");
+            editor.apply();
+        }
 
         ClientCertManager.setupSslSocketFactory(context);
         OfflineCovers.init(context);
