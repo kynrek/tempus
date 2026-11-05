@@ -10,6 +10,7 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.preference.PreferenceManager;
 
 import com.eddyizm.tempus.github.Github;
+import com.eddyizm.tempus.glide.OfflineCovers;
 import com.eddyizm.tempus.helper.ThemeHelper;
 import com.eddyizm.tempus.model.Server;
 import com.eddyizm.tempus.subsonic.RetrofitClient;
@@ -58,6 +59,7 @@ public class App extends Application {
         preferences = PreferenceManager.getDefaultSharedPreferences(context);
 
         ClientCertManager.setupSslSocketFactory(context);
+        OfflineCovers.init(context);
 
         new Thread(RetrofitClient::warmUp, "gson-warm-up").start();
     }

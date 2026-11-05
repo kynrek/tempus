@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.scheduler.Requirements;
 import androidx.media3.exoplayer.scheduler.Scheduler;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.glide.OfflineCovers;
 import com.eddyizm.tempus.util.DownloadUtil;
 
 import java.util.List;
@@ -59,6 +60,8 @@ public class DownloaderService extends androidx.media3.exoplayer.offline.Downloa
     protected DownloadManager getDownloadManager() {
         DownloadManager downloadManager = DownloadUtil.getDownloadManager(this);
         downloadManager.addListener(new TerminalStateNotificationHelper(this));
+        // Covers for tracks downloaded before they were kept offline.
+        OfflineCovers.catchUp(this);
         return downloadManager;
     }
 
@@ -190,6 +193,7 @@ public class DownloaderService extends androidx.media3.exoplayer.offline.Downloa
                     completedCount.incrementAndGet();
                     DownloaderService.batchCompletedCount = completedCount.get();
                     DownloaderManager.updateRequestDownload(download);
+                    OfflineCovers.saveFor(context, download.request.id);
                     break;
 
                 case Download.STATE_FAILED:

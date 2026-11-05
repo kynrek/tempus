@@ -268,6 +268,11 @@ public final class DownloadUtil {
         return streamingCacheDirectory;
     }
 
+    /** Where downloads live (internal or SD card, per Settings); offline covers are kept beside them. */
+    public static File getDownloadRoot(Context context) {
+        return getDownloadDirectory(context);
+    }
+
     private static synchronized File getDownloadDirectory(Context context) {
         if (downloadDirectory == null) {
             int pref = Preferences.getDownloadStoragePreference();

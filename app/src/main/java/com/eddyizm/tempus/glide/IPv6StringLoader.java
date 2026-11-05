@@ -15,6 +15,8 @@ import com.bumptech.glide.signature.ObjectKey;
 import com.eddyizm.tempus.util.ClientCertManager;
 import com.eddyizm.tempus.util.ServerHeaders;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +53,7 @@ public class IPv6StringLoader implements ModelLoader<String, InputStream> {
         private final String model;
         private Call call;
         private Response response;
+        private InputStream saved;
 
         IPv6StreamFetcher(OkHttpClient client, String model) {
             this.client = client;
@@ -59,6 +62,17 @@ public class IPv6StringLoader implements ModelLoader<String, InputStream> {
 
         @Override
         public void loadData(@NonNull Priority priority, @NonNull DataCallback<? super InputStream> callback) {
+            // A downloaded track's cover is kept on disk: use it, connected or not.
+            File savedCover = OfflineCovers.savedFor(model);
+            if (savedCover != null) {
+                try {
+                    saved = new FileInputStream(savedCover);
+                    callback.onDataReady(saved);
+                    return;
+                } catch (IOException ignored) {
+                    // Fall through to the server.
+                }
+            }
             try {
                 call = client.newCall(new Request.Builder().url(model).build());
                 response = call.execute();
@@ -80,6 +94,12 @@ public class IPv6StringLoader implements ModelLoader<String, InputStream> {
 
         @Override
         public void cleanup() {
+            if (saved != null) {
+                try {
+                    saved.close();
+                } catch (IOException ignored) {
+                }
+            }
             if (response != null) {
                 response.close();
             }
@@ -101,11 +121,11 @@ public class IPv6StringLoader implements ModelLoader<String, InputStream> {
         @NonNull
         @Override
         public DataSource getDataSource() {
-            return DataSource.REMOTE;
+            return saved != null ? DataSource.LOCAL : DataSource.REMOTE;
         }
     }
 
-    private static OkHttpClient buildClient() {
+    static OkHttpClient buildClient() {
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .connectTimeout(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .readTimeout(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
