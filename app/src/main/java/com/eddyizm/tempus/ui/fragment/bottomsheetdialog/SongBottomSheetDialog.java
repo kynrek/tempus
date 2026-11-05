@@ -55,7 +55,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 @UnstableApi
-public class SongBottomSheetDialog extends BottomSheetDialogFragment implements View.OnClickListener {
+public class SongBottomSheetDialog extends CarBottomSheetDialogFragment implements View.OnClickListener {
     private HomeViewModel homeViewModel;
     private SongBottomSheetViewModel songBottomSheetViewModel;
     private Child song;

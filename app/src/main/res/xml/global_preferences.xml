@@ -42,6 +42,15 @@
             android:key="theme"
             android:title="@string/settings_theme"/>
 
+        <ListPreference
+            app:defaultValue="artists"
+            app:dialogTitle="@string/settings_home_default_tab"
+            app:entries="@array/home_default_tab_titles"
+            app:entryValues="@array/home_default_tab_values"
+            app:key="home_default_tab"
+            app:title="@string/settings_home_default_tab"
+            app:useSimpleSummaryProvider="true" />
+
         <SwitchPreference
             android:title="@string/settings_always_on_display"
             android:defaultValue="false"

@@ -31,6 +31,7 @@ import com.eddyizm.tempus.subsonic.models.ArtistID3;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.ArtistHorizontalAdapter;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.viewmodel.ArtistListPageViewModel;
 
 import java.util.List;
@@ -47,7 +48,7 @@ public class ArtistListPageFragment extends Fragment implements ClickCallback {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
+        setHasOptionsMenu(!isEmbedded());
     }
 
     @Override
@@ -56,7 +57,8 @@ public class ArtistListPageFragment extends Fragment implements ClickCallback {
 
         bind = FragmentArtistListPageBinding.inflate(inflater, container, false);
         View view = bind.getRoot();
-        artistListPageViewModel = new ViewModelProvider(requireActivity()).get(ArtistListPageViewModel.class);
+        // Per screen: Home's Favorites tab embeds a starred artist list while others open on top of it.
+        artistListPageViewModel = new ViewModelProvider(this).get(ArtistListPageViewModel.class);
 
         Bundle args = getArguments();
         if (args == null) {
@@ -87,7 +89,17 @@ public class ArtistListPageFragment extends Fragment implements ClickCallback {
         }
     }
 
+    private boolean isEmbedded() {
+        return getArguments() != null && getArguments().getBoolean(Constants.EMBEDDED_IN_HOME);
+    }
+
     private void initAppBar() {
+        if (isEmbedded()) {
+            bind.toolbar.setVisibility(View.GONE);
+            UIUtil.compactEmbeddedHeader(bind.artistInfoSector);
+            return;
+        }
+
         activity.setSupportActionBar(bind.toolbar);
 
         if (activity.getSupportActionBar() != null) {

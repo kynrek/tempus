@@ -433,4 +433,20 @@
         <item>600</item>
         <item>-1</item>
     </string-array>
+    <string-array name="home_default_tab_titles">
+        <item>@string/artist_catalogue_title</item>
+        <item>@string/album_catalogue_title</item>
+        <item>@string/library_title_genre</item>
+        <item>@string/library_title_playlist</item>
+        <item>@string/home_tab_favorites</item>
+        <item>@string/home_tab_recent</item>
+    </string-array>
+    <string-array name="home_default_tab_values">
+        <item>artists</item>
+        <item>albums</item>
+        <item>genres</item>
+        <item>playlists</item>
+        <item>favorites</item>
+        <item>recent</item>
+    </string-array>
 </resources>

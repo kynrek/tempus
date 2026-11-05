@@ -26,7 +26,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.common.util.concurrent.ListenableFuture;
 
 @UnstableApi
-public class PlaylistBottomSheetDialog extends BottomSheetDialogFragment implements View.OnClickListener {
+public class PlaylistBottomSheetDialog extends CarBottomSheetDialogFragment implements View.OnClickListener {
     private PlaylistWithSongs playlist;
     private ListenableFuture<MediaBrowser> mediaBrowserListenableFuture;
     private static final String TAG = "PlaylistBottomSheetDialog";

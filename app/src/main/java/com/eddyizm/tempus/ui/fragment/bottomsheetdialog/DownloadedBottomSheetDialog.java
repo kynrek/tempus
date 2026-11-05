@@ -36,7 +36,7 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 @UnstableApi
-public class DownloadedBottomSheetDialog extends BottomSheetDialogFragment implements View.OnClickListener {
+public class DownloadedBottomSheetDialog extends CarBottomSheetDialogFragment implements View.OnClickListener {
     private List<Child> songs;
     private String groupTitle;
     private String groupSubtitle;

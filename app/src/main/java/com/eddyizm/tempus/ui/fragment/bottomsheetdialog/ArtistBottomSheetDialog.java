@@ -12,12 +12,14 @@ import android.widget.ToggleButton;
 
 import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.media3.common.MediaItem;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.session.MediaBrowser;
 import androidx.media3.session.SessionToken;
 
 import com.eddyizm.tempus.R;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
+import com.eddyizm.tempus.model.Download;
 import com.eddyizm.tempus.repository.ArtistRepository;
 import com.eddyizm.tempus.service.MediaManager;
 import com.eddyizm.tempus.service.MediaService;
@@ -25,7 +27,13 @@ import com.eddyizm.tempus.subsonic.models.ArtistID3;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.dialog.PlaylistChooserDialog;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.DownloadUtil;
+import com.eddyizm.tempus.util.ExternalAudioWriter;
+import com.eddyizm.tempus.util.MappingUtil;
+import com.eddyizm.tempus.util.Preferences;
 import com.eddyizm.tempus.util.MusicUtil;
 import com.eddyizm.tempus.viewmodel.ArtistBottomSheetViewModel;
 import com.eddyizm.tempus.util.FavoriteRegistry;
@@ -34,7 +42,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 
 @UnstableApi
-public class ArtistBottomSheetDialog extends BottomSheetDialogFragment implements View.OnClickListener {
+public class ArtistBottomSheetDialog extends CarBottomSheetDialogFragment implements View.OnClickListener {
     private static final String TAG = "AlbumBottomSheetDialog";
 
     private ArtistBottomSheetViewModel artistBottomSheetViewModel;
@@ -45,6 +53,9 @@ public class ArtistBottomSheetDialog extends BottomSheetDialogFragment implement
     private boolean isFirstBatch = true;
     // Guard to prevent concurrent taps that register multiple observers on the cached LiveData
     private boolean isLoadingTracks = false;
+    /** One at a time, in the order asked, so artists queued back to back keep their order. */
+    private static final java.util.concurrent.ExecutorService DOWNLOAD_QUEUER =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
 
     @Nullable
     @Override
@@ -146,6 +157,7 @@ public class ArtistBottomSheetDialog extends BottomSheetDialogFragment implement
         TextView playNext = view.findViewById(R.id.play_next_text_view);
         TextView addToQueue = view.findViewById(R.id.add_to_queue_text_view);
         TextView addToPlaylist = view.findViewById(R.id.add_to_playlist_text_view);
+        TextView downloadAll = view.findViewById(R.id.download_all_text_view);
 
         // Helper to restore UI state after loading completes or fails
         Runnable restoreButtons = () -> {
@@ -153,6 +165,7 @@ public class ArtistBottomSheetDialog extends BottomSheetDialogFragment implement
             if (playNext != null) playNext.setEnabled(true);
             if (addToQueue != null) addToQueue.setEnabled(true);
             if (addToPlaylist != null) addToPlaylist.setEnabled(true);
+            if (downloadAll != null) downloadAll.setEnabled(true);
         };
 
         playNext.setOnClickListener(v -> {
@@ -234,6 +247,45 @@ public class ArtistBottomSheetDialog extends BottomSheetDialogFragment implement
                         dialog.setArguments(bundle);
                         dialog.show(requireActivity().getSupportFragmentManager(), null);
 
+                        dismissBottomSheet();
+                    } finally {
+                        restoreButtons.run();
+                    }
+                }
+            };
+
+            artistBottomSheetViewModel.getArtistAllTracks().observe(getViewLifecycleOwner(), observer);
+        });
+
+        downloadAll.setOnClickListener(v -> {
+            if (isLoadingTracks) return;
+            isLoadingTracks = true;
+            downloadAll.setEnabled(false);
+
+            Toast.makeText(requireContext(), R.string.artist_bottom_sheet_loading_tracks, Toast.LENGTH_SHORT).show();
+
+            // The download keeps going after the sheet closes, so it hangs off the app context.
+            android.content.Context appContext = requireContext().getApplicationContext();
+            androidx.lifecycle.Observer<List<com.eddyizm.tempus.subsonic.models.Child>> observer = new androidx.lifecycle.Observer<List<com.eddyizm.tempus.subsonic.models.Child>>() {
+                @Override
+                public void onChanged(List<com.eddyizm.tempus.subsonic.models.Child> songs) {
+                    artistBottomSheetViewModel.getArtistAllTracks().removeObserver(this);
+                    try {
+                        if (songs == null || songs.isEmpty()) return;
+                        // Building a request per track takes a few ms each; for an artist with a
+                        // thousand tracks that froze the screen long enough for Android to close it.
+                        List<com.eddyizm.tempus.subsonic.models.Child> batch = new ArrayList<>(songs);
+                        DOWNLOAD_QUEUER.execute(() -> {
+                            if (Preferences.getDownloadDirectoryUri() == null) {
+                                List<MediaItem> mediaItems = MappingUtil.mapDownloads(batch);
+                                List<Download> downloads = batch.stream().map(Download::new).collect(Collectors.toList());
+                                DownloadUtil.getDownloadTracker(appContext).download(mediaItems, downloads);
+                            } else {
+                                batch.forEach(child -> ExternalAudioWriter.downloadToUserDirectory(appContext, child));
+                            }
+                        });
+                        Toast.makeText(appContext, getResources().getQuantityString(
+                                R.plurals.artist_bottom_sheet_downloading_tracks, songs.size(), songs.size()), Toast.LENGTH_SHORT).show();
                         dismissBottomSheet();
                     } finally {
                         restoreButtons.run();

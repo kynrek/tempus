@@ -28,7 +28,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import java.util.List;
 
 @UnstableApi
-public class ShareBottomSheetDialog extends BottomSheetDialogFragment implements View.OnClickListener {
+public class ShareBottomSheetDialog extends CarBottomSheetDialogFragment implements View.OnClickListener {
 
     private HomeViewModel homeViewModel;
     private ShareBottomSheetViewModel shareBottomSheetViewModel;

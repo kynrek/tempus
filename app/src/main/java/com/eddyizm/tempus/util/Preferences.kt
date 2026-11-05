@@ -79,6 +79,8 @@ object Preferences {
     private const val AUDIO_TRANSCODE_PRIORITY = "audio_transcode_priority"
     private const val STREAMING_CACHE_STORAGE = "streaming_cache_storage"
     private const val DOWNLOAD_STORAGE = "download_storage"
+    private const val HOME_DEFAULT_TAB = "home_default_tab"
+    private const val FAVORITES_TYPE = "favorites_type"
     private const val DOWNLOAD_DIRECTORY_URI = "download_directory_uri"
     private const val DEFAULT_DOWNLOAD_VIEW_TYPE = "default_download_view_type"
     private const val AUDIO_TRANSCODE_DOWNLOAD = "audio_transcode_download"
@@ -849,6 +851,21 @@ object Preferences {
                 STREAMING_CACHE_STORAGE,
                 streamingCachePreference.toString()
         ).apply()
+    }
+
+    @JvmStatic
+    fun getHomeDefaultTab(): String {
+        return App.getInstance().preferences.getString(HOME_DEFAULT_TAB, "artists")!!
+    }
+
+    @JvmStatic
+    fun getFavoritesType(): String {
+        return App.getInstance().preferences.getString(FAVORITES_TYPE, "albums")!!
+    }
+
+    @JvmStatic
+    fun setFavoritesType(type: String) {
+        App.getInstance().preferences.edit().putString(FAVORITES_TYPE, type).apply()
     }
 
     @JvmStatic

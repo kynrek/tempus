@@ -21,10 +21,13 @@ import com.eddyizm.tempus.navigation.NavigationController;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.fragment.pager.HomePager;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.Preferences;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 @UnstableApi
@@ -37,6 +40,18 @@ public class HomeFragment extends Fragment {
 
     private MaterialToolbar materialToolbar;
     private TabLayout tabLayout;
+
+    // In tab order; the values of the "Start on tab" setting.
+    private static final List<String> TAB_KEYS = Arrays.asList("artists", "albums", "genres", "playlists", "favorites", "recent");
+    // Only on a fresh start: coming back from an album page keeps the tab you were on.
+    private boolean startTabApplied;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // A restored Home (activity recreated) keeps its saved tab too.
+        startTabApplied = savedInstanceState != null;
+    }
 
     @Nullable
     @Override
@@ -97,15 +112,18 @@ public class HomeFragment extends Fragment {
         playlists.requireArguments().putString(Constants.PLAYLIST_ALL, Constants.PLAYLIST_ALL);
         pager.addFragment(playlists, getString(R.string.library_title_playlist), R.drawable.ic_home);
 
-        Fragment favorites = embedded(new SongListPageFragment());
-        favorites.requireArguments().putString(Constants.MEDIA_STARRED, Constants.MEDIA_STARRED);
-        pager.addFragment(favorites, getString(R.string.home_tab_favorites), R.drawable.ic_home);
+        pager.addFragment(new FavoritesFragment(), getString(R.string.home_tab_favorites), R.drawable.ic_home);
 
         Fragment recent = embedded(new AlbumListPageFragment());
         recent.requireArguments().putString(Constants.ALBUM_RECENTLY_PLAYED, Constants.ALBUM_RECENTLY_PLAYED);
         pager.addFragment(recent, getString(R.string.home_tab_recent), R.drawable.ic_home);
 
         bind.homeViewPager.setAdapter(pager);
+        if (!startTabApplied) {
+            startTabApplied = true;
+            int start = TAB_KEYS.indexOf(Preferences.getHomeDefaultTab());
+            if (start > 0 && start < pager.getItemCount()) bind.homeViewPager.setCurrentItem(start, false);
+        }
         bind.homeViewPager.setUserInputEnabled(false);
         buildTabsInTurn(bind.homeViewPager, pager.getItemCount() - 1);
 

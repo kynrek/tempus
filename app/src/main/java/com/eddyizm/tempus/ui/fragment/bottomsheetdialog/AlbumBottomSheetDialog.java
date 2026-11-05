@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @UnstableApi
-public class AlbumBottomSheetDialog extends BottomSheetDialogFragment implements View.OnClickListener {
+public class AlbumBottomSheetDialog extends CarBottomSheetDialogFragment implements View.OnClickListener {
     private HomeViewModel homeViewModel;
     private AlbumBottomSheetViewModel albumBottomSheetViewModel;
     private AlbumID3 album;

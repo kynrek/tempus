@@ -27,7 +27,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.common.util.concurrent.ListenableFuture;
 
 @UnstableApi
-public class PodcastEpisodeBottomSheetDialog extends BottomSheetDialogFragment implements View.OnClickListener {
+public class PodcastEpisodeBottomSheetDialog extends CarBottomSheetDialogFragment implements View.OnClickListener {
     private PodcastEpisodeBottomSheetViewModel podcastEpisodeBottomSheetViewModel;
     private PodcastEpisode podcastEpisode;
 
