@@ -120,6 +120,15 @@
             app:useSimpleSummaryProvider="true" />
 
         <ListPreference
+            app:defaultValue="wavy"
+            app:dialogTitle="@string/settings_widget_progress_style"
+            app:entries="@array/progress_style_titles"
+            app:entryValues="@array/progress_style_values"
+            app:key="widget_progress_style"
+            app:title="@string/settings_widget_progress_style"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
             app:defaultValue="3"
             app:dialogTitle="@string/settings_progress_thickness"
             app:entries="@array/progress_thickness_titles"

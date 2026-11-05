@@ -129,6 +129,8 @@ fun PlayerQueueSheet(
     onSheetReady: ((suspend () -> Unit)) -> Unit = {},
     /** Playback controls along the bottom (the queue's window hides the mini player). */
     controls: (@Composable () -> Unit)? = null,
+    queueMode: Boolean? = null,
+    onQueueModeChange: (Boolean) -> Unit = {},
 ) {
     if (!isOpen) return
 
@@ -261,7 +263,9 @@ fun PlayerQueueSheet(
                     onShuffleUpcoming = { onShuffleUpcoming(currentRawSongs, effectiveCurrentIndex) },
                     onSaveToPlaylist = { onSaveToPlaylist(currentSongs.map { it.song }, effectiveCurrentIndex) },
                     onDownloadAll = { onDownloadAll(currentSongs.map { it.song }) },
-                    onLoadSavedQueue = onLoadSavedQueue
+                    onLoadSavedQueue = onLoadSavedQueue,
+                    queueMode = queueMode,
+                    onQueueModeChange = onQueueModeChange
                 )
 
                 PlayerQueueList(

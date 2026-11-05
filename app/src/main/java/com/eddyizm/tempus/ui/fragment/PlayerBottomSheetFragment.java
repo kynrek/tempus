@@ -320,6 +320,11 @@ public class PlayerBottomSheetFragment extends Fragment {
         initHeaderSeekBar();
         // The queue opens over whatever is on screen, so Back returns there.
         bind.playerHeaderLayout.playerHeaderQueueButton.setOnClickListener(view -> goToQueuePage());
+        // Long press: queue mode on/off (also a switch at the top of the queue screen).
+        bind.playerHeaderLayout.playerHeaderQueueButton.setOnLongClickListener(view -> {
+            setQueueMode(!Preferences.isQueueMode());
+            return true;
+        });
     }
 
     private void initPlayerController() {
@@ -508,12 +513,34 @@ public class PlayerBottomSheetFragment extends Fragment {
     }
 
 
+    private int queueCount;
+
     private void setQueueCount(MediaBrowser mediaBrowser) {
+        queueCount = mediaBrowser.getMediaItemCount();
+        renderQueueButton();
+    }
+
+    /** "Queue 12" with queue mode on; "Queue off", dimmed, with it off. */
+    private void renderQueueButton() {
         if (bind == null) return;
-        int count = mediaBrowser.getMediaItemCount();
-        bind.playerHeaderLayout.playerHeaderQueueButton.setText(count > 0
-                ? getString(R.string.player_header_queue_count, count)
+        boolean on = Preferences.isQueueMode();
+        bind.playerHeaderLayout.playerHeaderQueueButton.setText(!on
+                ? getString(R.string.player_header_queue_off)
+                : queueCount > 0 ? getString(R.string.player_header_queue_count, queueCount)
                 : getString(R.string.player_header_queue));
+        bind.playerHeaderLayout.playerHeaderQueueButton.setAlpha(on ? 1f : 0.6f);
+    }
+
+    /** Queue mode switched (long press on Queue, or the switch on the queue screen). */
+    public void setQueueMode(boolean on) {
+        if (Preferences.isQueueMode() == on) return;
+        Preferences.setQueueMode(on);
+        com.eddyizm.tempus.util.UpNext.apply(mediaBrowserListenableFuture, on);
+        renderQueueButton();
+        if (getContext() != null) {
+            android.widget.Toast.makeText(getContext(), on ? R.string.queue_mode_now_on : R.string.queue_mode_now_off,
+                    android.widget.Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void setMediaControllerUI(MediaBrowser mediaBrowser) {

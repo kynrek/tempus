@@ -60,6 +60,8 @@ object Preferences {
     private const val QUEUE_ADD_POSITION = "queue_add_position"
     private const val CATALOGUE_VIEW = "catalogue_view"
     private const val MINI_PLAYER_LANDSCAPE = "mini_player_landscape"
+    private const val QUEUE_MODE = "queue_mode"
+    private const val WIDGET_PROGRESS_STYLE = "widget_progress_style"
     private const val ARTIST_TOP_SONGS_MODE = "artist_top_songs_mode"
     private const val ARTIST_ALBUMS_MODE = "artist_albums_mode"
     private const val ARTIST_FIRST_SECTION = "artist_first_section"
@@ -710,6 +712,26 @@ object Preferences {
     @JvmStatic
     fun getCatalogueView(): String {
         return App.getInstance().preferences.getString(CATALOGUE_VIEW, "condensed") ?: "condensed"
+    }
+
+    /** The home-screen widget's progress line: "wavy" (default) or "straight". */
+    @JvmStatic
+    fun getWidgetProgressStyle(): String {
+        return App.getInstance().preferences.getString(WIDGET_PROGRESS_STYLE, "wavy") ?: "wavy"
+    }
+
+    /**
+     * Queue mode: songs added with Q play next, in the order added, before the rest of what's
+     * playing. Off, they wait at the end and Next follows the album or playlist.
+     */
+    @JvmStatic
+    fun isQueueMode(): Boolean {
+        return App.getInstance().preferences.getBoolean(QUEUE_MODE, true)
+    }
+
+    @JvmStatic
+    fun setQueueMode(on: Boolean) {
+        App.getInstance().preferences.edit { putBoolean(QUEUE_MODE, on) }
     }
 
     /**

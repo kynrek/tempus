@@ -50,6 +50,11 @@ public final class ProgressLine {
         rest.setColor(restColor);
     }
 
+    /** Overrides the app's line style, for a place with a setting of its own (the home-screen widget). */
+    public void setWavy(boolean wavy) {
+        this.wavy = wavy;
+    }
+
     public boolean isWavy() {
         return wavy;
     }

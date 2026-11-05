@@ -337,6 +337,12 @@
     <string name="player_queue_back">Back</string>
     <string name="queued_view_queue">View queue</string>
     <string name="player_header_queue">Queue</string>
+    <string name="queue_mode_title">Queue mode</string>
+    <string name="queue_mode_on_summary">On: songs you add with Q play next, then the album carries on</string>
+    <string name="queue_mode_off_summary">Off: Next follows the album; songs you add wait at the end</string>
+    <string name="queue_mode_now_on">Queue on: songs you add play next</string>
+    <string name="queue_mode_now_off">Queue off: Next follows the album</string>
+    <string name="player_header_queue_off">Queue off</string>
     <string name="queue_bar_rewind">Back a few seconds</string>
     <string name="queue_bar_forward">Ahead a few seconds</string>
     <string name="queue_bar_play">Play</string>
@@ -355,6 +361,7 @@
     </plurals>
     <string name="settings_title_queue">Queue</string>
     <string name="settings_catalogue_view">Albums and Artists view</string>
+    <string name="settings_widget_progress_style">Widget progress line</string>
     <string name="settings_mini_player_landscape">Mini player when sideways</string>
     <string name="mini_player_landscape_side">Panel down the side</string>
     <string name="mini_player_landscape_bottom">Bar along the bottom</string>
@@ -863,6 +870,7 @@
     <string name="widget_content_desc_album_art">Album artwork</string>
     <string name="widget_content_desc_play_pause">Play or pause</string>
     <string name="widget_content_desc_next">Next track</string>
+    <string name="widget_content_desc_close">Close the player</string>
     <string name="widget_content_desc_prev">Previous track</string>
     <string name="widget_content_desc_shuffle">Toggle shuffle</string>
     <string name="widget_content_desc_repeat">Change repeat mode</string>

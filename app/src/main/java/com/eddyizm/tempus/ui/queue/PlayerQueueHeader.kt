@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,7 +49,9 @@ fun PlayerQueueHeader(
     onSaveToPlaylist: () -> Unit,
     onDownloadAll: () -> Unit,
     onLoadSavedQueue: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    queueMode: Boolean? = null,
+    onQueueModeChange: (Boolean) -> Unit = {},
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -231,6 +234,31 @@ fun PlayerQueueHeader(
                         }
                     }
                 }
+            }
+        }
+
+        // Queue mode: what Next does with the songs added with Q.
+        if (queueMode != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onQueueModeChange(!queueMode) }
+                    .padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.queue_mode_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(if (queueMode) R.string.queue_mode_on_summary else R.string.queue_mode_off_summary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                androidx.compose.material3.Switch(checked = queueMode, onCheckedChange = onQueueModeChange)
             }
         }
     }

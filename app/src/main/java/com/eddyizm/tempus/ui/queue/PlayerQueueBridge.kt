@@ -62,6 +62,9 @@ class PlayerQueueBridge @JvmOverloads constructor(
     var isQueueOpen by mutableStateOf(false)
         private set
 
+    /** Mirrors Preferences.isQueueMode() for the switch on the queue screen. */
+    private var queueMode by mutableStateOf(Preferences.isQueueMode())
+
     private var backCallback: OnBackPressedCallback? = null
     private var sheetHide: (suspend () -> Unit)? = null
 
@@ -318,7 +321,12 @@ class PlayerQueueBridge @JvmOverloads constructor(
                     onDownloadAll = ::downloadAll,
                     onLoadSavedQueue = ::loadSavedQueue,
                     onSheetReady = { sheetHide = it },
-                    controls = { QueueControlsBar(fragment) }
+                    controls = { QueueControlsBar(fragment) },
+                    queueMode = queueMode,
+                    onQueueModeChange = { on ->
+                        queueMode = on
+                        fragment.setQueueMode(on)
+                    }
                 )
             }
         }
@@ -326,6 +334,7 @@ class PlayerQueueBridge @JvmOverloads constructor(
 
     fun openQueue() {
         if (isQueueOpen) return
+        queueMode = Preferences.isQueueMode()
         composeView.visibility = View.VISIBLE
         isQueueOpen = true
         backCallback?.isEnabled = true

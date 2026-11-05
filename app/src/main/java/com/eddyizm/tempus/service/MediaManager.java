@@ -518,6 +518,39 @@ public class MediaManager {
         player.addMediaItems(insertPos, items);
     }
 
+    /**
+     * Queue mode: puts songs at {@code pos} (after the current song and any songs queued before
+     * them), in the player and the saved queue. Main thread, like the other browser edits.
+     */
+    public static void insertQueued(MediaBrowser browser, List<Child> media, int pos) {
+        if (media.isEmpty()) return;
+        enqueueDatabase(media, false, pos);
+        List<MediaItem> items = MappingUtil.mapMediaItems(media);
+        if (pos == browser.getCurrentMediaItemIndex() + 1) {
+            queueTargetFor(browser).requestPlayNextFixup(pos, items.size(), browser.getMediaItemCount() + items.size());
+        }
+        browser.addMediaItems(pos, items);
+        trimHistory(browser);
+    }
+
+    /** Saves the queue in the player's order, after moves made straight on the browser (queue mode on/off). */
+    public static void saveOrder(List<String> ids) {
+        backgroundExecutor.execute(() -> {
+            List<Child> saved = new ArrayList<>(getQueueRepository().getMedia());
+            List<Child> ordered = new ArrayList<>(saved.size());
+            for (String id : ids) {
+                for (int i = 0; i < saved.size(); i++) {
+                    if (id.equals(saved.get(i).getId())) {
+                        ordered.add(saved.remove(i));
+                        break;
+                    }
+                }
+            }
+            ordered.addAll(saved);   // anything the player doesn't list, kept at the end
+            swapDatabase(ordered);
+        });
+    }
+
     public static void requestPlayNextFixup(MediaBrowser browser, int insertPos, int count, int targetCount) {
         queueTargetFor(browser).requestPlayNextFixup(insertPos, count, targetCount);
     }

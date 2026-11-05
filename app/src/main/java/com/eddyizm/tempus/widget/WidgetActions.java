@@ -36,6 +36,15 @@ public final class WidgetActions {
                     case WidgetProvider.ACT_PREV:
                         c.seekToPrevious();
                         break;
+                    case WidgetProvider.ACT_CLOSE:
+                        // Like swiping the app away while paused: keep the spot to resume from,
+                        // then stop, which takes down the notification and lets the service end.
+                        if (c.getCurrentMediaItem() != null && c.getCurrentPosition() > 0) {
+                            com.eddyizm.tempus.service.MediaManager.setResumePoint(c.getCurrentMediaItem(), c.getCurrentPosition());
+                        }
+                        c.pause();
+                        c.stop();
+                        break;
                     case WidgetProvider.ACT_TOGGLE_SHUFFLE:
                         c.setShuffleModeEnabled(!c.getShuffleModeEnabled());
                         break;

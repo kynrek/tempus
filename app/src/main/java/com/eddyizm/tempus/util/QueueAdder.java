@@ -18,8 +18,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * "Add to queue" everywhere: puts the songs at the bottom of the queue, at the top (next up), or asks,
- * per Settings > Queue. "Play next" menu items keep inserting next on their own.
+ * "Add to queue" everywhere. With queue mode on (the default) the songs play next, in the order
+ * added; off, they go to the bottom of the queue, the top, or it asks, per Settings > Queue. "Play next" menu items keep inserting next on their own.
  */
 @UnstableApi
 public final class QueueAdder {
@@ -45,6 +45,13 @@ public final class QueueAdder {
     /** {@code onAdded} runs once the songs are queued (after the choice when asking; not on Cancel). */
     public static void add(Context context, ListenableFuture<MediaBrowser> browser, List<Child> songs, @Nullable Runnable onAdded) {
         if (browser == null || songs == null || songs.isEmpty()) return;
+        // Queue mode: they play next, after anything queued before them (see UpNext).
+        if (Preferences.isQueueMode()) {
+            UpNext.add(browser, songs);
+            if (onAdded != null) onAdded.run();
+            return;
+        }
+        UpNext.remember(songs);
         String where = Preferences.getQueueAddPosition();
         Activity activity = ASK.equals(where) ? activityOf(context) : null;
         if (activity == null || activity.isFinishing()) {

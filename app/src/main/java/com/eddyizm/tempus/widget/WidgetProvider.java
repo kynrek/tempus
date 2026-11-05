@@ -26,6 +26,7 @@ public class WidgetProvider extends AppWidgetProvider {
     public static final String ACT_PREV = "tempo.widget.PREV";
     public static final String ACT_TOGGLE_SHUFFLE = "tempo.widget.SHUFFLE";
     public static final String ACT_CYCLE_REPEAT = "tempo.widget.REPEAT";
+    public static final String ACT_CLOSE = "tempo.widget.CLOSE";
 
     @Override
     public void onUpdate(Context ctx, AppWidgetManager mgr, int[] ids) {
@@ -42,7 +43,7 @@ public class WidgetProvider extends AppWidgetProvider {
         String a = intent.getAction();
         Log.d(TAG, "onReceive action=" + a);
         if (ACT_PLAY_PAUSE.equals(a) || ACT_NEXT.equals(a) || ACT_PREV.equals(a)
-                || ACT_TOGGLE_SHUFFLE.equals(a) || ACT_CYCLE_REPEAT.equals(a)) {
+                || ACT_TOGGLE_SHUFFLE.equals(a) || ACT_CYCLE_REPEAT.equals(a) || ACT_CLOSE.equals(a)) {
             WidgetActions.dispatchToMediaSession(ctx, a);
         } else if (AppWidgetManager.ACTION_APPWIDGET_UPDATE.equals(a)) {
             WidgetUpdateManager.refreshFromController(ctx);
@@ -106,6 +107,13 @@ public class WidgetProvider extends AppWidgetProvider {
         rv.setOnClickPendingIntent(R.id.btn_prev, prev);
         rv.setOnClickPendingIntent(R.id.btn_shuffle, shuffle);
         rv.setOnClickPendingIntent(R.id.btn_repeat, repeat);
+        PendingIntent close = PendingIntent.getBroadcast(
+                ctx,
+                requestCodeBase + 5,
+                new Intent(ctx, WidgetProvider4x1.class).setAction(ACT_CLOSE),
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+        );
+        rv.setOnClickPendingIntent(R.id.btn_close, close);
 
         PendingIntent launch = buildMainActivityPendingIntent(ctx, requestCodeBase + 10, null);
         rv.setOnClickPendingIntent(R.id.root, launch);

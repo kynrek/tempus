@@ -87,6 +87,16 @@
         android:progress="0"
         android:progressBackgroundTint="@color/widget_subtitle"
         android:progressTint="@color/widget_icon_tint" />
+    <!-- The wavy line (Settings > UI > Widget progress line): drawn as a picture, since a widget
+         can't host the app's own animated line. Shown instead of the bar above when wavy. -->
+    <ImageView
+        android:id="@+id/progress_wave"
+        android:layout_width="match_parent"
+        android:layout_height="14dp"
+        android:layout_marginTop="16dp"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/timing"
@@ -154,6 +164,17 @@
             android:background="@android:color/transparent"
             android:contentDescription="@string/widget_content_desc_next"
             android:src="@drawable/ic_skip_next"
+            android:tint="@color/widget_icon_tint" />
+
+        <!-- Stops playback and lets the player close (notification gone); the queue is kept. -->
+        <ImageButton
+            android:id="@+id/btn_close"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/widget_content_desc_close"
+            android:src="@drawable/ic_close"
             android:tint="@color/widget_icon_tint" />
     </LinearLayout>
 

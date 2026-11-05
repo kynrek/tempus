@@ -446,6 +446,7 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 Log.d(TAG, "onMediaItemTransition" + player.currentMediaItemIndex)
                 if (mediaItem == null) return
+                UpNext.played(mediaItem.mediaId)
                 if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
                     reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
                     scheduleQueueSync()

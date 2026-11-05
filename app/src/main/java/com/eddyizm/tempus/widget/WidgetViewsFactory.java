@@ -10,6 +10,7 @@ import android.graphics.Shader;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.View;
+import com.eddyizm.tempus.util.Preferences;
 import android.widget.RemoteViews;
 
 import androidx.core.content.ContextCompat;
@@ -53,6 +54,7 @@ public final class WidgetViewsFactory {
         rv.setTextViewText(R.id.time_elapsed, ctx.getString(R.string.widget_time_elapsed_placeholder));
         rv.setTextViewText(R.id.time_total, ctx.getString(R.string.widget_time_duration_placeholder));
         rv.setProgressBar(R.id.progress, PROGRESS_MAX, 0, false);
+        applyProgressStyle(ctx, rv, 0);
         rv.setImageViewResource(R.id.btn_play_pause, R.drawable.ic_play);
         rv.setImageViewResource(R.id.album_art, R.drawable.ic_splash_logo);
         applySecondaryControlsDefaults(ctx, rv, showSecondaryControls);
@@ -185,6 +187,7 @@ public final class WidgetViewsFactory {
         rv.setTextViewText(R.id.time_elapsed, elapsed);
         rv.setTextViewText(R.id.time_total, total);
         rv.setProgressBar(R.id.progress, PROGRESS_MAX, safeProgress, false);
+        applyProgressStyle(ctx, rv, safeProgress);
 
         applySecondaryControls(ctx, rv, showSecondaryControls, shuffleEnabled, repeatMode);
 
@@ -248,5 +251,33 @@ public final class WidgetViewsFactory {
         rv.setInt(R.id.btn_shuffle, "setColorFilter", shuffleEnabled ? activeColor : inactiveColor);
         rv.setInt(R.id.btn_repeat, "setColorFilter",
                 repeatMode == Player.REPEAT_MODE_OFF ? inactiveColor : activeColor);
+    }
+
+    /**
+     * Settings > UI > Widget progress line. Wavy draws the app's own line into a picture for the
+     * widget (it can't host a custom view); straight keeps the plain progress bar.
+     */
+    private static void applyProgressStyle(Context ctx, RemoteViews rv, int progress) {
+        boolean wavy = !com.eddyizm.tempus.ui.view.ProgressLine.STRAIGHT.equals(Preferences.getWidgetProgressStyle());
+        rv.setViewVisibility(R.id.progress, wavy ? View.GONE : View.VISIBLE);
+        rv.setViewVisibility(R.id.progress_wave, wavy ? View.VISIBLE : View.GONE);
+        if (!wavy) return;
+        try {
+            float density = ctx.getResources().getDisplayMetrics().density;
+            com.eddyizm.tempus.ui.view.ProgressLine line = new com.eddyizm.tempus.ui.view.ProgressLine(ctx);
+            line.setWavy(true);
+            line.setColors(ctx.getColor(R.color.widget_icon_tint), ctx.getColor(R.color.widget_subtitle));
+            int width = Math.round(320 * density);
+            int height = Math.max(Math.round(10 * density), (int) Math.ceil(line.height()) + 2);
+            android.graphics.Bitmap bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888);
+            float inset = line.height() / 2f;
+            float x = inset + (width - 2 * inset) * (progress / (float) PROGRESS_MAX);
+            line.draw(new android.graphics.Canvas(bitmap), inset, width - inset, height / 2f, x, false);
+            rv.setImageViewBitmap(R.id.progress_wave, bitmap);
+        } catch (RuntimeException e) {
+            // Drawing failed: fall back to the plain bar rather than an empty widget.
+            rv.setViewVisibility(R.id.progress, View.VISIBLE);
+            rv.setViewVisibility(R.id.progress_wave, View.GONE);
+        }
     }
 }
