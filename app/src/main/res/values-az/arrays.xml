@@ -390,6 +390,7 @@
         <item>Təkrarla</item>
         <item>Qarışdır</item>
         <item>Ani qarışıq</item>
+        <item>Close</item>
     </string-array>
 
 </resources>

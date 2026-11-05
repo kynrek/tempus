@@ -395,6 +395,7 @@
         <item>Повтор</item>
         <item>Перемешать</item>
         <item>Мгновенный микс</item>
+        <item>Close</item>
     </string-array>
     <string-array name="custom_commands_values" translatable="false">
         <item>[heartID]</item>

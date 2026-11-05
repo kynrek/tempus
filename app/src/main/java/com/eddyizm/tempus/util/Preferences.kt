@@ -876,7 +876,9 @@ object Preferences {
 
     @JvmStatic
     fun getCustomCommandSecondButton(): String? {
-        return App.getInstance().preferences.getString(CUSTOM_COMMAND_SECOND_BUTTON, "[repeatID]")
+        // Default from resources: repeat, or Close in the phone build (launcher media cards show these two).
+        return App.getInstance().preferences.getString(CUSTOM_COMMAND_SECOND_BUTTON,
+            App.getInstance().getString(com.eddyizm.tempus.R.string.default_custom_command_second_button))
     }
 
     @JvmStatic

@@ -4,4 +4,6 @@
     <string name="launcher_label" translatable="false">Music Phone</string>
     <!-- On a phone on its side the bottom bar costs a fifth of the height: use the side panel. -->
     <string name="default_mini_player_landscape" translatable="false">side</string>
+    <!-- Launcher media cards (Lawnchair) show the first two of these: heart and Close. -->
+    <string name="default_custom_command_second_button" translatable="false">[closeID]</string>
 </resources>

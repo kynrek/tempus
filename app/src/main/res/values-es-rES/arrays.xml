@@ -333,5 +333,6 @@
         <item>Repetir</item>
         <item>Aleatorio</item>
         <item>Mix instantáneo</item>
+        <item>Close</item>
     </string-array>
 </resources>

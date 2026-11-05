@@ -871,6 +871,9 @@
     <string name="widget_content_desc_play_pause">Play or pause</string>
     <string name="widget_content_desc_next">Next track</string>
     <string name="widget_content_desc_close">Close the player</string>
+    <string name="media_control_close">Close</string>
+    <!-- Second media-control button by default; the phone build uses Close. -->
+    <string name="default_custom_command_second_button" translatable="false">[repeatID]</string>
     <string name="widget_content_desc_prev">Previous track</string>
     <string name="widget_content_desc_shuffle">Toggle shuffle</string>
     <string name="widget_content_desc_repeat">Change repeat mode</string>

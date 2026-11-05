@@ -358,6 +358,7 @@
         <item>Wiederholen</item>
         <item>Zufällig</item>
         <item>Sofort-Mix</item>
+        <item>Close</item>
     </string-array>
 
 </resources>

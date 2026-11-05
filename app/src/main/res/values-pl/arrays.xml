@@ -375,5 +375,6 @@
         <item>Powtarzanie</item>
         <item>Odtwarzanie losowe</item>
         <item>Natychmiastowy mix</item>
+        <item>Close</item>
     </string-array>
 </resources>

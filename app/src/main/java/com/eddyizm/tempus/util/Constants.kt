@@ -145,6 +145,8 @@ object Constants {
     const val CUSTOM_COMMAND_TOGGLE_REPEAT_MODE_ALL = "android.media3.session.demo.REPEAT_ALL"
     const val CUSTOM_COMMAND_INSTANT_MIX_ON = "android.media3.session.demo.INSTANT_MIX_ON"
     const val CUSTOM_COMMAND_INSTANT_MIX_OFF = "android.media3.session.demo.INSTANT_MIX_OFF"
+    /** Media controls: stop playback and let the player close (notification gone, queue kept). */
+    const val CUSTOM_COMMAND_CLOSE = "com.eddyizm.tempus.CLOSE"
 
     // "Play next" shuffle-order fixup: the UI inserts the items on the timeline, then
     // asks the service (which owns the ExoPlayer) to move them next in the shuffle order.

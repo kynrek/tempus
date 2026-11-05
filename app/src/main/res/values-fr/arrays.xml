@@ -301,6 +301,7 @@
         <item>Répétition</item>
         <item>Mélange</item>
         <item>Mix instantané</item>
+        <item>Close</item>
     </string-array>
 
 </resources>

@@ -395,6 +395,7 @@
         <item>重複播放</item>
         <item>隨機播放</item>
         <item>即時混音</item>
+        <item>Close</item>
     </string-array>
     <string-array name="custom_commands_values" translatable="false">
         <item>[heartID]</item>
