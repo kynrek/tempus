@@ -362,6 +362,58 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
     private var restartableUntilMs = 0L
     private val restartAfterErrorWindowMs = 60_000L
 
+    /** Tracks already retried as a transcode after their original file wouldn't play. */
+    private val transcodedAfterError = HashSet<String>()
+    private var skippedInARow = 0
+
+    /**
+     * A track the player can't read (a FLAC whose frames ExoPlayer's extractor rejects, a
+     * corrupt file) used to stop the whole queue with the play button still showing pause.
+     * First ask the server for that track transcoded, which its own decoder usually manages;
+     * if that fails too, move on to the next track. Stops after a whole queue's worth of skips.
+     */
+    private fun recoverFromUnplayableTrack(player: Player, error: PlaybackException): Boolean {
+        val code = error.errorCode
+        val unplayable = code in PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED..PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED ||
+                code in PlaybackException.ERROR_CODE_DECODER_INIT_FAILED..PlaybackException.ERROR_CODE_DECODING_RESOURCES_RECLAIMED
+        if (!unplayable) return false
+        val index = player.currentMediaItemIndex
+        val item = player.currentMediaItem ?: return false
+        if (index == C.INDEX_UNSET) return false
+        val title = item.mediaMetadata.title ?: ""
+
+        val uri = item.localConfiguration?.uri
+        val format = uri?.getQueryParameter("format")
+        if (uri != null && (uri.scheme == "http" || uri.scheme == "https") && uri.getQueryParameter("id") != null
+                && (format == null || format == "raw") && transcodedAfterError.add(item.mediaId)) {
+            val transcoded = uri.buildUpon().clearQuery().apply {
+                for (name in uri.queryParameterNames) {
+                    if (name == "format" || name == "maxBitRate") continue
+                    for (value in uri.getQueryParameters(name)) appendQueryParameter(name, value)
+                }
+                appendQueryParameter("maxBitRate", "320")
+                appendQueryParameter("format", "mp3")
+            }.build()
+            Log.w(TAG, "Unplayable as sent (${error.errorCodeName}); retrying ${item.mediaId} as an mp3 transcode")
+            player.replaceMediaItem(index, item.buildUpon().setUri(transcoded).build())
+            player.prepare()
+            player.play()
+            return true
+        }
+
+        if (player.hasNextMediaItem() && skippedInARow < player.mediaItemCount) {
+            skippedInARow++
+            Log.w(TAG, "Skipping unplayable ${item.mediaId} (${error.errorCodeName})")
+            android.widget.Toast.makeText(applicationContext,
+                    getString(com.eddyizm.tempus.R.string.player_skipped_unplayable, title), android.widget.Toast.LENGTH_LONG).show()
+            player.seekToNextMediaItem()
+            player.prepare()
+            player.play()
+            return true
+        }
+        return false
+    }
+
     fun initializePlayerListener(player: Player) {
         player.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
@@ -371,6 +423,8 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
                 // position, but only for recoverable IO errors and throttled so a permanent
                 // failure (bad URL, auth) can't spin in an endless prepare loop.
                 Log.w(TAG, "onPlayerError: ${error.errorCodeName}", error)
+
+                if (recoverFromUnplayableTrack(player, error)) return
 
                 val recoverable = when (error.errorCode) {
                     PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
@@ -593,6 +647,7 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) skippedInARow = 0
                 Log.d(TAG, "onIsPlayingChanged " + player.currentMediaItemIndex + " isPlaying=" + isPlaying)
                 if (isPlaying) hasPlayedSinceRestore = true
                 if (!isPlaying) {

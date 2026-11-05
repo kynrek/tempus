@@ -70,6 +70,46 @@ public class PlayerBottomSheetFragment extends Fragment {
     private Runnable progressBarRunnable;
     private MediaBrowser progressBarBrowser;
 
+    /**
+     * A phone on its side puts the mini player's bottom row (elapsed time, timeline, total) right
+     * on the screen's rounded bottom corners, which cut off the times. Pad the bar's sides by
+     * what the corners take at that row's height. Square screens (the car) report no corners.
+     */
+    private void keepHeaderClearOfRoundedCorners(View header) {
+        if (android.os.Build.VERSION.SDK_INT < 31) return;
+        header.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> applyCornerPadding(v));
+    }
+
+    @androidx.annotation.RequiresApi(31)
+    private void applyCornerPadding(View header) {
+        android.view.WindowInsets insets = header.getRootWindowInsets();
+        View content = getActivity() != null ? getActivity().findViewById(android.R.id.content) : null;
+        if (insets == null || content == null) return;
+        int[] at = new int[2];
+        content.getLocationOnScreen(at);
+        // Where the collapsed bar's bottom row sits: the bottom of the content, above any navigation bar.
+        float rowY = at[1] + content.getHeight() - content.getPaddingBottom() - 6 * getResources().getDisplayMetrics().density;
+        header.getLocationOnScreen(at);
+        int left = 0;
+        int right = 0;
+        android.view.RoundedCorner bl = insets.getRoundedCorner(android.view.RoundedCorner.POSITION_BOTTOM_LEFT);
+        if (bl != null && rowY > bl.getCenter().y) {
+            double dy = rowY - bl.getCenter().y;
+            double edge = bl.getCenter().x - Math.sqrt(Math.max(0, (double) bl.getRadius() * bl.getRadius() - dy * dy));
+            left = (int) Math.max(0, Math.ceil(edge - at[0]));
+        }
+        android.view.RoundedCorner br = insets.getRoundedCorner(android.view.RoundedCorner.POSITION_BOTTOM_RIGHT);
+        if (br != null && rowY > br.getCenter().y) {
+            double dy = rowY - br.getCenter().y;
+            double edge = br.getCenter().x + Math.sqrt(Math.max(0, (double) br.getRadius() * br.getRadius() - dy * dy));
+            right = (int) Math.max(0, Math.ceil(at[0] + header.getWidth() - edge));
+        }
+        if (header.getPaddingLeft() != left || header.getPaddingRight() != right) {
+            int fl = left, fr = right;
+            header.post(() -> header.setPadding(fl, header.getPaddingTop(), fr, header.getPaddingBottom()));
+        }
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -83,6 +123,7 @@ public class PlayerBottomSheetFragment extends Fragment {
         initPlayerController();
         initQueueBridge(playbackViewModel);
         setHeaderBookmarksButton();
+        keepHeaderClearOfRoundedCorners(bind.playerHeaderLayout.getRoot());
         com.eddyizm.tempus.lan.LanRemoteSession.state().observe(getViewLifecycleOwner(), this::renderRemote);
         // Settings is a fragment in this activity, so a flipped switch is heard here rather than on resume.
         com.eddyizm.tempus.App.getInstance().getPreferences().registerOnSharedPreferenceChangeListener(lanSwitchListener);

@@ -337,6 +337,7 @@
     <string name="player_queue_back">Back</string>
     <string name="queued_view_queue">View queue</string>
     <string name="player_header_queue">Queue</string>
+    <string name="player_skipped_unplayable">Couldn\'t play %1$s, skipped</string>
     <string name="player_header_queue_count">Queue %1$d</string>
     <string name="player_header_seek">Playback position</string>
     <string name="track_add_to_queue">Add to queue</string>
