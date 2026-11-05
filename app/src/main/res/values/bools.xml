@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Home tabs (Artists … Recent) inside the toolbar row, beside the drawer button. That keeps
+        the header to one row where the window is wide (the car pane, a phone on its side); a
+        narrow window (a phone upright) gets them as a scrollable row under the toolbar instead.
+    -->
+    <bool name="home_tabs_in_toolbar">false</bool>
+</resources>

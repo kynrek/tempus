@@ -23,7 +23,9 @@ import com.eddyizm.tempus.ui.fragment.pager.HomePager;
 import com.eddyizm.tempus.util.AppColors;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.Preferences;
+import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
@@ -94,12 +96,25 @@ public class HomeFragment extends Fragment {
         Objects.requireNonNull(materialToolbar.getOverflowIcon()).setTint(requireContext().getResources().getColor(R.color.titleTextColor, null));
 
         tabLayout = new TabLayout(requireContext());
-        tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
-        tabLayout.setTabMode(TabLayout.MODE_FIXED);
-
-        // The tabs sit in the toolbar row itself, beside the drawer button, to keep the header to one row.
-        materialToolbar.addView(tabLayout, new Toolbar.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+        if (getResources().getBoolean(R.bool.home_tabs_in_toolbar)) {
+            // Wide window (car pane, phone on its side): the tabs sit in the toolbar row itself,
+            // beside the drawer button, to keep the header to one row.
+            tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
+            tabLayout.setTabMode(TabLayout.MODE_FIXED);
+            materialToolbar.addView(tabLayout, new Toolbar.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+        } else if (materialToolbar.getParent() instanceof AppBarLayout) {
+            // Narrow window (phone upright): six fixed tabs would be ~55dp each, so they get their
+            // own scrollable row under the toolbar. It has no scroll flags, so it stays pinned
+            // while the toolbar above it scrolls away with the list.
+            tabLayout.setTabMode(TabLayout.MODE_SCROLLABLE);
+            tabLayout.setTabGravity(TabLayout.GRAVITY_START);
+            tabLayout.setBackgroundColor(MaterialColors.getColor(materialToolbar, com.google.android.material.R.attr.colorSurface));
+            ((AppBarLayout) materialToolbar.getParent()).addView(tabLayout, new AppBarLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            // The toolbar row is free for a title now; the activity's own is the launcher label.
+            if (activity.getSupportActionBar() != null) activity.getSupportActionBar().setTitle(R.string.home_toolbar_title);
+        }
         applyTabColors();
     }
 

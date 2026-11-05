@@ -27,4 +27,12 @@
     <dimen name="catalogue_full_art_gap">6dp</dimen>
     <!-- Artist page picture: short enough that Top songs and Albums show without scrolling on the car screen. -->
     <dimen name="artist_header_height">132dp</dimen>
+    <!-- Favorites albums / tracks / artists switch: wide enough to hit while driving. -->
+    <dimen name="favorites_toggle_min_width">96dp</dimen>
+    <dimen name="favorites_toggle_padding">24dp</dimen>
+    <!-- Track row buttons (queue, playlist, playlist picker, go to album), sized for the car screen. -->
+    <dimen name="track_row_queue_button_width">44dp</dimen>
+    <dimen name="track_row_playlist_button_width">40dp</dimen>
+    <dimen name="track_row_choose_button_width">24dp</dimen>
+    <dimen name="track_row_album_button_width">48dp</dimen>
 </resources>

@@ -23,6 +23,7 @@
     - [Continue listening](#continue-listening)
 - [Navigation](#navigation)
     - [Bottom Navigation Bar](#bottom-navigation-bar)
+    - [Phone upright and on its side](#phone-upright-and-on-its-side)
 - [Playing on another device](#playing-on-another-device)
 - [Controlling another phone](#controlling-another-phone)
 - [Favorites](#favorites)
@@ -284,6 +285,16 @@ The spot is also saved as a bookmark on your server, if the server supports book
 - **Home**: Recently played and server recommendations
 - **Library**: Your server's complete music collection
 - **Download**: Locally downloaded files from server 
+
+### Phone upright and on its side
+The bottom bar is off by default; the navigation drawer (the ☰ button, or a swipe from the left edge) holds Home, Library, Downloads and Settings in both orientations. Turn the bar back on with **Settings > UI > Hide bottom navbar on portrait**.
+
+Turning the phone changes the layout, not what's on screen:
+- **Home tabs**: upright, Artists, Albums, Genres, Playlists, Favorites and Recent sit in a row under the toolbar that you can scroll sideways. On a wide screen they share the toolbar row.
+- **Albums and Artists**: the number of items across follows the screen width. Upright, rows are one column, full art three covers across, big art two and medium art three. On its side you get the wide-screen counts: rows three, full art five, big art three, medium art four.
+- **Mini player**: upright it has two rows, with the cover, title and buttons on top and the timeline, remote and **Queue** under them. On its side it's a single row.
+
+A separate *phone* build (`./gradlew assembleDegoogledPhone`) installs as **Music Phone** next to the regular build.
 
 [Back to top](#table-of-contents)
 

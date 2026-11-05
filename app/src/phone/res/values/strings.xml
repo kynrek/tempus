@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The phone build sits beside the car build ("Music"), so it needs a name of its own. -->
+    <string name="launcher_label" translatable="false">Music Phone</string>
+</resources>

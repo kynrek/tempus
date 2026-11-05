@@ -93,6 +93,12 @@ public class NavigationHelper {
      */
 
     public void setBottomNavigationBarVisibility(boolean visible) {
+        // Off in portrait while the drawer is used instead; screens that ask for the bar back (Home,
+        // the equalizer) would otherwise bring it up under the mini player.
+        if (visible && Preferences.getHideBottomNavbarOnPortrait()
+                && bottomNavigationView.getResources().getConfiguration().orientation != Configuration.ORIENTATION_LANDSCAPE) {
+            visible = false;
+        }
         int visibility = visible
                 ? View.VISIBLE
                 : View.GONE;
@@ -130,7 +136,9 @@ public class NavigationHelper {
         int orientation = activity.getResources().getConfiguration().orientation;
         boolean isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE;
 
-        if (isLandscape) {
+        // The drawer holds the library, Downloads and Settings in both orientations (the Home
+        // tabs replaced the bottom bar), so portrait gets the drawer button too unless it's off.
+        if (isLandscape || Preferences.getEnableDrawerOnPortrait()) {
             ActionBarDrawerToggle drawerToggle = new ActionBarDrawerToggle(
                     activity,
                     drawerLayout,

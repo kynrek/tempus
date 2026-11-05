@@ -77,7 +77,7 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
         TileSizeManager.getInstance().calculateTileSize( requireContext() );
         spanCount = TileSizeManager.getInstance().getTileSpanCount( requireContext() );
         catalogueView = CatalogueView.current();
-        spanCount = CatalogueView.spanCount(catalogueView);
+        spanCount = CatalogueView.spanCount(catalogueView, requireContext());
         tileSpacing = TileSizeManager.getInstance().getTileSpacing( requireContext() );
 
         initAppBar();

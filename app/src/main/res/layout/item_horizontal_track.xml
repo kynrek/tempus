@@ -214,7 +214,7 @@
     <!-- Add to queue: appends the track; playback carries on. -->
     <FrameLayout
         android:id="@+id/search_result_song_queue_button"
-        android:layout_width="44dp"
+        android:layout_width="@dimen/track_row_queue_button_width"
         android:layout_height="48dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/track_add_to_queue"
@@ -233,7 +233,7 @@
     <!-- Add to playlist: tap adds to the last playlist used, the arrow picks another. -->
     <FrameLayout
         android:id="@+id/search_result_song_playlist_button"
-        android:layout_width="40dp"
+        android:layout_width="@dimen/track_row_playlist_button_width"
         android:layout_height="48dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/track_add_to_last_playlist"
@@ -251,7 +251,7 @@
 
     <FrameLayout
         android:id="@+id/search_result_song_playlist_choose_button"
-        android:layout_width="24dp"
+        android:layout_width="@dimen/track_row_choose_button_width"
         android:layout_height="48dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/track_choose_playlist"
@@ -270,7 +270,7 @@
     <!-- Go to album: a full 48dp target, hidden on the album's own page. -->
     <FrameLayout
         android:id="@+id/search_result_song_album_button"
-        android:layout_width="48dp"
+        android:layout_width="@dimen/track_row_album_button_width"
         android:layout_height="48dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/song_bottom_sheet_go_to_album"

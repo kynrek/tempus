@@ -84,8 +84,10 @@ import androidx.fragment.app.Fragment;
 
 @UnstableApi
 public class MainActivity extends BaseActivity {
-    /** Mini player bar, timeline included; matches @dimen/bottom_sheet_peek_height. */
-    private static final int MINI_PLAYER_HEIGHT_DP = 72;
+    /** Mini player bar, timeline included: @dimen/bottom_sheet_peek_height (taller in portrait, where it has two rows). */
+    private int miniPlayerHeightDp() {
+        return Math.round(getResources().getDimension(R.dimen.bottom_sheet_peek_height) / getResources().getDisplayMetrics().density);
+    }
 
     private static final String TAG = "MainActivityLogs";
 
@@ -484,19 +486,19 @@ public class MainActivity extends BaseActivity {
         // Ignore orientation change, bottom navbar always hidden
         if (Preferences.getHideBottomNavbarOnPortrait()) {
             navigationController.setNavbarVisibility(false);
-            bottomSheetController.setPeekHeight(MINI_PLAYER_HEIGHT_DP, displayDensity);
+            bottomSheetController.setPeekHeight(miniPlayerHeightDp(), displayDensity);
             navigationController.setSystemBarsVisibility(this, !isLandscape);
             return;
         }
 
         if (!isLandscape) {
             // Show app navbar + show system bars
-            bottomSheetController.setPeekHeight(MINI_PLAYER_HEIGHT_DP + 80, displayDensity);
+            bottomSheetController.setPeekHeight(miniPlayerHeightDp() + 80, displayDensity);
             navigationController.setNavbarVisibility(true);
             navigationController.setSystemBarsVisibility(this, true);
         } else {
             // Hide app navbar + hide system bars
-            bottomSheetController.setPeekHeight(MINI_PLAYER_HEIGHT_DP, displayDensity);
+            bottomSheetController.setPeekHeight(miniPlayerHeightDp(), displayDensity);
             navigationController.setNavbarVisibility(false);
             navigationController.setSystemBarsVisibility(this, false);
         }
@@ -942,18 +944,22 @@ public class MainActivity extends BaseActivity {
             Insets status = !isInMultiWindowMode() && insets.isVisible(WindowInsetsCompat.Type.statusBars())
                     ? insets.getInsets(WindowInsetsCompat.Type.statusBars()) : Insets.NONE;
             int topPadding = Math.max(status.top, displayCutout.top);
+            // A phone on its side hides its bars, which leaves the camera cutout over the drawer
+            // button or the last tab; keep the sides clear of it too (the car screen has none).
+            int leftPadding = Math.max(systemBars.left, displayCutout.left);
+            int rightPadding = Math.max(systemBars.right, displayCutout.right);
 
             rootView.setPadding(
-                    systemBars.left,
+                    leftPadding,
                     topPadding,
-                    systemBars.right,
+                    rightPadding,
                     0
             );
 
             return new WindowInsetsCompat.Builder(insets)
-                    .setInsets(WindowInsetsCompat.Type.systemBars(), Insets.of(systemBars.left, 0, systemBars.right, systemBars.bottom))
+                    .setInsets(WindowInsetsCompat.Type.systemBars(), Insets.of(0, 0, 0, systemBars.bottom))
                     .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.NONE)
-                    .setInsets(WindowInsetsCompat.Type.displayCutout(), Insets.of(displayCutout.left, 0, displayCutout.right, displayCutout.bottom))
+                    .setInsets(WindowInsetsCompat.Type.displayCutout(), Insets.of(0, 0, 0, displayCutout.bottom))
                     .build();
         });
     }

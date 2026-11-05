@@ -1,5 +1,7 @@
 package com.eddyizm.tempus.util;
 
+import android.content.Context;
+
 /** The Albums and Artists tabs' view style (Settings > UI > Albums and Artists view). */
 public final class CatalogueView {
     public static final String CONDENSED = "condensed";
@@ -29,13 +31,32 @@ public final class CatalogueView {
         return !FULL_ART.equals(view);
     }
 
-    /** Items across: rows three across, full art five, big art three, medium art four. */
-    public static int spanCount(String view) {
+    /**
+     * Items across for a window {@code widthDp} wide. The counts were picked on the car pane
+     * (833dp: rows three across, full art five, big art three, medium art four) and scale with
+     * the width from there, so a phone on its side (~870dp) gets the same and a phone upright
+     * (~400dp) gets one row, three full-art covers, two big or three medium tiles. Each style
+     * keeps a floor so covers on a narrow screen don't shrink to stamps or grow to one per row.
+     */
+    public static int spanCount(String view, int widthDp) {
+        int perCar;
+        int min;
         switch (view) {
-            case FULL_ART: return 5;
-            case ART_TITLE_BIG: return 3;
-            case ART_TITLE_MEDIUM: return 4;
-            default: return 3;
+            case FULL_ART: perCar = 5; min = 3; break;
+            case ART_TITLE_BIG: perCar = 3; min = 2; break;
+            case ART_TITLE_MEDIUM: perCar = 4; min = 3; break;
+            default: perCar = 3; min = 1; break;   // rows
         }
+        if (widthDp <= 0) return perCar;
+        int span = (int) Math.floor(perCar * widthDp / (float) CAR_WIDTH_DP + 0.15f);
+        return Math.max(min, span);
     }
+
+    /** Items across for the window this context is shown in (follows rotation and split screen). */
+    public static int spanCount(String view, Context context) {
+        return spanCount(view, context.getResources().getConfiguration().screenWidthDp);
+    }
+
+    /** Width the per-style counts were tuned on: the car display pane. */
+    private static final int CAR_WIDTH_DP = 833;
 }

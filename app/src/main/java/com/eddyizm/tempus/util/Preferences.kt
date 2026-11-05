@@ -615,12 +615,12 @@ object Preferences {
 
     @JvmStatic
     fun getEnableDrawerOnPortrait(): Boolean {
-        return App.getInstance().preferences.getBoolean(ENABLE_DRAWER_ON_PORTRAIT, false)
+        return App.getInstance().preferences.getBoolean(ENABLE_DRAWER_ON_PORTRAIT, true)
     }
 
     @JvmStatic
     fun getHideBottomNavbarOnPortrait(): Boolean {
-        return App.getInstance().preferences.getBoolean(HIDE_BOTTOM_NAVBAR_ON_PORTRAIT, false)
+        return App.getInstance().preferences.getBoolean(HIDE_BOTTOM_NAVBAR_ON_PORTRAIT, true)
     }
 
     @JvmStatic

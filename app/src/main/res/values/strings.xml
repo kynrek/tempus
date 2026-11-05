@@ -57,6 +57,8 @@
     <string name="app_name">Tempus</string>
     <!-- Name under the launcher icon, in system settings and in the navigation drawer header. -->
     <string name="launcher_label" translatable="false">Music</string>
+    <!-- Home toolbar title on a narrow (phone upright) screen, where the tabs get their own row. -->
+    <string name="home_toolbar_title" translatable="false">Music</string>
     <string name="home_tab_favorites">Favorites</string>
     <string name="home_tab_recent">Recent</string>
     <string name="favorites_type_albums">Albums</string>
@@ -362,8 +364,8 @@
     <string name="progress_thickness_thin">Thin</string>
     <string name="progress_thickness_medium">Medium</string>
     <string name="progress_thickness_thick">Thick</string>
-    <string name="catalogue_view_condensed">Rows, medium (3 across)</string>
-    <string name="catalogue_view_rows_large">Rows, large (3 across, twice as tall)</string>
+    <string name="catalogue_view_condensed">Rows, medium (one column upright, three on a wide screen)</string>
+    <string name="catalogue_view_rows_large">Rows, large (twice as tall)</string>
     <string name="catalogue_view_full_art">Full art (no titles)</string>
     <string name="catalogue_view_art_title_big">Art and title, big</string>
     <string name="catalogue_view_art_title_medium">Art and title, medium</string>

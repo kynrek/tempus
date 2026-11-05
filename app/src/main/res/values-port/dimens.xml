@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="alphabet_scrubber_bottom_inset">8dp</dimen>
+    <!-- Portrait mini player has two rows (see layout-port/player_header_bottom_sheet.xml). -->
+    <dimen name="bottom_sheet_peek_height">96dp</dimen>
+    <!-- A phone upright is ~400dp: the switch has to leave room for the shuffle and sort buttons. -->
+    <dimen name="favorites_toggle_min_width">0dp</dimen>
+    <dimen name="favorites_toggle_padding">12dp</dimen>
+    <!-- Track rows: narrower buttons (still 48dp tall) so the title keeps room on a ~400dp phone. -->
+    <dimen name="track_row_queue_button_width">36dp</dimen>
+    <dimen name="track_row_playlist_button_width">34dp</dimen>
+    <dimen name="track_row_choose_button_width">20dp</dimen>
+    <dimen name="track_row_album_button_width">36dp</dimen>
+    <!-- Artist picture: a phone upright has the height for a proper header. -->
+    <dimen name="artist_header_height">220dp</dimen>
 </resources>

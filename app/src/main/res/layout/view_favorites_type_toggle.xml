@@ -12,7 +12,9 @@
         style="@style/Widget.Material3.Button.OutlinedButton"
         android:layout_width="wrap_content"
         android:layout_height="48dp"
-        android:minWidth="96dp"
+        android:minWidth="@dimen/favorites_toggle_min_width"
+        android:paddingStart="@dimen/favorites_toggle_padding"
+        android:paddingEnd="@dimen/favorites_toggle_padding"
         android:text="@string/favorites_type_albums"
         android:textAllCaps="false" />
 
@@ -21,7 +23,9 @@
         style="@style/Widget.Material3.Button.OutlinedButton"
         android:layout_width="wrap_content"
         android:layout_height="48dp"
-        android:minWidth="96dp"
+        android:minWidth="@dimen/favorites_toggle_min_width"
+        android:paddingStart="@dimen/favorites_toggle_padding"
+        android:paddingEnd="@dimen/favorites_toggle_padding"
         android:text="@string/favorites_type_tracks"
         android:textAllCaps="false" />
 
@@ -30,7 +34,9 @@
         style="@style/Widget.Material3.Button.OutlinedButton"
         android:layout_width="wrap_content"
         android:layout_height="48dp"
-        android:minWidth="96dp"
+        android:minWidth="@dimen/favorites_toggle_min_width"
+        android:paddingStart="@dimen/favorites_toggle_padding"
+        android:paddingEnd="@dimen/favorites_toggle_padding"
         android:text="@string/favorites_type_artists"
         android:textAllCaps="false" />
 </com.google.android.material.button.MaterialButtonToggleGroup>

@@ -80,6 +80,15 @@ android {
             applicationIdSuffix = ".debug"
             debuggable = true
         }
+
+        // Phone build: same code and layouts as debug (the layouts adapt to the screen on their
+        // own), but its own app id and launcher label so it installs beside the car build.
+        // Build with ./gradlew assembleDegoogledPhone; src/phone/ holds its few overrides.
+        phone {
+            initWith debug
+            applicationIdSuffix = ".phone"
+            matchingFallbacks = ['debug']
+        }
     }
 
     packaging {
