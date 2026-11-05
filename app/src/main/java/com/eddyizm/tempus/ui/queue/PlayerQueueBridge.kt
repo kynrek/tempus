@@ -24,13 +24,16 @@ import androidx.lifecycle.lifecycleScope
 import com.eddyizm.tempus.R
 import com.eddyizm.tempus.lan.LanRemoteSession
 import com.eddyizm.tempus.model.Download
+import com.eddyizm.tempus.repository.AlbumRepository
 import com.eddyizm.tempus.repository.DownloadRepository
 import com.eddyizm.tempus.repository.PlaylistRepository
 import com.eddyizm.tempus.service.MediaManager
+import com.eddyizm.tempus.subsonic.models.AlbumID3
 import com.eddyizm.tempus.subsonic.models.Child
 import com.eddyizm.tempus.subsonic.models.PlayQueue
 import com.eddyizm.tempus.ui.dialog.PlaylistChooserDialog
 import com.eddyizm.tempus.ui.fragment.PlayerBottomSheetFragment
+import com.eddyizm.tempus.ui.activity.MainActivity
 import com.eddyizm.tempus.util.Constants
 import com.eddyizm.tempus.util.DownloadUtil
 import com.eddyizm.tempus.util.ExternalAudioReader
@@ -202,6 +205,7 @@ class PlayerQueueBridge @JvmOverloads constructor(
                             }
                         }, ContextCompat.getMainExecutor(context))
                     },
+                    onOpenAlbum = { song -> openAlbum(song) },
                     onRemoveTrack = { removeIndex ->
                         if (LanRemoteSession.isActive()) {
                             MediaManager.remove(
@@ -352,6 +356,27 @@ class PlayerQueueBridge @JvmOverloads constructor(
         composeView.visibility = View.GONE
         backCallback?.isEnabled = false
         fragment.updateBottomSheetDraggableState()
+    }
+
+    /** Opens the song's album page, closing the queue and the player over it. */
+    private fun openAlbum(song: Child) {
+        val albumId = song.albumId ?: return
+        val owner = fragment.viewLifecycleOwner
+        val data = AlbumRepository().getAlbum(albumId)
+        data.observe(owner, object : Observer<AlbumID3?> {
+            override fun onChanged(value: AlbumID3?) {
+                data.removeObserver(this)
+                val activity = fragment.activity as? MainActivity ?: return
+                if (value == null) {
+                    Toast.makeText(activity, R.string.song_bottom_sheet_error_retrieving_album, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                closeImmediate()
+                val bundle = Bundle().apply { putParcelable(Constants.ALBUM_OBJECT, value.strippedForNav()) }
+                activity.navController.navigate(R.id.albumPageFragment, bundle)
+                activity.collapseBottomSheetDelayed()
+            }
+        })
     }
 
     fun toggleQueue() {

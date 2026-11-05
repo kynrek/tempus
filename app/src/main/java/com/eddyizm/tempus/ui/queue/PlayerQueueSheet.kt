@@ -123,6 +123,7 @@ fun PlayerQueueSheet(
     onDownloadAll: (List<Child>) -> Unit,
     onLoadSavedQueue: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenAlbum: ((Child) -> Unit)? = null,
     currentSongId: String? = null,
     externalRefreshTrigger: Any? = null,
     onSheetReady: ((suspend () -> Unit)) -> Unit = {},
@@ -290,7 +291,8 @@ fun PlayerQueueSheet(
                     onRemoveTrack = { removeIndex, _ ->
                         reorderedChildList = null
                         onRemoveTrack(removeIndex)
-                    }
+                    },
+                    onOpenAlbum = onOpenAlbum
                 )
             }
         }

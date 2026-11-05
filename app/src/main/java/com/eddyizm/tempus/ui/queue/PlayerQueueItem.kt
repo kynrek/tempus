@@ -82,6 +82,7 @@ fun PlayerQueueItem(
     onClick: (Int, Child) -> Unit,
     onRemove: (Int, QueueSongItem) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenAlbum: ((Child) -> Unit)? = null,
     dragHandleModifier: Modifier = Modifier,
     downloadedIds: Set<String> = emptySet(),
     canDismiss: Boolean = true,
@@ -293,6 +294,21 @@ fun PlayerQueueItem(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = textAlpha),
                                 modifier = Modifier.size(18.dp)
                             )
+                        }
+
+                        // Go to this song's album (the player and queue close behind it).
+                        if (onOpenAlbum != null && item.song.albumId != null) {
+                            IconButton(
+                                onClick = { onOpenAlbum(currentItem.song) },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_albums),
+                                    contentDescription = stringResource(R.string.song_bottom_sheet_go_to_album),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         }
 
                         // Quick remove (the now-playing song stays).

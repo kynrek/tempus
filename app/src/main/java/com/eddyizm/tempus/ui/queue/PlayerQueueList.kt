@@ -56,6 +56,7 @@ fun PlayerQueueList(
     onTrackClick: (Int, Child) -> Unit,
     onRemoveTrack: (Int, QueueSongItem) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenAlbum: ((Child) -> Unit)? = null,
     downloadedIds: Set<String> = emptySet(),
     externalRefreshTrigger: Any? = null,
     onDragStarted: () -> Unit = {},
@@ -152,6 +153,7 @@ fun PlayerQueueList(
                         externalRefreshTrigger = externalRefreshTrigger,
                         onClick = onTrackClick,
                         onRemove = onRemoveTrack,
+                        onOpenAlbum = onOpenAlbum,
                         canDismiss = items.size > 1
                     )
                 }
