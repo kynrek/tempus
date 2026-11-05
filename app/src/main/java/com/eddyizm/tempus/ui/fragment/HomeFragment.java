@@ -90,8 +90,8 @@ public class HomeFragment extends Fragment {
         HomePager pager = new HomePager(this);
 
         // Car layout: browse the library straight from Home instead of Music / Podcast / Radio.
-        pager.addFragment(embedded(new AlbumCatalogueFragment()), getString(R.string.album_catalogue_title), R.drawable.ic_home);
         pager.addFragment(embedded(new ArtistCatalogueFragment()), getString(R.string.artist_catalogue_title), R.drawable.ic_home);
+        pager.addFragment(embedded(new AlbumCatalogueFragment()), getString(R.string.album_catalogue_title), R.drawable.ic_home);
         pager.addFragment(embedded(new GenreCatalogueFragment()), getString(R.string.library_title_genre), R.drawable.ic_home);
         Fragment playlists = embedded(new PlaylistCatalogueFragment());
         playlists.requireArguments().putString(Constants.PLAYLIST_ALL, Constants.PLAYLIST_ALL);
@@ -153,7 +153,7 @@ public class HomeFragment extends Fragment {
 
     /**
      * The music library line in the drawer is a filter for library-scoped screens. The Home
-     * tabs (Albums, Artists, Genres, Playlists, Favorites, Recent) list the whole server, so the line would name a filter that isn't applied.
+     * tabs (Artists, Albums, Genres, Playlists, Favorites, Recent) list the whole server, so the line would name a filter that isn't applied.
      *
      * The toolbar reads this on every update instead of being pushed the page once.
      */
