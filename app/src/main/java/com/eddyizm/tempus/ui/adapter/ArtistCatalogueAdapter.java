@@ -2,6 +2,7 @@ package com.eddyizm.tempus.ui.adapter;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Filter;
 import android.widget.Filterable;
@@ -9,6 +10,7 @@ import android.widget.Filterable;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.eddyizm.tempus.R;
 import com.eddyizm.tempus.databinding.ItemLibraryCatalogueArtistBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.helper.recyclerview.AlphabetScrubber;
@@ -16,6 +18,7 @@ import com.eddyizm.tempus.helper.recyclerview.ScrubberSections;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.subsonic.models.ArtistID3;
 import com.eddyizm.tempus.util.AlphabetSort;
+import com.eddyizm.tempus.util.CatalogueView;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.MusicUtil;
 
@@ -26,6 +29,7 @@ import java.util.List;
 
 public class ArtistCatalogueAdapter extends RecyclerView.Adapter<ArtistCatalogueAdapter.ViewHolder> implements Filterable, StandardViewTypeAdapter, AlphabetScrubber.SectionProvider {
     private final ClickCallback click;
+    private String view = CatalogueView.ART_TITLE_MEDIUM;
     private String sortOrder;
 
     private final Filter filtering = new Filter() {
@@ -70,8 +74,26 @@ public class ArtistCatalogueAdapter extends RecyclerView.Adapter<ArtistCatalogue
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        ItemLibraryCatalogueArtistBinding view = ItemLibraryCatalogueArtistBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
-        return new ViewHolder(view);
+        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+        ItemLibraryCatalogueArtistBinding item = CatalogueView.isRows(view)
+                ? ItemLibraryCatalogueArtistBinding.bind(inflater.inflate(R.layout.item_library_catalogue_artist_row, parent, false))
+                : ItemLibraryCatalogueArtistBinding.inflate(inflater, parent, false);
+        if (CatalogueView.isRows(view)) {
+            int size = Math.round(CatalogueView.rowCoverDp(view) * parent.getResources().getDisplayMetrics().density);
+            ViewGroup.LayoutParams lp = item.artistCatalogueCoverImageView.getLayoutParams();
+            lp.width = size;
+            lp.height = size;
+        }
+        if (!CatalogueView.showsTitles(view)) {
+            item.artistNameLabel.setVisibility(View.GONE);
+            item.getRoot().setPadding(0, 0, 0, item.getRoot().getResources().getDimensionPixelSize(R.dimen.catalogue_full_art_gap));
+        }
+        return new ViewHolder(item);
+    }
+
+    /** Set before the adapter is attached: rows and tiles use different layouts. */
+    public void setView(String view) {
+        this.view = view;
     }
 
     @Override

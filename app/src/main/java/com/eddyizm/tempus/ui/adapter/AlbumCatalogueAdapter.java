@@ -10,6 +10,7 @@ import android.widget.Filterable;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.eddyizm.tempus.R;
 import com.eddyizm.tempus.databinding.ItemLibraryCatalogueAlbumBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.helper.recyclerview.AlphabetScrubber;
@@ -17,6 +18,7 @@ import com.eddyizm.tempus.helper.recyclerview.ScrubberSections;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.util.AlphabetSort;
+import com.eddyizm.tempus.util.CatalogueView;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.MusicUtil;
 
@@ -33,6 +35,7 @@ public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAd
     private String sortOrder;
     private String currentFilter;
     private boolean showArtist;
+    private String view = CatalogueView.ART_TITLE_MEDIUM;
 
     private final Filter filtering = new Filter() {
         @Override
@@ -79,8 +82,21 @@ public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAd
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        ItemLibraryCatalogueAlbumBinding view = ItemLibraryCatalogueAlbumBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
-        return new ViewHolder(view);
+        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+        ItemLibraryCatalogueAlbumBinding item = CatalogueView.isRows(view)
+                ? ItemLibraryCatalogueAlbumBinding.bind(inflater.inflate(R.layout.item_library_catalogue_album_row, parent, false))
+                : ItemLibraryCatalogueAlbumBinding.inflate(inflater, parent, false);
+        if (CatalogueView.isRows(view)) {
+            int size = Math.round(CatalogueView.rowCoverDp(view) * parent.getResources().getDisplayMetrics().density);
+            ViewGroup.LayoutParams lp = item.albumCatalogueCoverImageView.getLayoutParams();
+            lp.width = size;
+            lp.height = size;
+        }
+        if (!CatalogueView.showsTitles(view)) {
+            item.albumNameLabel.setVisibility(View.GONE);
+            item.getRoot().setPadding(0, 0, 0, item.getRoot().getResources().getDimensionPixelSize(R.dimen.catalogue_full_art_gap));
+        }
+        return new ViewHolder(item);
     }
 
     @Override
@@ -89,7 +105,7 @@ public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAd
 
         holder.item.albumNameLabel.setText(album.getName());
         holder.item.artistNameLabel.setText(album.getArtist());
-        holder.item.artistNameLabel.setVisibility(showArtist ? View.VISIBLE : View.GONE);
+        holder.item.artistNameLabel.setVisibility(showArtist && CatalogueView.showsTitles(view) ? View.VISIBLE : View.GONE);
 
         CustomGlideRequest.Builder
                 .from(holder.itemView.getContext(), album.getCoverArtId(), CustomGlideRequest.ResourceType.Album)
@@ -100,6 +116,11 @@ public class AlbumCatalogueAdapter extends RecyclerView.Adapter<AlbumCatalogueAd
     @Override
     public int getItemCount() {
         return albums.size();
+    }
+
+    /** Set before the adapter is attached: rows and tiles use different layouts. */
+    public void setView(String view) {
+        this.view = view;
     }
 
     public AlbumID3 getItem(int position) {

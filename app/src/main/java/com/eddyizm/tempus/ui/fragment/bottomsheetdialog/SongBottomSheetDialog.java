@@ -23,6 +23,7 @@ import androidx.media3.session.SessionToken;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.util.QueueAdder;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.model.Download;
 import com.eddyizm.tempus.repository.PlaylistRepository;
@@ -198,7 +199,7 @@ public class SongBottomSheetDialog extends CarBottomSheetDialogFragment implemen
 
         TextView addToQueue = view.findViewById(R.id.add_to_queue_text_view);
         addToQueue.setOnClickListener(v -> {
-            MediaManager.enqueue(mediaBrowserListenableFuture, song, false);
+            QueueAdder.add(requireActivity(), mediaBrowserListenableFuture, song);
             ((MainActivity) requireActivity()).setBottomSheetInPeek(true);
             dismissBottomSheet();
         });

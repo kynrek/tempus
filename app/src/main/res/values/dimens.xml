@@ -24,4 +24,7 @@
     <dimen name="embedded_header_height">64dp</dimen>
     <!-- Mini player transport buttons, large enough to hit while driving (the bar is 72dp, timeline included). -->
     <dimen name="mini_player_button_size">38dp</dimen>
+    <dimen name="catalogue_full_art_gap">6dp</dimen>
+    <!-- Artist page picture: short enough that Top songs and Albums show without scrolling on the car screen. -->
+    <dimen name="artist_header_height">132dp</dimen>
 </resources>

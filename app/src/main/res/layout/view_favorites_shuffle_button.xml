@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Button xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/favorites_shuffle_button"
+    style="@style/Widget.Material3.Button.TonalButton.Icon"
+    android:layout_width="52dp"
+    android:layout_height="52dp"
+    android:contentDescription="@string/favorites_shuffle"
+    android:insetLeft="0dp"
+    android:insetTop="0dp"
+    android:insetRight="0dp"
+    android:insetBottom="0dp"
+    app:cornerRadius="30dp"
+    app:icon="@drawable/ic_shuffle" />

@@ -6,6 +6,16 @@
     android:background="?attr/colorSurface"
     android:clipChildren="false">
 
+    <!-- A bar along the top edge, so it's clear where the control panel starts. -->
+    <View
+        android:id="@+id/player_header_top_bar"
+        android:layout_width="0dp"
+        android:layout_height="3dp"
+        android:background="?attr/colorPrimary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <ImageView
         android:id="@+id/player_header_media_cover_image"
         android:layout_width="42dp"

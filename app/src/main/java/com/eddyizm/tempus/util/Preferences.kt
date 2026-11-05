@@ -57,6 +57,14 @@ object Preferences {
     private const val WIFI_ONLY = "wifi_only"
     private const val DOWNLOAD_WIFI_ONLY = "download_wifi_only"
     private const val DOWNLOAD_CELLULAR_LIMIT = "download_cellular_limit"
+    private const val QUEUE_ADD_POSITION = "queue_add_position"
+    private const val CATALOGUE_VIEW = "catalogue_view"
+    private const val ARTIST_TOP_SONGS_MODE = "artist_top_songs_mode"
+    private const val ARTIST_ALBUMS_MODE = "artist_albums_mode"
+    private const val ARTIST_FIRST_SECTION = "artist_first_section"
+    private const val OFFLINE_COVER_SIZES = "offline_cover_sizes"
+    private const val PROGRESS_STYLE = "progress_style"
+    private const val PROGRESS_THICKNESS = "progress_thickness"
     private const val DOWNLOAD_DATABASE_REPAIRED = "download_database_repaired_version"
     private const val DOWNLOAD_REPAIR_ATTEMPTS = "download_repair_attempts"
     private const val ALBUM_ARTIST_BACKFILLED = "album_artist_backfilled_version"
@@ -304,14 +312,33 @@ object Preferences {
         App.getInstance().preferences.edit().putString(USER, user).apply()
     }
 
+    // The signed-in password, decrypted once (it's stored encrypted, see CredentialCipher).
+    @Volatile
+    private var passwordCache: String? = null
+    @Volatile
+    private var passwordCached = false
+
     @JvmStatic
     fun getPassword(): String? {
-        return App.getInstance().preferences.getString(PASSWORD, null)
+        if (!passwordCached) {
+            passwordCache = CredentialCipher.decrypt(App.getInstance().preferences.getString(PASSWORD, null))
+            passwordCached = true
+        }
+        return passwordCache
     }
 
     @JvmStatic
     fun setPassword(password: String?) {
-        App.getInstance().preferences.edit().putString(PASSWORD, password).apply()
+        App.getInstance().preferences.edit().putString(PASSWORD, CredentialCipher.encrypt(password)).apply()
+        passwordCache = password
+        passwordCached = true
+    }
+
+    /** Encrypts a signed-in password saved before encryption was added. */
+    @JvmStatic
+    fun encryptSavedPassword() {
+        val stored = App.getInstance().preferences.getString(PASSWORD, null)
+        if (!stored.isNullOrEmpty() && !CredentialCipher.isEncrypted(stored)) setPassword(stored)
     }
 
     @JvmStatic
@@ -640,6 +667,54 @@ object Preferences {
     @JvmStatic
     fun isDownloadWifiOnly(): Boolean {
         return App.getInstance().preferences.getBoolean(DOWNLOAD_WIFI_ONLY, false)
+    }
+
+    /** A Settings > Colors choice (a palette name), or {@code fallback} when not set. */
+    @JvmStatic
+    fun getColorChoice(key: String, fallback: String): String {
+        return App.getInstance().preferences.getString(key, fallback) ?: fallback
+    }
+
+    /** Offline cover copies: "all" (full, half and quarter; default) or "small" (half and quarter only). */
+    @JvmStatic
+    fun getOfflineCoverSizes(): String {
+        return App.getInstance().preferences.getString(OFFLINE_COVER_SIZES, "all") ?: "all"
+    }
+
+    /** Artist page Top songs section: "open" (default), "closed" or "hidden". */
+    @JvmStatic
+    fun getArtistTopSongsMode(): String = App.getInstance().preferences.getString(ARTIST_TOP_SONGS_MODE, "open") ?: "open"
+
+    /** Artist page Albums section: "open" (default), "closed" or "hidden". */
+    @JvmStatic
+    fun getArtistAlbumsMode(): String = App.getInstance().preferences.getString(ARTIST_ALBUMS_MODE, "open") ?: "open"
+
+    /** Which artist page section comes first: "top_songs" (default) or "albums". */
+    @JvmStatic
+    fun getArtistFirstSection(): String = App.getInstance().preferences.getString(ARTIST_FIRST_SECTION, "top_songs") ?: "top_songs"
+
+    /** Playback progress line: "wavy" (default) or "straight". */
+    @JvmStatic
+    fun getProgressStyle(): String {
+        return App.getInstance().preferences.getString(PROGRESS_STYLE, "wavy") ?: "wavy"
+    }
+
+    /** Playback progress line thickness in dp (2, 3 or 5; default 3). */
+    @JvmStatic
+    fun getProgressThicknessDp(): Float {
+        return App.getInstance().preferences.getString(PROGRESS_THICKNESS, "3")?.toFloatOrNull()?.takeIf { it > 0 } ?: 3f
+    }
+
+    /** How the Albums and Artists tabs show items: condensed (default), full_art, art_title_big, art_title_medium. */
+    @JvmStatic
+    fun getCatalogueView(): String {
+        return App.getInstance().preferences.getString(CATALOGUE_VIEW, "condensed") ?: "condensed"
+    }
+
+    /** Where "Add to queue" puts songs: "bottom" (default), "top" (play next) or "ask". */
+    @JvmStatic
+    fun getQueueAddPosition(): String {
+        return App.getInstance().preferences.getString(QUEUE_ADD_POSITION, "bottom") ?: "bottom"
     }
 
     /** Mobile-data speed cap for downloads in kbit/s; 0 for no cap. */

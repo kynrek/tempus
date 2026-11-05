@@ -328,50 +328,17 @@ public class ArtistRepository {
         return new SongRepository().getInstantMix(artist.getId(), SeedType.ARTIST, count);
     }
 
+    /**
+     * Up to {@code count} of the artist's own tracks in random order, drawn from all their albums
+     * (songs by other artists on compilations are left out).
+     */
     public MutableLiveData<List<Child>> getRandomSong(ArtistID3 artist, int count) {
         MutableLiveData<List<Child>> randomSongs = new MutableLiveData<>();
-
-        App.getSubsonicClientInstance(false)
-                .getBrowsingClient()
-                .getArtist(artist.getId())
-                .enqueue(new Callback<ApiResponse>() {
-                    @Override
-                    public void onResponse(@NonNull Call<ApiResponse> call, @NonNull Response<ApiResponse> response) {
-                        if (response.isSuccessful() && response.body() != null &&
-                                response.body().getSubsonicResponse().getArtist() != null &&
-                                response.body().getSubsonicResponse().getArtist().getAlbums() != null) {
-
-                            List<AlbumID3> albums = response.body().getSubsonicResponse().getArtist().getAlbums();
-                            Log.d("ArtistRepository", "Got albums directly: " + albums.size());
-                            if (albums.isEmpty()) {
-                                Log.d("ArtistRepository", "No albums found in artist response");
-                                return;
-                            }
-
-                            Collections.shuffle(albums);
-                            int[] counts = albums.stream().mapToInt(AlbumID3::getSongCount).toArray();
-                            Arrays.parallelPrefix(counts, Integer::sum);
-                            int albumLimit = 0;
-                            int multiplier = 4; // get more than the limit so we can shuffle them
-                            while (albumLimit < albums.size() && counts[albumLimit] < count * multiplier)
-                                albumLimit++;
-                            Log.d("ArtistRepository", String.format("Retaining %d/%d albums", albumLimit, albums.size()));
-
-                            fetchAllAlbumSongsWithCallback(albums.stream().limit(albumLimit).collect(Collectors.toList()), artist.getId(), artist.getName(), songs -> {
-                                Collections.shuffle(songs);
-                                randomSongs.setValue(songs.stream().limit(count).collect(Collectors.toList()));
-                            });
-                        } else {
-                            Log.d("ArtistRepository", "Failed to get artist info");
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(@NonNull Call<ApiResponse> call, @NonNull Throwable t) {
-                        Log.d("ArtistRepository", "Error getting artist info: " + t.getMessage());
-                    }
-                });
-
+        getArtistAllSongs(artist.getId(), songs -> {
+            List<Child> shuffled = new ArrayList<>(songs);
+            Collections.shuffle(shuffled);
+            randomSongs.postValue(new ArrayList<>(shuffled.subList(0, Math.min(count, shuffled.size()))));
+        });
         return randomSongs;
     }
 

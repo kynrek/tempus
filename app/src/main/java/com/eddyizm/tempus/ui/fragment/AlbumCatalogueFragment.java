@@ -33,6 +33,7 @@ import com.eddyizm.tempus.helper.recyclerview.GridItemDecoration;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.AlbumCatalogueAdapter;
+import com.eddyizm.tempus.util.CatalogueView;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.util.Preferences;
@@ -51,6 +52,7 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
     private MainActivity activity;
     private AlbumCatalogueViewModel albumCatalogueViewModel;
     private int spanCount = 2;
+    private String catalogueView = CatalogueView.ART_TITLE_MEDIUM;
     private int tileSpacing = 20;
     private AlbumCatalogueAdapter albumAdapter;
     private String currentSortOrder;
@@ -102,6 +104,8 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
 
         TileSizeManager.getInstance().calculateTileSize( requireContext() );
         spanCount = TileSizeManager.getInstance().getTileSpanCount( requireContext() );
+        catalogueView = CatalogueView.current();
+        spanCount = CatalogueView.spanCount(catalogueView);
         tileSpacing = TileSizeManager.getInstance().getTileSpacing( requireContext() );
 
         initAppBar();
@@ -168,6 +172,8 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
         bind.albumCatalogueRecyclerView.getRecycledViewPool().setMaxRecycledViews(0, spanCount * 4);
 
         albumAdapter = new AlbumCatalogueAdapter(this, true);
+
+        albumAdapter.setView(catalogueView);
         albumAdapter.setStateRestorationPolicy(RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY);
         bind.albumCatalogueRecyclerView.setAdapter(albumAdapter);
         bind.albumAlphabetScrubber.attach(bind.albumCatalogueRecyclerView, albumAdapter);

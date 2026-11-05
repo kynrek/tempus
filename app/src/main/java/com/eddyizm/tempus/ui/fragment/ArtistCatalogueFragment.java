@@ -34,6 +34,7 @@ import com.eddyizm.tempus.helper.recyclerview.GridItemDecoration;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.ArtistCatalogueAdapter;
+import com.eddyizm.tempus.util.CatalogueView;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.util.Preferences;
@@ -55,6 +56,7 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
     private ArtistCatalogueAdapter artistAdapter;
 
     private int spanCount = 2;
+    private String catalogueView = CatalogueView.ART_TITLE_MEDIUM;
     private int tileSpacing = 20;
 
     @Override
@@ -74,6 +76,8 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
 
         TileSizeManager.getInstance().calculateTileSize( requireContext() );
         spanCount = TileSizeManager.getInstance().getTileSpanCount( requireContext() );
+        catalogueView = CatalogueView.current();
+        spanCount = CatalogueView.spanCount(catalogueView);
         tileSpacing = TileSizeManager.getInstance().getTileSpacing( requireContext() );
 
         initAppBar();
@@ -139,6 +143,8 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
         bind.artistCatalogueRecyclerView.getRecycledViewPool().setMaxRecycledViews(0, spanCount * 4);
 
         artistAdapter = new ArtistCatalogueAdapter(this);
+
+        artistAdapter.setView(catalogueView);
         artistAdapter.setStateRestorationPolicy(RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY);
         bind.artistCatalogueRecyclerView.setAdapter(artistAdapter);
         bind.artistAlphabetScrubber.attach(bind.artistCatalogueRecyclerView, artistAdapter);

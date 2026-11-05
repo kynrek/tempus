@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.TextView;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -27,6 +28,8 @@ import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.util.AppColors;
+import com.eddyizm.tempus.ui.view.ProgressLineDrawable;
 import com.eddyizm.tempus.databinding.FragmentPlayerBottomSheetBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.service.MediaManager;
@@ -93,6 +96,46 @@ public class PlayerBottomSheetFragment extends Fragment {
         }
 
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (headerLine != null) headerLine.reload();   // the line style may have changed in Settings
+        applyPanelColors();
+    }
+
+    /** Settings > Colors: the control panel's background and text (and its icons and line). */
+    private void applyPanelColors() {
+        if (bind == null) return;
+        View root = bind.playerHeaderLayout.getRoot();
+        Integer bg = AppColors.color(AppColors.PANEL_BG);
+        Integer text = AppColors.color(AppColors.PANEL_TEXT);
+        if (bg != null) {
+            root.setBackgroundColor(bg);
+            bind.playerHeaderLayout.playerHeaderSeekBar.setBackground(null);
+        }
+        if (text != null) {
+            android.content.res.ColorStateList tint = android.content.res.ColorStateList.valueOf(text);
+            for (TextView t : new TextView[]{bind.playerHeaderLayout.playerHeaderMediaTitleLabel,
+                    bind.playerHeaderLayout.playerHeaderMediaArtistLabel,
+                    bind.playerHeaderLayout.playerHeaderElapsedText,
+                    bind.playerHeaderLayout.playerHeaderDurationText}) {
+                t.setTextColor(text);
+            }
+            for (View b : new View[]{bind.playerHeaderLayout.playerHeaderRewindMediaButton,
+                    bind.playerHeaderLayout.playerHeaderButton,
+                    bind.playerHeaderLayout.playerHeaderNextMediaButton,
+                    bind.playerHeaderLayout.playerHeaderFastForwardMediaButton,
+                    bind.playerHeaderLayout.playerHeaderBookmarkMediaButton}) {
+                b.setBackgroundTintList(tint);
+            }
+            if (headerLine != null) {
+                android.util.TypedValue tv = new android.util.TypedValue();
+                requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true);
+                headerLine.setColors(tv.data, (text & 0x00FFFFFF) | 0x55000000);
+            }
+        }
     }
 
     @Override
@@ -357,7 +400,20 @@ public class PlayerBottomSheetFragment extends Fragment {
     /** True while a finger is on the mini player timeline, so playback updates don't fight it. */
     private boolean scrubbing;
 
+    private ProgressLineDrawable headerLine;
+
     private void initHeaderSeekBar() {
+        // The wavy (or straight) line from Settings, in place of the platform bar.
+        android.widget.SeekBar bar = bind.playerHeaderLayout.playerHeaderSeekBar;
+        android.util.TypedValue tv = new android.util.TypedValue();
+        requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true);
+        int played = tv.data;
+        requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, tv, true);
+        int rest = (tv.data & 0x00FFFFFF) | 0x66000000;
+        headerLine = new ProgressLineDrawable(requireContext(), played, rest);
+        int progress = bar.getProgress();
+        bar.setProgressDrawable(headerLine);
+        bar.setProgress(progress);
         bind.playerHeaderLayout.playerHeaderSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
@@ -409,8 +465,21 @@ public class PlayerBottomSheetFragment extends Fragment {
 
     private void setContentDuration(long duration) {
         if (com.eddyizm.tempus.lan.LanRemoteSession.isActive() || bind == null) return;
+        // Before the track is prepared (e.g. after a restart) the player doesn't know the length yet:
+        // use the length the server gave for the track rather than the "unknown" value.
+        if (duration <= 0 || duration == androidx.media3.common.C.TIME_UNSET) duration = knownDurationMs();
+        if (duration <= 0) return;
         bind.playerHeaderLayout.playerHeaderSeekBar.setMax((int) (duration / 1000));
         setHeaderTimes(bind.playerHeaderLayout.playerHeaderSeekBar.getProgress(), (int) (duration / 1000));
+    }
+
+    private long knownDurationMs() {
+        MediaBrowser browser = progressBarBrowser;
+        if (browser == null || browser.getCurrentMediaItem() == null) return 0;
+        androidx.media3.common.MediaMetadata m = browser.getCurrentMediaItem().mediaMetadata;
+        if (m.durationMs != null && m.durationMs > 0) return m.durationMs;
+        android.os.Bundle extras = m.extras;
+        return extras != null ? extras.getInt("duration", 0) * 1000L : 0;
     }
 
     private void setProgress(MediaBrowser mediaBrowser) {
@@ -587,6 +656,7 @@ public class PlayerBottomSheetFragment extends Fragment {
     /** Ticks once a second while playing; on pause, shows where it stopped instead of the last tick. */
     private void runProgressBarHandler(boolean isPlaying) {
         progressBarHandler.removeCallbacks(progressBarRunnable);
+        if (headerLine != null) headerLine.setPlaying(isPlaying);
         if (isPlaying) {
             progressBarHandler.post(progressBarRunnable);
         } else if (progressBarBrowser != null) {

@@ -18,6 +18,7 @@ import androidx.media3.session.MediaBrowser;
 import androidx.media3.session.SessionToken;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.util.QueueAdder;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.model.Download;
 import com.eddyizm.tempus.repository.ArtistRepository;
@@ -144,7 +145,7 @@ public class ArtistBottomSheetDialog extends CarBottomSheetDialogFragment implem
         TextView playRandom = view.findViewById(R.id.play_random_text_view);
         playRandom.setOnClickListener(v -> {
             ArtistRepository artistRepository = new ArtistRepository();
-            artistRepository.getRandomSong(artist, 50).observe(getViewLifecycleOwner(), songs -> {
+            artistRepository.getRandomSong(artist, Preferences.getQueueLimit()).observe(getViewLifecycleOwner(), songs -> {
                 MusicUtil.ratingFilter(songs);
                 if (!songs.isEmpty()) {
                     MediaManager.startQueue(mediaBrowserListenableFuture, songs, 0);
@@ -213,7 +214,7 @@ public class ArtistBottomSheetDialog extends CarBottomSheetDialogFragment implem
                     try {
                         if (songs == null || songs.isEmpty()) return;
                         MusicUtil.ratingFilter(songs);
-                        MediaManager.enqueue(mediaBrowserListenableFuture, songs, false);
+                        QueueAdder.add(requireActivity(), mediaBrowserListenableFuture, songs);
                         ((MainActivity) requireActivity()).setBottomSheetInPeek(true);
                         dismissBottomSheet();
                     } finally {

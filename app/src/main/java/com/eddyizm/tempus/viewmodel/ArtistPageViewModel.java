@@ -131,7 +131,7 @@ public class ArtistPageViewModel extends AndroidViewModel {
     }
 
     public LiveData<List<Child>> getArtistShuffleList() {
-        return artistRepository.getRandomSong(artist, 50);
+        return artistRepository.getRandomSong(artist, Preferences.getQueueLimit());
     }
 
     public LiveData<List<Child>> getArtistInstantMix() {

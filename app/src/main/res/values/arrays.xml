@@ -34,14 +34,16 @@
     </string-array>
 
     <string-array name="pref_image_size_titles">
-        <item>High</item>
-        <item>Medium</item>
-        <item>Low</item>
+        <item>High (original)</item>
+        <item>Medium (500 px)</item>
+        <item>Low (300 px)</item>
+        <item>Lowest (150 px, saves the most data)</item>
     </string-array>
     <string-array name="pref_image_size_values">
         <item>-1</item>
         <item>500</item>
         <item>300</item>
+        <item>150</item>
     </string-array>
 
     <string-array name="streaming_cache_size_titles">
@@ -462,5 +464,117 @@
         <item>2000</item>
         <item>1000</item>
         <item>500</item>
+    </string-array>
+    <string-array name="queue_add_position_titles">
+        <item>@string/queue_add_position_bottom</item>
+        <item>@string/queue_add_position_top</item>
+        <item>@string/queue_add_position_ask</item>
+    </string-array>
+    <string-array name="queue_add_position_values">
+        <item>bottom</item>
+        <item>top</item>
+        <item>ask</item>
+    </string-array>
+    <string-array name="catalogue_view_titles">
+        <item>@string/catalogue_view_condensed</item>
+        <item>@string/catalogue_view_rows_large</item>
+        <item>@string/catalogue_view_full_art</item>
+        <item>@string/catalogue_view_art_title_big</item>
+        <item>@string/catalogue_view_art_title_medium</item>
+    </string-array>
+    <string-array name="catalogue_view_values">
+        <item>condensed</item>
+        <item>rows_large</item>
+        <item>full_art</item>
+        <item>art_title_big</item>
+        <item>art_title_medium</item>
+    </string-array>
+    <string-array name="progress_style_titles">
+        <item>@string/progress_style_wavy</item>
+        <item>@string/progress_style_straight</item>
+    </string-array>
+    <string-array name="progress_style_values">
+        <item>wavy</item>
+        <item>straight</item>
+    </string-array>
+    <string-array name="progress_thickness_titles">
+        <item>@string/progress_thickness_thin</item>
+        <item>@string/progress_thickness_medium</item>
+        <item>@string/progress_thickness_thick</item>
+    </string-array>
+    <string-array name="progress_thickness_values">
+        <item>2</item>
+        <item>3</item>
+        <item>5</item>
+    </string-array>
+    <string-array name="color_bg_titles">
+        <item>Theme default</item>
+        <item>Black</item>
+        <item>Charcoal</item>
+        <item>Slate</item>
+        <item>Navy</item>
+        <item>Forest</item>
+        <item>Burgundy</item>
+        <item>White</item>
+        <item>Light gray</item>
+        <item>Sand</item>
+    </string-array>
+    <string-array name="color_bg_values">
+        <item>default</item>
+        <item>black</item>
+        <item>charcoal</item>
+        <item>slate</item>
+        <item>navy</item>
+        <item>forest</item>
+        <item>burgundy</item>
+        <item>white</item>
+        <item>light_gray</item>
+        <item>sand</item>
+    </string-array>
+    <string-array name="color_text_titles">
+        <item>Theme default</item>
+        <item>White</item>
+        <item>Light gray</item>
+        <item>Black</item>
+        <item>Dark gray</item>
+        <item>Amber</item>
+        <item>Teal</item>
+        <item>Sky</item>
+    </string-array>
+    <string-array name="color_text_values">
+        <item>default</item>
+        <item>white</item>
+        <item>light_gray</item>
+        <item>black</item>
+        <item>dark_gray</item>
+        <item>amber</item>
+        <item>teal</item>
+        <item>sky</item>
+    </string-array>
+    <string-array name="offline_cover_sizes_titles">
+        <item>@string/offline_cover_sizes_all</item>
+        <item>@string/offline_cover_sizes_small</item>
+    </string-array>
+    <string-array name="offline_cover_sizes_values">
+        <item>all</item>
+        <item>small</item>
+    </string-array>
+    <string-array name="artist_section_mode_titles">
+        <item>@string/artist_section_open</item>
+        <item>@string/artist_section_closed</item>
+        <item>@string/artist_section_hidden</item>
+    </string-array>
+    <string-array name="artist_section_mode_values">
+        <item>open</item>
+        <item>closed</item>
+        <item>hidden</item>
+    </string-array>
+    <string-array name="artist_first_section_titles">
+        <item>@string/artist_first_top_songs</item>
+        <item>@string/artist_first_albums</item>
+    </string-array>
+    <string-array name="artist_first_section_values">
+        <item>top_songs</item>
+        <item>albums</item>
     </string-array>
 </resources>

@@ -60,6 +60,15 @@ public class App extends Application {
 
         ClientCertManager.setupSslSocketFactory(context);
         OfflineCovers.init(context);
+        // Saved passwords are kept encrypted; this converts any saved before that, once.
+        new Thread(() -> {
+            try {
+                Preferences.encryptSavedPassword();
+                com.eddyizm.tempus.repository.ServerRepository.encryptSavedPasswords();
+            } catch (RuntimeException e) {
+                android.util.Log.w("App", "Encrypting saved passwords failed", e);
+            }
+        }, "EncryptCredentials").start();
 
         new Thread(RetrofitClient::warmUp, "gson-warm-up").start();
     }

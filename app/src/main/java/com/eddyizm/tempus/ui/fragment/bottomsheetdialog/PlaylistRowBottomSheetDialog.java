@@ -16,6 +16,7 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.util.QueueAdder;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.model.Download;
 import com.eddyizm.tempus.repository.PlaylistRepository;
@@ -97,8 +98,8 @@ public class PlaylistRowBottomSheetDialog extends BottomSheetDialogFragment {
         }));
 
         view.findViewById(R.id.add_to_queue_row).setOnClickListener(v -> withSongs((activity, songs) -> {
-            MediaManager.enqueue(activity.getMediaBrowserListenableFuture(), songs, false);
-            Toast.makeText(activity, R.string.playlist_added_to_queue, Toast.LENGTH_SHORT).show();
+            QueueAdder.add(activity, activity.getMediaBrowserListenableFuture(), songs,
+                    () -> Toast.makeText(activity, R.string.playlist_added_to_queue, Toast.LENGTH_SHORT).show());
         }));
 
         view.findViewById(R.id.download_all_row).setOnClickListener(v -> withSongs((activity, songs) -> {

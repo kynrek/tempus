@@ -62,6 +62,7 @@ import com.eddyizm.tempus.ui.fragment.SettingsFragment;
 import com.eddyizm.tempus.ui.login.LoginActivity;
 import com.eddyizm.tempus.util.AssetLinkNavigator;
 import com.eddyizm.tempus.util.AssetLinkUtil;
+import com.eddyizm.tempus.util.AppColors;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.AlbumArtistBackfill;
 import com.eddyizm.tempus.util.DownloadRepair;
@@ -155,10 +156,12 @@ public class MainActivity extends BaseActivity {
         setUpEdgeToEdge(this);
         fixUpEdgeToEdge();
         super.onCreate(savedInstanceState);
+        AppColors.applyMainWindow(this);   // Settings > Colors, over the theme
 
         bind = ActivityMainBinding.inflate(getLayoutInflater());
         View view = bind.getRoot();
         setContentView(view);
+        keepWindowEdgeToEdge();
 
         mainViewModel = new ViewModelProvider(this).get(MainViewModel.class);
         assetLinkNavigator = new AssetLinkNavigator(this);
@@ -192,6 +195,7 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        keepWindowEdgeToEdge();
         pingServer();
         toggleNavigationDrawerLockOnOrientationChange();
     }
@@ -908,13 +912,36 @@ public class MainActivity extends BaseActivity {
         MediaManager.playDownloadedMediaItem(getMediaBrowserListenableFuture(), mediaItem);
     }
 
+    /**
+     * The car box's firmware gives windows "layout stable" flags, which make the window frame keep a
+     * hidden status bar's 24 px; after the screen is rebuilt that pushed everything down and cut off
+     * the bottom of the mini player. The app handles insets itself, so the frame shouldn't fit any.
+     */
+    private void keepWindowEdgeToEdge() {
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            android.view.WindowManager.LayoutParams lp = getWindow().getAttributes();
+            if (lp.getFitInsetsTypes() != 0 || lp.isFitInsetsIgnoringVisibility()) {
+                lp.setFitInsetsTypes(0);
+                lp.setFitInsetsIgnoringVisibility(false);
+                getWindow().setAttributes(lp);
+            }
+        }
+    }
+
     private void fixUpEdgeToEdge() {
         View rootView = findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             Insets displayCutout = insets.getInsets(WindowInsetsCompat.Type.displayCutout());
 
-            int topPadding = Math.max(systemBars.top, displayCutout.top);
+            // Only a status bar that's actually showing. systemBars() also counts the window caption bar,
+            // which the car box's home screen shows briefly while it moves the app into its pane, and that
+            // left the whole screen 24 px low with the bottom of the mini player cut off.
+            // In a window (the car home screen's pane) nothing covers the app's top edge at all.
+            Insets status = !isInMultiWindowMode() && insets.isVisible(WindowInsetsCompat.Type.statusBars())
+                    ? insets.getInsets(WindowInsetsCompat.Type.statusBars()) : Insets.NONE;
+            int topPadding = Math.max(status.top, displayCutout.top);
 
             rootView.setPadding(
                     systemBars.left,

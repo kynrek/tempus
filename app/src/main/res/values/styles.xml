@@ -117,4 +117,126 @@
         <item name="android:textColor">?attr/colorPrimary</item>
         <item name="materialThemeOverlay">@style/ThemeOverlay.App.Snackbar.Button</item>
     </style>
+    <!-- Settings > Colors: the main window's background and text, applied over the theme. -->
+    <style name="ThemeOverlay.Tempus.Bg.black" parent="">
+        <item name="colorSurface">#000000</item>
+        <item name="android:colorBackground">#000000</item>
+        <item name="android:windowBackground">#000000</item>
+        <item name="colorSurfaceContainer">#000000</item>
+        <item name="colorSurfaceContainerLow">#000000</item>
+        <item name="colorSurfaceContainerLowest">#000000</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Bg.charcoal" parent="">
+        <item name="colorSurface">#1E2427</item>
+        <item name="android:colorBackground">#1E2427</item>
+        <item name="android:windowBackground">#1E2427</item>
+        <item name="colorSurfaceContainer">#1E2427</item>
+        <item name="colorSurfaceContainerLow">#1E2427</item>
+        <item name="colorSurfaceContainerLowest">#1E2427</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Bg.slate" parent="">
+        <item name="colorSurface">#263238</item>
+        <item name="android:colorBackground">#263238</item>
+        <item name="android:windowBackground">#263238</item>
+        <item name="colorSurfaceContainer">#263238</item>
+        <item name="colorSurfaceContainerLow">#263238</item>
+        <item name="colorSurfaceContainerLowest">#263238</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Bg.navy" parent="">
+        <item name="colorSurface">#0D1B2A</item>
+        <item name="android:colorBackground">#0D1B2A</item>
+        <item name="android:windowBackground">#0D1B2A</item>
+        <item name="colorSurfaceContainer">#0D1B2A</item>
+        <item name="colorSurfaceContainerLow">#0D1B2A</item>
+        <item name="colorSurfaceContainerLowest">#0D1B2A</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Bg.forest" parent="">
+        <item name="colorSurface">#10261C</item>
+        <item name="android:colorBackground">#10261C</item>
+        <item name="android:windowBackground">#10261C</item>
+        <item name="colorSurfaceContainer">#10261C</item>
+        <item name="colorSurfaceContainerLow">#10261C</item>
+        <item name="colorSurfaceContainerLowest">#10261C</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Bg.burgundy" parent="">
+        <item name="colorSurface">#2A1015</item>
+        <item name="android:colorBackground">#2A1015</item>
+        <item name="android:windowBackground">#2A1015</item>
+        <item name="colorSurfaceContainer">#2A1015</item>
+        <item name="colorSurfaceContainerLow">#2A1015</item>
+        <item name="colorSurfaceContainerLowest">#2A1015</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Bg.white" parent="">
+        <item name="colorSurface">#FFFFFF</item>
+        <item name="android:colorBackground">#FFFFFF</item>
+        <item name="android:windowBackground">#FFFFFF</item>
+        <item name="colorSurfaceContainer">#FFFFFF</item>
+        <item name="colorSurfaceContainerLow">#FFFFFF</item>
+        <item name="colorSurfaceContainerLowest">#FFFFFF</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Bg.light_gray" parent="">
+        <item name="colorSurface">#ECEFF1</item>
+        <item name="android:colorBackground">#ECEFF1</item>
+        <item name="android:windowBackground">#ECEFF1</item>
+        <item name="colorSurfaceContainer">#ECEFF1</item>
+        <item name="colorSurfaceContainerLow">#ECEFF1</item>
+        <item name="colorSurfaceContainerLowest">#ECEFF1</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Bg.sand" parent="">
+        <item name="colorSurface">#F3EBDD</item>
+        <item name="android:colorBackground">#F3EBDD</item>
+        <item name="android:windowBackground">#F3EBDD</item>
+        <item name="colorSurfaceContainer">#F3EBDD</item>
+        <item name="colorSurfaceContainerLow">#F3EBDD</item>
+        <item name="colorSurfaceContainerLowest">#F3EBDD</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Text.white" parent="">
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="colorOnSurfaceVariant">#FFFFFF</item>
+        <item name="colorOnBackground">#FFFFFF</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#FFFFFF</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Text.light_gray" parent="">
+        <item name="colorOnSurface">#CFD8DC</item>
+        <item name="colorOnSurfaceVariant">#CFD8DC</item>
+        <item name="colorOnBackground">#CFD8DC</item>
+        <item name="android:textColorPrimary">#CFD8DC</item>
+        <item name="android:textColorSecondary">#CFD8DC</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Text.black" parent="">
+        <item name="colorOnSurface">#000000</item>
+        <item name="colorOnSurfaceVariant">#000000</item>
+        <item name="colorOnBackground">#000000</item>
+        <item name="android:textColorPrimary">#000000</item>
+        <item name="android:textColorSecondary">#000000</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Text.dark_gray" parent="">
+        <item name="colorOnSurface">#37474F</item>
+        <item name="colorOnSurfaceVariant">#37474F</item>
+        <item name="colorOnBackground">#37474F</item>
+        <item name="android:textColorPrimary">#37474F</item>
+        <item name="android:textColorSecondary">#37474F</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Text.amber" parent="">
+        <item name="colorOnSurface">#FFC107</item>
+        <item name="colorOnSurfaceVariant">#FFC107</item>
+        <item name="colorOnBackground">#FFC107</item>
+        <item name="android:textColorPrimary">#FFC107</item>
+        <item name="android:textColorSecondary">#FFC107</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Text.teal" parent="">
+        <item name="colorOnSurface">#6FD3C0</item>
+        <item name="colorOnSurfaceVariant">#6FD3C0</item>
+        <item name="colorOnBackground">#6FD3C0</item>
+        <item name="android:textColorPrimary">#6FD3C0</item>
+        <item name="android:textColorSecondary">#6FD3C0</item>
+    </style>
+    <style name="ThemeOverlay.Tempus.Text.sky" parent="">
+        <item name="colorOnSurface">#81D4FA</item>
+        <item name="colorOnSurfaceVariant">#81D4FA</item>
+        <item name="colorOnBackground">#81D4FA</item>
+        <item name="android:textColorPrimary">#81D4FA</item>
+        <item name="android:textColorSecondary">#81D4FA</item>
+    </style>
 </resources>

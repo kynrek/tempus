@@ -10,6 +10,7 @@ import androidx.annotation.Nullable;
 import com.eddyizm.tempus.model.Download;
 import com.eddyizm.tempus.repository.DownloadRepository;
 import com.eddyizm.tempus.util.DownloadUtil;
+import com.eddyizm.tempus.util.Preferences;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,8 +40,11 @@ import okhttp3.ResponseBody;
 public final class OfflineCovers {
     private static final String TAG = "OfflineCovers";
     private static final String DIRECTORY = "covers";
-    // Big enough for the player on the car screen, small enough that thousands stay cheap.
-    private static final int SIZE = 600;
+    // Full (the player on the car screen), half (art tiles) and quarter (small rows). Smaller copies
+    // are much less to read and decode while scrolling; Settings can skip the full size.
+    private static final int FULL = 600, HALF = 300, QUARTER = 150;
+    private static final int[] ALL_SIZES = {FULL, HALF, QUARTER};
+    private static final int[] SMALL_SIZES = {HALF, QUARTER};
 
     private static final ExecutorService FETCHER = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "OfflineCovers");
@@ -54,20 +58,44 @@ public final class OfflineCovers {
     private OfflineCovers() {
     }
 
-    /** The saved cover for a getCoverArt URL, or null to fetch it from the server. */
+    /**
+     * The saved cover for a getCoverArt URL: the smallest saved copy at least as big as the image
+     * being shown ({@code width} x {@code height}, or the URL's size), else the biggest one saved.
+     * Null to fetch it from the server.
+     */
     @Nullable
-    static File savedFor(String url) {
+    static File savedFor(String url, int width, int height) {
         if (url == null || !url.contains("getCoverArt")) return null;
         String id;
+        int urlSize = 0;
         try {
-            id = Uri.parse(url).getQueryParameter("id");
+            Uri uri = Uri.parse(url);
+            id = uri.getQueryParameter("id");
+            String s = uri.getQueryParameter("size");
+            if (s != null) urlSize = Integer.parseInt(s);
         } catch (RuntimeException e) {
             return null;
         }
         File dir = directory;
         if (id == null || dir == null) return null;
-        File file = new File(dir, fileName(id));
-        return file.isFile() && file.length() > 0 ? file : null;
+        int wanted = Math.max(width, height);
+        if (wanted <= 0) wanted = urlSize > 0 ? urlSize : FULL;   // Glide's "original size", or unknown
+        File best = null, biggest = null;
+        for (int size : usableSizes()) {   // largest first
+            File file = new File(dir, fileName(id, size));
+            if (!file.isFile() || file.length() == 0) continue;
+            if (biggest == null) biggest = file;
+            if (size >= wanted) best = file;
+        }
+        return best != null ? best : biggest;
+    }
+
+    private static int[] usableSizes() {
+        return smallOnly() ? SMALL_SIZES : ALL_SIZES;
+    }
+
+    private static boolean smallOnly() {
+        return "small".equals(Preferences.getOfflineCoverSizes());
     }
 
     /** Saves the cover of a finished download, off the calling thread. */
@@ -93,7 +121,8 @@ public final class OfflineCovers {
                 for (Download download : downloads) {
                     String id = download.getCoverArtId();
                     if (id == null || !seen.add(id)) continue;
-                    if (new File(directoryFor(app), fileName(id)).isFile()) continue;
+                    if (smallOnly()) new File(directoryFor(app), fileName(id, FULL)).delete();   // free the space
+                    if (allSaved(app, id)) continue;
                     if (isMetered(app)) {
                         Log.d(TAG, "Stopping catch-up off Wi-Fi after " + saved + " covers");
                         return;
@@ -114,19 +143,33 @@ public final class OfflineCovers {
         directoryFor(context.getApplicationContext());
     }
 
+    private static boolean allSaved(Context context, String id) {
+        for (int size : usableSizes()) {
+            if (!new File(directoryFor(context), fileName(id, size)).isFile()) return false;
+        }
+        return true;
+    }
+
+    /** Saves each size (per Settings) of a cover that isn't saved yet; true if any was. */
     private static boolean save(Context context, @Nullable String id) {
         if (id == null || id.isEmpty()) return false;
+        boolean any = false;
+        for (int size : usableSizes()) any |= saveSize(context, id, size);
+        return any;
+    }
+
+    private static boolean saveSize(Context context, String id, int size) {
         File dir = directoryFor(context);
-        File file = new File(dir, fileName(id));
+        File file = new File(dir, fileName(id, size));
         if (file.isFile() && file.length() > 0) return false;
 
         String url;
         try {
-            url = CustomGlideRequest.createUrl(id, SIZE);
+            url = CustomGlideRequest.createUrl(id, size);
         } catch (RuntimeException e) {
             return false; // not signed in to a server
         }
-        File partial = new File(dir, fileName(id) + ".part");
+        File partial = new File(dir, file.getName() + ".part");
         try (Response response = client().newCall(new Request.Builder().url(url).build()).execute()) {
             ResponseBody body = response.body();
             String type = body != null && body.contentType() != null ? body.contentType().type() : "";
@@ -153,8 +196,10 @@ public final class OfflineCovers {
         return dir;
     }
 
-    private static String fileName(String id) {
-        return id.replaceAll("[^A-Za-z0-9._-]", "_") + ".img";
+    /** Full size keeps the original name, so covers saved before the smaller sizes still count. */
+    private static String fileName(String id, int size) {
+        String base = id.replaceAll("[^A-Za-z0-9._-]", "_");
+        return size == FULL ? base + ".img" : base + "_" + size + ".img";
     }
 
     private static boolean isMetered(Context context) {
