@@ -225,7 +225,8 @@ public final class DownloadUtil {
                     context,
                     getDatabaseProvider(context),
                     getDownloadCache(context),
-                    getHttpDataSourceFactory(),
+                    // Paced on mobile data (Settings) so navigation still gets through.
+                    new ThrottledDataSource.Factory(context, getHttpDataSourceFactory()),
                     Executors.newFixedThreadPool(6)
             );
 

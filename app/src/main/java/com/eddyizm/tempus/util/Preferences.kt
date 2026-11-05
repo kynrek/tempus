@@ -56,6 +56,7 @@ object Preferences {
     private const val AUDIO_TRANSCODE_FORMAT_MOBILE = "audio_transcode_format_mobile"
     private const val WIFI_ONLY = "wifi_only"
     private const val DOWNLOAD_WIFI_ONLY = "download_wifi_only"
+    private const val DOWNLOAD_CELLULAR_LIMIT = "download_cellular_limit"
     private const val DOWNLOAD_DATABASE_REPAIRED = "download_database_repaired_version"
     private const val DOWNLOAD_REPAIR_ATTEMPTS = "download_repair_attempts"
     private const val ALBUM_ARTIST_BACKFILLED = "album_artist_backfilled_version"
@@ -639,6 +640,12 @@ object Preferences {
     @JvmStatic
     fun isDownloadWifiOnly(): Boolean {
         return App.getInstance().preferences.getBoolean(DOWNLOAD_WIFI_ONLY, false)
+    }
+
+    /** Mobile-data speed cap for downloads in kbit/s; 0 for no cap. */
+    @JvmStatic
+    fun getDownloadCellularLimitKbps(): Int {
+        return App.getInstance().preferences.getString(DOWNLOAD_CELLULAR_LIMIT, "2000")?.toIntOrNull() ?: 2000
     }
 
     @JvmStatic

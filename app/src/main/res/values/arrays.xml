@@ -449,4 +449,18 @@
         <item>favorites</item>
         <item>recent</item>
     </string-array>
+    <string-array name="download_cellular_limit_titles">
+        <item>@string/download_cellular_limit_none</item>
+        <item>@string/download_cellular_limit_4000</item>
+        <item>@string/download_cellular_limit_2000</item>
+        <item>@string/download_cellular_limit_1000</item>
+        <item>@string/download_cellular_limit_500</item>
+    </string-array>
+    <string-array name="download_cellular_limit_values">
+        <item>0</item>
+        <item>4000</item>
+        <item>2000</item>
+        <item>1000</item>
+        <item>500</item>
+    </string-array>
 </resources>

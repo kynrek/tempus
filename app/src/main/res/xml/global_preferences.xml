@@ -400,6 +400,15 @@
             android:summary="@string/settings_download_wifi_only_summary"
             android:key="download_wifi_only" />
 
+        <ListPreference
+            app:defaultValue="2000"
+            app:dialogTitle="@string/settings_download_cellular_limit_title"
+            app:entries="@array/download_cellular_limit_titles"
+            app:entryValues="@array/download_cellular_limit_values"
+            app:key="download_cellular_limit"
+            app:title="@string/settings_download_cellular_limit_title"
+            app:useSimpleSummaryProvider="true" />
+
         <SwitchPreference
             android:title="@string/settings_data_saving_mode_title"
             android:defaultValue="false"

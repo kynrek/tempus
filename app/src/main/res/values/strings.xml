@@ -701,6 +701,12 @@
     <string name="settings_wifi_only_title">Stream via Wi-Fi only alert</string>
     <string name="settings_download_wifi_only_summary">Downloads will pause on mobile data and resume automatically on Wi-Fi.</string>
     <string name="settings_download_wifi_only_title">Download only on Wi-Fi</string>
+    <string name="settings_download_cellular_limit_title">Download speed on mobile data</string>
+    <string name="download_cellular_limit_none">No limit</string>
+    <string name="download_cellular_limit_4000">4 Mbps</string>
+    <string name="download_cellular_limit_2000">2 Mbps (leaves room for navigation)</string>
+    <string name="download_cellular_limit_1000">1 Mbps</string>
+    <string name="download_cellular_limit_500">0.5 Mbps</string>
     <string name="share_bottom_sheet_copy_link">Copy link</string>
     <string name="share_bottom_sheet_delete">Delete share</string>
     <string name="share_bottom_sheet_update">Update share</string>

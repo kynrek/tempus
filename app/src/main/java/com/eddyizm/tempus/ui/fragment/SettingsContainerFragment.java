@@ -267,11 +267,15 @@ public class SettingsContainerFragment extends PreferenceFragmentCompat {
         }
 
         SwitchPreference downloadWifiOnlyPreference = findPreference("download_wifi_only");
+        Preference cellularLimitPreference = findPreference("download_cellular_limit");
+        // The mobile-data cap only matters when downloads may use mobile data.
+        if (cellularLimitPreference != null) cellularLimitPreference.setEnabled(!Preferences.isDownloadWifiOnly());
         if (downloadWifiOnlyPreference != null) {
             downloadWifiOnlyPreference.setOnPreferenceChangeListener((preference, newValue) -> {
                 if (newValue instanceof Boolean) {
                     boolean enabled = (Boolean) newValue;
                     Preferences.setDownloadWifiOnly(enabled);
+                    if (cellularLimitPreference != null) cellularLimitPreference.setEnabled(!enabled);
                     Requirements requirements = enabled
                             ? new Requirements(Requirements.NETWORK_UNMETERED)
                             : new Requirements(0);
