@@ -100,6 +100,7 @@ public class ArtistPageFragment extends Fragment implements ClickCallback {
         initArtistInfo();
         initPlayButtons();
         initTopSongsView();
+        initSections();
         initCategorizedAlbumsView();
         initSimilarArtistsView();
 
@@ -326,15 +327,100 @@ public class ArtistPageFragment extends Fragment implements ClickCallback {
     }
 
     private static final long TOP_SONGS_TIMEOUT = 3000;
+    private static final int FALLBACK_TOP_SONGS = 5;
     private final Handler emptyTopSongsTimerHandler = new Handler(Looper.getMainLooper());
-    private final Runnable emptyTopSongsTimerRunnable = () -> {
-        bind.artistPageTopSongsSector.setVisibility(View.VISIBLE);
-        bind.mostStreamedSongRecyclerContainer.setVisibility(View.GONE);
-        bind.mostStreamedSongRecyclerView.setVisibility(View.GONE);
-        bind.mostStreamedSongRecyclerPlaceholder.setVisibility(View.GONE);
-        bind.mostStreamedSongRecyclerEmpty.setVisibility(View.VISIBLE);
-        bind.mostStreamedSongTextViewClickable.setVisibility(View.GONE);
-    };
+    private final Runnable emptyTopSongsTimerRunnable = this::topSongsUnavailableFromServer;
+
+    private enum TopSongs { LOADING, LIST, EMPTY }
+    private TopSongs topSongsState = TopSongs.LOADING;
+    private boolean topSongsSeeAll;
+    private boolean topSongsOpen = true;
+    private boolean albumsOpen = true;
+    private boolean hasAlbums;
+    private boolean fallbackTried;
+
+    /** Settings > UI: each section open, closed or hidden, and which comes first. */
+    private void initSections() {
+        String topMode = Preferences.getArtistTopSongsMode();
+        String albumMode = Preferences.getArtistAlbumsMode();
+        topSongsOpen = !"closed".equals(topMode);
+        albumsOpen = !"closed".equals(albumMode);
+        if ("albums".equals(Preferences.getArtistFirstSection())) {
+            ViewGroup parent = (ViewGroup) bind.artistPageTopSongsSector.getParent();
+            int at = parent.indexOfChild(bind.artistPageTopSongsSector);
+            parent.removeView(bind.artistPageAllAlbumsSectors);
+            parent.addView(bind.artistPageAllAlbumsSectors, at);
+        }
+        bind.topSongsHeader.setOnClickListener(v -> {
+            topSongsOpen = !topSongsOpen;
+            renderTopSongs();
+        });
+        bind.albumsHeader.setOnClickListener(v -> {
+            albumsOpen = !albumsOpen;
+            renderAlbums();
+        });
+        renderTopSongs();
+        renderAlbums();
+    }
+
+    private void renderTopSongs() {
+        if (bind == null) return;
+        boolean hidden = "hidden".equals(Preferences.getArtistTopSongsMode());
+        bind.artistPageTopSongsSector.setVisibility(hidden ? View.GONE : View.VISIBLE);
+        bind.topSongsToggle.setRotation(topSongsOpen ? 0f : -90f);
+        boolean open = topSongsOpen && !hidden;
+        bind.mostStreamedSongRecyclerPlaceholder.setVisibility(open && topSongsState == TopSongs.LOADING ? View.VISIBLE : View.GONE);
+        bind.mostStreamedSongRecyclerEmpty.setVisibility(open && topSongsState == TopSongs.EMPTY ? View.VISIBLE : View.GONE);
+        boolean list = open && topSongsState == TopSongs.LIST;
+        bind.mostStreamedSongRecyclerContainer.setVisibility(list ? View.VISIBLE : View.GONE);
+        bind.mostStreamedSongRecyclerView.setVisibility(list ? View.VISIBLE : View.GONE);
+        bind.mostStreamedSongTextViewClickable.setVisibility(list && topSongsSeeAll ? View.VISIBLE : View.GONE);
+    }
+
+    private void renderAlbums() {
+        if (bind == null) return;
+        boolean hidden = "hidden".equals(Preferences.getArtistAlbumsMode());
+        bind.artistPageAllAlbumsSectors.setVisibility(hidden || !hasAlbums ? View.GONE : View.VISIBLE);
+        bind.albumsToggle.setRotation(albumsOpen ? 0f : -90f);
+        bind.allAlbumsRecyclerView.setVisibility(albumsOpen && hasAlbums ? View.VISIBLE : View.GONE);
+    }
+
+    /**
+     * The server has no top songs for this artist (Navidrome only knows them through Last.fm): list the
+     * artist's own favourite, best rated and most played tracks instead (a random few if none yet).
+     */
+    private void topSongsUnavailableFromServer() {
+        if (bind == null) return;
+        ArtistID3 artist = artistPageViewModel.getArtist();
+        if (fallbackTried || artist == null) {
+            topSongsState = TopSongs.EMPTY;
+            renderTopSongs();
+            return;
+        }
+        fallbackTried = true;
+        new com.eddyizm.tempus.repository.ArtistRepository().getArtistAllSongs(artist.getId(), songs -> {
+            if (bind == null) return;
+            // Favourites first, then your ratings, then plays; with no history at all, a random handful.
+            List<Child> played = new ArrayList<>(songs);
+            played.sort((a, b) -> Long.compare(topScore(b), topScore(a)));
+            if (!played.isEmpty() && topScore(played.get(0)) == 0) java.util.Collections.shuffle(played);
+            if (played.isEmpty()) {
+                topSongsState = TopSongs.EMPTY;
+            } else {
+                topSongsState = TopSongs.LIST;
+                topSongsSeeAll = false;   // "See all" asks the server again, which has none
+                songHorizontalAdapter.setItems(played.stream().limit(FALLBACK_TOP_SONGS).collect(Collectors.toList()));
+                reapplyPlayback();
+            }
+            renderTopSongs();
+        });
+    }
+
+    private static long topScore(Child c) {
+        long plays = c.getPlayCount() != null ? c.getPlayCount() : 0;
+        int rating = c.getUserRating() != null ? c.getUserRating() : 0;
+        return (c.getStarred() != null ? 1_000_000L : 0) + rating * 10_000L + plays;
+    }
 
     private void initTopSongsView() {
         bind.mostStreamedSongRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -350,38 +436,22 @@ public class ArtistPageFragment extends Fragment implements ClickCallback {
                     emptyTopSongsTimerHandler.removeCallbacks(emptyTopSongsTimerRunnable);
 
                     if (songs.isEmpty()) {
-                        // FETCHING -> Placeholder View
-                        bind.artistPageTopSongsSector.setVisibility(View.VISIBLE);
-                        bind.mostStreamedSongRecyclerContainer.setVisibility(View.GONE);
-                        bind.mostStreamedSongRecyclerView.setVisibility(View.GONE);
-                        bind.mostStreamedSongRecyclerPlaceholder.setVisibility(View.VISIBLE);
-                        bind.mostStreamedSongRecyclerEmpty.setVisibility(View.GONE);
-                        // Start timeout to get out of placeholder
+                        if (topSongsState == TopSongs.LIST) return;   // the played-tracks list is showing
+                        // FETCHING -> placeholder, with a timeout to get out of it
+                        topSongsState = TopSongs.LOADING;
+                        renderTopSongs();
                         emptyTopSongsTimerHandler.postDelayed(emptyTopSongsTimerRunnable, TOP_SONGS_TIMEOUT);
                         return;
                     }
 
-                    // TOP SONGS -> Reycler View
-                    bind.mostStreamedSongTextViewClickable.setVisibility(View.VISIBLE);
-                    bind.artistPageTopSongsSector.setVisibility(View.VISIBLE);
-                    bind.mostStreamedSongRecyclerContainer.setVisibility(View.VISIBLE);
-                    bind.mostStreamedSongRecyclerView.setVisibility(View.VISIBLE);
-                    bind.mostStreamedSongRecyclerPlaceholder.setVisibility(View.GONE);
-                    bind.mostStreamedSongRecyclerEmpty.setVisibility(View.GONE);
-                    bind.mostStreamedSongTextViewClickable.setVisibility(
-                            songs.size() > 3 ? View.VISIBLE : View.GONE);
-
-                    songHorizontalAdapter.setItems(
-                            songs.stream().limit(3).collect(Collectors.toList()));
+                    topSongsState = TopSongs.LIST;
+                    topSongsSeeAll = songs.size() > 3;
+                    songHorizontalAdapter.setItems(songs.stream().limit(3).collect(Collectors.toList()));
                     reapplyPlayback();
-
+                    renderTopSongs();
                 });
 
-        bind.mostStreamedSongRecyclerEmpty.setOnClickListener( v -> {
-            bind.artistPageTopSongsSector.setVisibility(View.GONE);
-        }
-
-        );
+        bind.mostStreamedSongRecyclerEmpty.setOnClickListener(v -> bind.artistPageTopSongsSector.setVisibility(View.GONE));
     }
 
     private void initCategorizedAlbumsView() {
@@ -393,8 +463,9 @@ public class ArtistPageFragment extends Fragment implements ClickCallback {
         bind.allAlbumsRecyclerView.setAdapter(allAlbumsAdapter);
         artistPageViewModel.getReleasesInOrder().observe(getViewLifecycleOwner(), albums -> {
             if (bind != null) {
-                bind.allAlbumsRecyclerView.setVisibility(albums != null && !albums.isEmpty() ? View.VISIBLE : View.GONE);
+                hasAlbums = albums != null && !albums.isEmpty();
                 if (albums != null) allAlbumsAdapter.setItems(albums);
+                renderAlbums();
             }
         });
 

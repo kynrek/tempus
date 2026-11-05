@@ -29,6 +29,7 @@ import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.util.QueueAdder;
 import com.eddyizm.tempus.databinding.FragmentAlbumPageBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.interfaces.ClickCallback;
@@ -211,7 +212,8 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
             if (songs == null || songs.isEmpty()) {
                 return true;
             }
-            MediaManager.enqueue(mediaBrowserListenableFuture, songs, playNext);
+            if (playNext) MediaManager.enqueueAsQueued(mediaBrowserListenableFuture, songs, true);
+            else QueueAdder.add(requireActivity(), mediaBrowserListenableFuture, songs);
             activity.setBottomSheetInPeek(true);
             return true;
         }
@@ -381,8 +383,8 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
         inOrder.sort(Comparator
                 .comparing((Child song) -> song.getDiscNumber() != null ? song.getDiscNumber() : 1)
                 .thenComparing(song -> song.getTrack() != null ? song.getTrack() : 0));
-        MediaManager.enqueue(mediaBrowserListenableFuture, inOrder, false);
-        activity.showQueuedMessage(getResources().getQuantityString(R.plurals.album_added_to_queue, inOrder.size(), inOrder.size()));
+        String message = getResources().getQuantityString(R.plurals.album_added_to_queue, inOrder.size(), inOrder.size());
+        QueueAdder.add(requireActivity(), mediaBrowserListenableFuture, inOrder, () -> activity.showQueuedMessage(message));
     }
 
     private void initMusicButton() {

@@ -20,6 +20,7 @@ import com.eddyizm.tempus.databinding.FragmentHomeBinding;
 import com.eddyizm.tempus.navigation.NavigationController;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.fragment.pager.HomePager;
+import com.eddyizm.tempus.util.AppColors;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.Preferences;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -94,11 +95,38 @@ public class HomeFragment extends Fragment {
 
         tabLayout = new TabLayout(requireContext());
         tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
-        tabLayout.setTabMode(TabLayout.MODE_FIXED);
+        // With the control panel as a side column the tabs have less room: scroll rather than wrap the names.
+        boolean side = !"bottom".equals(Preferences.getPanelPosition());
+        tabLayout.setTabMode(side ? TabLayout.MODE_SCROLLABLE : TabLayout.MODE_FIXED);
 
         // The tabs sit in the toolbar row itself, beside the drawer button, to keep the header to one row.
         materialToolbar.addView(tabLayout, new Toolbar.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+        applyTabColors();
+    }
+
+    /** Settings > Colors: the tab row's background and text. */
+    private void applyTabColors() {
+        Integer bg = AppColors.color(AppColors.TABS_BG);
+        Integer text = AppColors.color(AppColors.TABS_TEXT);
+        if (bg != null) {
+            materialToolbar.setBackgroundColor(bg);
+            tabLayout.setBackgroundColor(bg);
+            if (materialToolbar.getParent() instanceof View) ((View) materialToolbar.getParent()).setBackgroundColor(bg);
+        }
+        if (text != null) {
+            tabLayout.setTabTextColors((text & 0x00FFFFFF) | 0xB3000000, text);
+            tabLayout.setSelectedTabIndicatorColor(text);
+            if (materialToolbar.getNavigationIcon() != null) materialToolbar.getNavigationIcon().setTint(text);
+            if (materialToolbar.getOverflowIcon() != null) materialToolbar.getOverflowIcon().setTint(text);
+            materialToolbar.post(() -> {
+                if (bind == null) return;
+                android.view.Menu menu = materialToolbar.getMenu();
+                for (int i = 0; i < menu.size(); i++) {
+                    if (menu.getItem(i).getIcon() != null) menu.getItem(i).getIcon().setTint(text);
+                }
+            });
+        }
     }
 
     private void initHomePager() {

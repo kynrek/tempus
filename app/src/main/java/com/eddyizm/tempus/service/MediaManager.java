@@ -401,14 +401,27 @@ public class MediaManager {
         }
     }
 
+    /** Songs added from "Add to queue" (see QueueAdder): marked so Queue off can pass over them. */
+    public static void enqueueAsQueued(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture, List<Child> media, boolean playImmediatelyAfter) {
+        markNextEnqueue.set(true);
+        try {
+            enqueue(mediaBrowserListenableFuture, media, playImmediatelyAfter);
+        } finally {
+            markNextEnqueue.set(false);
+        }
+    }
+
+    private static final ThreadLocal<Boolean> markNextEnqueue = ThreadLocal.withInitial(() -> false);
+
     public static void enqueue(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture, List<Child> media, boolean playImmediatelyAfter) {
         if (LanRemoteSession.routeSongs(media, playImmediatelyAfter ? "next" : "append", 0)) return;
+        final boolean queued = markNextEnqueue.get();
         if (mediaBrowserListenableFuture != null) {
             mediaBrowserListenableFuture.addListener(() -> {
                 try {
                     if (mediaBrowserListenableFuture.isDone()) {
                         if (LanRemoteSession.isActive()) return;
-                        enqueue(queueTargetFor(mediaBrowserListenableFuture.get()), media, playImmediatelyAfter);
+                        enqueue(queueTargetFor(mediaBrowserListenableFuture.get()), media, playImmediatelyAfter, queued);
                     }
                 } catch (ExecutionException | InterruptedException e) {
                     e.printStackTrace();
@@ -418,6 +431,10 @@ public class MediaManager {
     }
 
     public static void enqueue(QueueTarget queueTarget, List<Child> media, boolean playImmediatelyAfter) {
+        enqueue(queueTarget, media, playImmediatelyAfter, false);
+    }
+
+    public static void enqueue(QueueTarget queueTarget, List<Child> media, boolean playImmediatelyAfter, boolean queued) {
         Player player = queueTarget.livePlayer();
         if (player == null) {
             Log.d(TAG, "enqueue: queue target gone, dropping " + media.size() + " items");
@@ -428,11 +445,13 @@ public class MediaManager {
         int current = player.getCurrentMediaItemIndex();
         if (playImmediatelyAfter && current != C.INDEX_UNSET) {
             enqueueDatabase(media, false, current + 1);
-            insertPlayNext(queueTarget, player, MappingUtil.mapMediaItems(media));
+            List<MediaItem> items = MappingUtil.mapMediaItems(media);
+            insertPlayNext(queueTarget, player, queued ? MappingUtil.markQueued(items) : items);
         } else {
             int firstNew = player.getMediaItemCount();
             enqueueDatabase(media, false, firstNew);
-            player.addMediaItems(MappingUtil.mapMediaItems(media));
+            List<MediaItem> items = MappingUtil.mapMediaItems(media);
+            player.addMediaItems(queued ? MappingUtil.markQueued(items) : items);
             keepPlaying(player, firstNew);
         }
         trimHistory(player);

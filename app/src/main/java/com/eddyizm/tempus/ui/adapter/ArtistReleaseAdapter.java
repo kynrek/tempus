@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.util.QueueAdder;
 import com.eddyizm.tempus.databinding.ItemArtistReleaseBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.interfaces.ClickCallback;
@@ -168,8 +169,8 @@ public class ArtistReleaseAdapter extends RecyclerView.Adapter<ArtistReleaseAdap
                 if (album == null || mediaBrowserListenableFuture == null) return;
                 withTracks(album, list -> {
                     if (list.isEmpty()) return;
-                    MediaManager.enqueue(mediaBrowserListenableFuture, list, false);
-                    SongHorizontalAdapter.showQueued(itemView, itemView.getResources().getQuantityString(R.plurals.album_added_to_queue, list.size(), list.size()));
+                    QueueAdder.add(itemView.getContext(), mediaBrowserListenableFuture, list,
+                            () -> SongHorizontalAdapter.showQueued(itemView, itemView.getResources().getQuantityString(R.plurals.album_added_to_queue, list.size(), list.size())));
                 });
             });
         }

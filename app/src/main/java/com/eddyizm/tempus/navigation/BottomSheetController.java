@@ -61,6 +61,10 @@ public class BottomSheetController {
         helper.animate(slideOffset);
     }
 
+    public void setSideDock(int widthPx, Runnable onCollapsed) {
+        helper.setSideDock(widthPx, onCollapsed);
+    }
+
     public void setPeekHeight(int peekHeight, float displayDensity) {
         helper.setPeekHeight(peekHeight, displayDensity);
     }

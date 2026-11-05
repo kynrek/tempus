@@ -1,10 +1,14 @@
 package com.eddyizm.tempus.repository;
 
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Transformations;
 
 import com.eddyizm.tempus.database.AppDatabase;
 import com.eddyizm.tempus.database.dao.ServerDao;
 import com.eddyizm.tempus.model.Server;
+import com.eddyizm.tempus.util.CredentialCipher;
+
+import java.util.ArrayList;
 
 import java.util.List;
 
@@ -13,18 +17,33 @@ public class ServerRepository {
 
     private final ServerDao serverDao = AppDatabase.getInstance().serverDao();
 
+    /** Saved servers with their passwords decrypted (they're stored encrypted, see CredentialCipher). */
     public LiveData<List<Server>> getLiveServer() {
-        return serverDao.getAll();
+        return Transformations.map(serverDao.getAll(), servers -> {
+            List<Server> out = new ArrayList<>();
+            if (servers != null) for (Server s : servers) out.add(CredentialCipher.decrypted(s));
+            return out;
+        });
+    }
+
+    /** Encrypts passwords saved before encryption was added; run once at startup, off the main thread. */
+    public static void encryptSavedPasswords() {
+        ServerDao dao = AppDatabase.getInstance().serverDao();
+        for (Server s : dao.getAllNow()) {
+            if (s.getPassword() != null && !s.getPassword().isEmpty() && !CredentialCipher.isEncrypted(s.getPassword())) {
+                dao.update(CredentialCipher.encrypted(s));
+            }
+        }
     }
 
     public void insert(Server server) {
-        InsertThreadSafe insert = new InsertThreadSafe(serverDao, server);
+        InsertThreadSafe insert = new InsertThreadSafe(serverDao, CredentialCipher.encrypted(server));
         Thread thread = new Thread(insert);
         thread.start();
     }
 
     public void update(Server server) {
-        UpdateThreadSafe update = new UpdateThreadSafe(serverDao, server);
+        UpdateThreadSafe update = new UpdateThreadSafe(serverDao, CredentialCipher.encrypted(server));
         Thread thread = new Thread(update);
         thread.start();
     }

@@ -210,6 +210,23 @@ public class MappingUtil {
                 .setUri(uri)
                 .build();
     }
+    /** Extra on songs added with "Add to queue" / "Play next", as opposed to the album or playlist played. */
+    public static final String EXTRA_QUEUED = "addedToQueue";
+
+    public static boolean isQueued(MediaItem item) {
+        return item != null && item.mediaMetadata.extras != null && item.mediaMetadata.extras.getBoolean(EXTRA_QUEUED, false);
+    }
+
+    public static List<MediaItem> markQueued(List<MediaItem> items) {
+        List<MediaItem> out = new ArrayList<>(items.size());
+        for (MediaItem item : items) {
+            android.os.Bundle extras = item.mediaMetadata.extras != null ? new android.os.Bundle(item.mediaMetadata.extras) : new android.os.Bundle();
+            extras.putBoolean(EXTRA_QUEUED, true);
+            out.add(item.buildUpon().setMediaMetadata(item.mediaMetadata.buildUpon().setExtras(extras).build()).build());
+        }
+        return out;
+    }
+
     public static List<MediaItem> mapMediaItems(List<Child> items, String parentId) {
         ArrayList<MediaItem> mediaItems = new ArrayList<>();
 

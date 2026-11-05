@@ -48,7 +48,9 @@ fun PlayerQueueHeader(
     onSaveToPlaylist: () -> Unit,
     onDownloadAll: () -> Unit,
     onLoadSavedQueue: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    queueEnabled: Boolean = true,
+    onToggleQueue: (() -> Unit)? = null
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -110,11 +112,26 @@ fun PlayerQueueHeader(
                 )
             }
 
-            // Quick Actions: [Clear] button & [⋮] More menu
+            // Quick Actions: Queue on/off, [Clear] button & [⋮] More menu
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                if (onToggleQueue != null) {
+                    // On: added songs play next. Off: Next follows the album/playlist you started.
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 6.dp)
+                    ) {
+                        Text(
+                            text = stringResource(if (queueEnabled) R.string.player_queue_on else R.string.player_queue_off),
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(end = 6.dp)
+                        )
+                        androidx.compose.material3.Switch(checked = queueEnabled, onCheckedChange = { onToggleQueue() })
+                    }
+                }
                 FilledTonalButton(
                     onClick = onClearUpcoming,
                     enabled = upcomingSongsCount > 0,

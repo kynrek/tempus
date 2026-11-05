@@ -57,6 +57,123 @@
             android:key="always_on_display" />
 
         <ListPreference
+            app:defaultValue="default"
+            app:dialogTitle="Main window background"
+            app:entries="@array/color_bg_titles"
+            app:entryValues="@array/color_bg_values"
+            app:key="color_main_bg"
+            app:title="Main window background"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="default"
+            app:dialogTitle="Main window text"
+            app:entries="@array/color_text_titles"
+            app:entryValues="@array/color_text_values"
+            app:key="color_main_text"
+            app:title="Main window text"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="default"
+            app:dialogTitle="Tabs background"
+            app:entries="@array/color_bg_titles"
+            app:entryValues="@array/color_bg_values"
+            app:key="color_tabs_bg"
+            app:title="Tabs background"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="default"
+            app:dialogTitle="Tabs text"
+            app:entries="@array/color_text_titles"
+            app:entryValues="@array/color_text_values"
+            app:key="color_tabs_text"
+            app:title="Tabs text"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="charcoal"
+            app:dialogTitle="Control panel background"
+            app:entries="@array/color_bg_titles"
+            app:entryValues="@array/color_bg_values"
+            app:key="color_panel_bg"
+            app:title="Control panel background"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="white"
+            app:dialogTitle="Control panel text"
+            app:entries="@array/color_text_titles"
+            app:entryValues="@array/color_text_values"
+            app:key="color_panel_text"
+            app:title="Control panel text"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="wavy"
+            app:dialogTitle="@string/settings_progress_style"
+            app:entries="@array/progress_style_titles"
+            app:entryValues="@array/progress_style_values"
+            app:key="progress_style"
+            app:title="@string/settings_progress_style"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="3"
+            app:dialogTitle="@string/settings_progress_thickness"
+            app:entries="@array/progress_thickness_titles"
+            app:entryValues="@array/progress_thickness_values"
+            app:key="progress_thickness"
+            app:title="@string/settings_progress_thickness"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="bottom"
+            app:dialogTitle="@string/settings_panel_position"
+            app:entries="@array/panel_position_titles"
+            app:entryValues="@array/panel_position_values"
+            app:key="panel_position"
+            app:title="@string/settings_panel_position"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="open"
+            app:dialogTitle="@string/settings_artist_top_songs"
+            app:entries="@array/artist_section_mode_titles"
+            app:entryValues="@array/artist_section_mode_values"
+            app:key="artist_top_songs_mode"
+            app:title="@string/settings_artist_top_songs"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="open"
+            app:dialogTitle="@string/settings_artist_albums"
+            app:entries="@array/artist_section_mode_titles"
+            app:entryValues="@array/artist_section_mode_values"
+            app:key="artist_albums_mode"
+            app:title="@string/settings_artist_albums"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="top_songs"
+            app:dialogTitle="@string/settings_artist_first_section"
+            app:entries="@array/artist_first_section_titles"
+            app:entryValues="@array/artist_first_section_values"
+            app:key="artist_first_section"
+            app:title="@string/settings_artist_first_section"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="condensed"
+            app:dialogTitle="@string/settings_catalogue_view"
+            app:entries="@array/catalogue_view_titles"
+            app:entryValues="@array/catalogue_view_values"
+            app:key="catalogue_view"
+            app:title="@string/settings_catalogue_view"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
             app:defaultValue="2"
             app:dialogTitle="@string/settings_tile_size"
             app:entries="@array/tile_size_titles"
@@ -313,6 +430,14 @@
         android:icon="@drawable/ic_navigate_next" />
 
     <com.eddyizm.tempus.util.ClickablePreferenceCategory app:title="@string/settings_title_queue">
+        <ListPreference
+            app:defaultValue="bottom"
+            app:dialogTitle="@string/settings_queue_add_position"
+            app:entries="@array/queue_add_position_titles"
+            app:entryValues="@array/queue_add_position_values"
+            app:key="queue_add_position"
+            app:title="@string/settings_queue_add_position"
+            app:useSimpleSummaryProvider="true" />
         <SwitchPreference
             android:title="@string/settings_keep_played_in_queue"
             android:defaultValue="true"
@@ -399,6 +524,15 @@
             android:defaultValue="false"
             android:summary="@string/settings_download_wifi_only_summary"
             android:key="download_wifi_only" />
+
+        <ListPreference
+            app:defaultValue="all"
+            app:dialogTitle="@string/settings_offline_cover_sizes"
+            app:entries="@array/offline_cover_sizes_titles"
+            app:entryValues="@array/offline_cover_sizes_values"
+            app:key="offline_cover_sizes"
+            app:title="@string/settings_offline_cover_sizes"
+            app:useSimpleSummaryProvider="true" />
 
         <ListPreference
             app:defaultValue="2000"

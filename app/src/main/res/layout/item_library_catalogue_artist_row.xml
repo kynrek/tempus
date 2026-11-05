@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Condensed artist row: small picture, then the name. Same ids and view types as
+     item_library_catalogue_artist so ItemLibraryCatalogueArtistBinding.bind() works on it. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <com.eddyizm.tempus.helper.recyclerview.SquareImageView
+        android:id="@+id/artist_catalogue_cover_image_view"
+        android:layout_width="52dp"
+        android:layout_height="52dp" />
+
+    <TextView
+        android:id="@+id/artist_name_label"
+        style="@style/CatalogueTileTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="2"
+        app:emojiCompatEnabled="false" />
+</LinearLayout>

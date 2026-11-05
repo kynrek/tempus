@@ -22,6 +22,26 @@ public class BottomSheetHelper {
     private boolean isTargetExpanded = false;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable pendingStateRunnable;
+    // Side column mode (Settings > control panel position): the collapsed sheet is a full-height
+    // column; expanding widens it to the whole screen for the full player.
+    private int sideWidthPx;
+    private Runnable onSideCollapsed;
+
+    public void setSideDock(int widthPx, Runnable onCollapsed) {
+        sideWidthPx = widthPx;
+        onSideCollapsed = onCollapsed;
+        bottomSheetBehavior.setPeekHeight(100_000);   // collapsed offset 0: the column fills the height
+        bottomSheetBehavior.setDraggable(false);
+        setSheetWidth(widthPx);
+    }
+
+    private void setSheetWidth(int width) {
+        android.view.ViewGroup.LayoutParams lp = bottomSheetView.getLayoutParams();
+        if (lp.width != width) {
+            lp.width = width;
+            bottomSheetView.setLayoutParams(lp);
+        }
+    }
 
     public void setState(int state) {
         if (state == BottomSheetBehavior.STATE_EXPANDED) {
@@ -39,6 +59,7 @@ public class BottomSheetHelper {
             handler.removeCallbacks(pendingStateRunnable);
             pendingStateRunnable = null;
         }
+        if (sideWidthPx > 0) setSheetWidth(android.view.ViewGroup.LayoutParams.MATCH_PARENT);
         animate(1.0f);
         bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
     }
@@ -61,6 +82,14 @@ public class BottomSheetHelper {
             public void onStateChanged(@NonNull View bottomSheet, int newState) {
                 if (newState == BottomSheetBehavior.STATE_COLLAPSED || newState == BottomSheetBehavior.STATE_HIDDEN) {
                     isTargetExpanded = false;
+                }
+                if (sideWidthPx > 0 && newState == BottomSheetBehavior.STATE_COLLAPSED) {
+                    setSheetWidth(sideWidthPx);
+                    animate(0f);
+                }
+                if (sideWidthPx > 0 && onSideCollapsed != null
+                        && (newState == BottomSheetBehavior.STATE_COLLAPSED || newState == BottomSheetBehavior.STATE_HIDDEN)) {
+                    onSideCollapsed.run();
                 }
             }
 
@@ -123,6 +152,7 @@ public class BottomSheetHelper {
     }
 
     public void setDraggable(Boolean isDraggable) {
+        if (sideWidthPx > 0) return;   // the side column doesn't drag
         bottomSheetBehavior.setDraggable((isDraggable));
     }
 
@@ -142,6 +172,7 @@ public class BottomSheetHelper {
     }
 
     public void setPeekHeight(int peekHeight, float displayDensity) {
+        if (sideWidthPx > 0) return;
         int newPeekPx = (int) (peekHeight * displayDensity);
         bottomSheetBehavior.setGestureInsetBottomIgnored(false);
         bottomSheetBehavior.setPeekHeight(newPeekPx);

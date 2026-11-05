@@ -17,7 +17,9 @@ import android.os.Bundle;
 import android.os.Parcel;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import androidx.activity.OnBackPressedCallback;
@@ -62,6 +64,7 @@ import com.eddyizm.tempus.ui.fragment.SettingsFragment;
 import com.eddyizm.tempus.ui.login.LoginActivity;
 import com.eddyizm.tempus.util.AssetLinkNavigator;
 import com.eddyizm.tempus.util.AssetLinkUtil;
+import com.eddyizm.tempus.util.AppColors;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.AlbumArtistBackfill;
 import com.eddyizm.tempus.util.DownloadRepair;
@@ -155,10 +158,12 @@ public class MainActivity extends BaseActivity {
         setUpEdgeToEdge(this);
         fixUpEdgeToEdge();
         super.onCreate(savedInstanceState);
+        AppColors.applyMainWindow(this);   // Settings > Colors, over the theme
 
         bind = ActivityMainBinding.inflate(getLayoutInflater());
         View view = bind.getRoot();
         setContentView(view);
+        keepWindowEdgeToEdge();
 
         mainViewModel = new ViewModelProvider(this).get(MainViewModel.class);
         assetLinkNavigator = new AssetLinkNavigator(this);
@@ -192,6 +197,7 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        keepWindowEdgeToEdge();
         pingServer();
         toggleNavigationDrawerLockOnOrientationChange();
     }
@@ -297,6 +303,35 @@ public class MainActivity extends BaseActivity {
         bottomSheetController.addCallback(bottomSheetCallback);
         bottomSheetController.replaceFragment(R.id.player_bottom_sheet);
         bottomSheetController.checkAfterStateChanged(mainViewModel);
+        applyPanelPosition();
+    }
+
+    /** Settings > UI > Control panel position: as a column on the left or right instead of along the bottom. */
+    public static final int SIDE_PANEL_DP = 230;
+
+    private void applyPanelPosition() {
+        String pos = Preferences.getPanelPosition();
+        if (!"left".equals(pos) && !"right".equals(pos)) return;
+        boolean left = "left".equals(pos);
+        int width = Math.round(SIDE_PANEL_DP * getResources().getDisplayMetrics().density);
+        View sheet = bind.playerBottomSheet;
+        if (sheet.getLayoutParams() instanceof androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams) {
+            ((androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams) sheet.getLayoutParams()).gravity =
+                    (left ? Gravity.START : Gravity.END) | Gravity.TOP;
+        }
+        View content = (View) findViewById(R.id.nav_host_fragment).getParent();
+        Runnable reserve = () -> {
+            boolean shown = bottomSheetBehavior.getState() != BottomSheetBehavior.STATE_HIDDEN
+                    && sheet.getVisibility() == View.VISIBLE;
+            ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) content.getLayoutParams();
+            int m = shown ? width : 0;
+            if ((left ? lp.leftMargin : lp.rightMargin) != m) {
+                if (left) lp.leftMargin = m; else lp.rightMargin = m;
+                content.setLayoutParams(lp);
+            }
+        };
+        bottomSheetController.setSideDock(width, reserve);
+        reserve.run();
     }
 
     public void initBackPressedDispatcher() {
@@ -908,13 +943,83 @@ public class MainActivity extends BaseActivity {
         MediaManager.playDownloadedMediaItem(getMediaBrowserListenableFuture(), mediaItem);
     }
 
+    /**
+     * The car box's firmware gives windows "layout stable" flags, which make the window frame keep a
+     * hidden status bar's 24 px; after the screen is rebuilt that pushed everything down and cut off
+     * the bottom of the mini player. The app handles insets itself, so the frame shouldn't fit any.
+     */
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) keepWindowEdgeToEdge();   // the caption container can appear after onResume
+        // Started freeform and then moved into the car home screen's pane, the window keeps a hidden
+        // caption container that reserves 24 px at the top and pushes the bottom off screen. A fresh
+        // window (as after a rebuild) has none, so rebuild once.
+        View decor = getWindow().getDecorView();
+        if (hasFocus && !captionRebuildDone && isInMultiWindowMode() && decor instanceof ViewGroup
+                && ((ViewGroup) decor).getChildCount() > 0
+                && ((ViewGroup) decor).getChildAt(0).getClass().getName().contains("DecorCaption")) {
+            captionRebuildDone = true;
+            decor.post(this::recreate);
+        }
+    }
+
+    private static boolean captionRebuildDone;   // once per app start, never a loop
+    private View pinnedWindowRoot;   // the view the fix is attached to (the decor can wrap it later)
+
+    private void keepWindowEdgeToEdge() {
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        // The window's own root layout (above android.R.id.content) fits system windows and, with the
+        // firmware's "layout stable" flag, keeps the hidden status bar's 24 px as padding. The content
+        // view handles insets itself (fixUpEdgeToEdge), so this layer mustn't add any.
+        View decor = getWindow().getDecorView();
+        if (decor instanceof ViewGroup && ((ViewGroup) decor).getChildCount() > 0) {
+            View windowRoot = ((ViewGroup) decor).getChildAt(0);
+            // With a freeform caption container (DecorCaptionView) the app's root is inside it.
+            if (windowRoot.getClass().getName().contains("DecorCaption") && windowRoot instanceof ViewGroup) {
+                ViewGroup caption = (ViewGroup) windowRoot;
+                for (int i = 0; i < caption.getChildCount(); i++) {
+                    if (caption.getChildAt(i) instanceof android.widget.LinearLayout) windowRoot = caption.getChildAt(i);
+                }
+            }
+            windowRoot.setFitsSystemWindows(false);
+            if (windowRoot.getLayoutParams() instanceof ViewGroup.MarginLayoutParams && pinnedWindowRoot != windowRoot) {
+                pinnedWindowRoot = windowRoot;
+                windowRoot.requestLayout();
+                // The decor places its child under the status bar's 24 px as a top margin; keep it at the top.
+                windowRoot.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+                    if (!isInMultiWindowMode() || !(v.getParent() instanceof View)) return;
+                    ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+                    if (lp.topMargin != 0) {
+                        lp.topMargin = 0;
+                        v.post(() -> v.setLayoutParams(lp));
+                    }
+                });
+            }
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            android.view.WindowManager.LayoutParams lp = getWindow().getAttributes();
+            if (lp.getFitInsetsTypes() != 0 || lp.isFitInsetsIgnoringVisibility()) {
+                lp.setFitInsetsTypes(0);
+                lp.setFitInsetsIgnoringVisibility(false);
+                getWindow().setAttributes(lp);
+            }
+        }
+    }
+
     private void fixUpEdgeToEdge() {
         View rootView = findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             Insets displayCutout = insets.getInsets(WindowInsetsCompat.Type.displayCutout());
 
-            int topPadding = Math.max(systemBars.top, displayCutout.top);
+            // Only a status bar that's actually showing. systemBars() also counts the window caption bar,
+            // which the car box's home screen shows briefly while it moves the app into its pane, and that
+            // left the whole screen 24 px low with the bottom of the mini player cut off.
+            // In a window (the car home screen's pane) nothing covers the app's top edge at all.
+            Insets status = !isInMultiWindowMode() && insets.isVisible(WindowInsetsCompat.Type.statusBars())
+                    ? insets.getInsets(WindowInsetsCompat.Type.statusBars()) : Insets.NONE;
+            int topPadding = Math.max(status.top, displayCutout.top);
 
             rootView.setPadding(
                     systemBars.left,

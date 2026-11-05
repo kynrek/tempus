@@ -23,6 +23,7 @@ import androidx.media3.session.SessionToken;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.util.QueueAdder;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.model.Download;
 import com.eddyizm.tempus.repository.AlbumRepository;
@@ -154,7 +155,7 @@ public class AlbumBottomSheetDialog extends CarBottomSheetDialogFragment impleme
                         dismissBottomSheet();
                     }
                 } else {
-                    MediaManager.enqueue(activityBrowserFuture, media, true);
+                    MediaManager.enqueueAsQueued(activityBrowserFuture, media, true);
                 }
             });
         });
@@ -183,7 +184,7 @@ public class AlbumBottomSheetDialog extends CarBottomSheetDialogFragment impleme
 
         TextView addToQueue = view.findViewById(R.id.add_to_queue_text_view);
         addToQueue.setOnClickListener(v -> albumBottomSheetViewModel.getAlbumTracks().observe(getViewLifecycleOwner(), songs -> {
-            MediaManager.enqueue(mediaBrowserListenableFuture, songs, false);
+            QueueAdder.add(requireActivity(), mediaBrowserListenableFuture, songs);
             ((MainActivity) requireActivity()).setBottomSheetInPeek(true);
 
             dismissBottomSheet();

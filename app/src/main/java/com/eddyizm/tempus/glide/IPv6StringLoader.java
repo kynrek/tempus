@@ -45,7 +45,7 @@ public class IPv6StringLoader implements ModelLoader<String, InputStream> {
         if (!handles(model)) {
             return null;
         }
-        return new LoadData<>(new ObjectKey(model), new IPv6StreamFetcher(client, model));
+        return new LoadData<>(new ObjectKey(model), new IPv6StreamFetcher(client, model, width, height));
     }
 
     private static class IPv6StreamFetcher implements DataFetcher<InputStream> {
@@ -55,15 +55,19 @@ public class IPv6StringLoader implements ModelLoader<String, InputStream> {
         private Response response;
         private InputStream saved;
 
-        IPv6StreamFetcher(OkHttpClient client, String model) {
+        private final int width, height;
+
+        IPv6StreamFetcher(OkHttpClient client, String model, int width, int height) {
             this.client = client;
             this.model = model;
+            this.width = width;
+            this.height = height;
         }
 
         @Override
         public void loadData(@NonNull Priority priority, @NonNull DataCallback<? super InputStream> callback) {
             // A downloaded track's cover is kept on disk: use it, connected or not.
-            File savedCover = OfflineCovers.savedFor(model);
+            File savedCover = OfflineCovers.savedFor(model, width, height);
             if (savedCover != null) {
                 try {
                     saved = new FileInputStream(savedCover);

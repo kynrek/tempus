@@ -32,6 +32,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.bumptech.glide.load.resource.bitmap.GranularRoundedCorners;
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.util.QueueAdder;
 import com.eddyizm.tempus.databinding.FragmentPlaylistPageBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.interfaces.ClickCallback;
@@ -229,7 +230,7 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
         } else if (item.getItemId() == R.id.action_add_to_queue) {
             List<Child> songs = playlistPageViewModel.getPlaylistSongLiveList().getValue();
             if (isVisible() && getActivity() != null && songs != null && !songs.isEmpty()) {
-                MediaManager.enqueue(mediaBrowserListenableFuture, songs, false);
+                QueueAdder.add(requireActivity(), mediaBrowserListenableFuture, songs);
             }
             return true;
         } else if (item.getItemId() == R.id.action_edit_playlist) {

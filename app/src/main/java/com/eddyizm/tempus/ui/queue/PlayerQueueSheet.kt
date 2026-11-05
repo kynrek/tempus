@@ -123,6 +123,9 @@ fun PlayerQueueSheet(
     onDownloadAll: (List<Child>) -> Unit,
     onLoadSavedQueue: () -> Unit,
     modifier: Modifier = Modifier,
+    controls: QueueControlActions? = null,
+    queueEnabled: Boolean = true,
+    onToggleQueue: (() -> Unit)? = null,
     onOpenAlbum: ((Child) -> Unit)? = null,
     currentSongId: String? = null,
     externalRefreshTrigger: Any? = null,
@@ -181,8 +184,10 @@ fun PlayerQueueSheet(
             val idx = currentSongs.indexOfFirst { it.stableId == currentPlayingStableId }
             if (idx >= 0) idx else currentIndex
         } else if (currentSongId != null) {
-            val idx = currentSongs.indexOfFirst { it.song.id == currentSongId }
-            if (idx >= 0) idx else currentIndex
+            val target = currentIndex.coerceAtLeast(0)
+            currentSongs.indices
+                .filter { currentSongs[it].song.id == currentSongId }
+                .minByOrNull { kotlin.math.abs(it - target) } ?: currentIndex
         } else {
             currentIndex
         }
@@ -259,10 +264,13 @@ fun PlayerQueueSheet(
                     onShuffleUpcoming = { onShuffleUpcoming(currentRawSongs, effectiveCurrentIndex) },
                     onSaveToPlaylist = { onSaveToPlaylist(currentSongs.map { it.song }, effectiveCurrentIndex) },
                     onDownloadAll = { onDownloadAll(currentSongs.map { it.song }) },
-                    onLoadSavedQueue = onLoadSavedQueue
+                    onLoadSavedQueue = onLoadSavedQueue,
+                    queueEnabled = queueEnabled,
+                    onToggleQueue = onToggleQueue
                 )
 
                 PlayerQueueList(
+                    modifier = Modifier.weight(1f),
                     items = currentSongs,
                     currentIndex = effectiveCurrentIndex,
                     isPlaying = isPlaying,
@@ -294,6 +302,7 @@ fun PlayerQueueSheet(
                     },
                     onOpenAlbum = onOpenAlbum
                 )
+                if (controls != null) QueueControls(isPlaying = isPlaying, actions = controls)
             }
         }
     }

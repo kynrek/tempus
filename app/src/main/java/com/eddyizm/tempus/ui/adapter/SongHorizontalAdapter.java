@@ -26,6 +26,7 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.util.QueueAdder;
 import com.eddyizm.tempus.databinding.ItemHorizontalTrackBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.interfaces.ClickCallback;
@@ -381,8 +382,8 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
         private void addToQueue() {
             Child song = song();
             if (song == null || mediaBrowserListenableFuture == null) return;
-            MediaManager.enqueue(mediaBrowserListenableFuture, song, false);
-            showQueued(itemView, itemView.getContext().getString(R.string.track_added_to_queue, song.getTitle()));
+            QueueAdder.add(itemView.getContext(), mediaBrowserListenableFuture, song,
+                    () -> showQueued(itemView, itemView.getContext().getString(R.string.track_added_to_queue, song.getTitle())));
         }
 
         private void addToLastPlaylist() {

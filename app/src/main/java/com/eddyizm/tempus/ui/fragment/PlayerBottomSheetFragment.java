@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.TextView;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -27,6 +28,8 @@ import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.util.AppColors;
+import com.eddyizm.tempus.ui.view.ProgressLineDrawable;
 import com.eddyizm.tempus.databinding.FragmentPlayerBottomSheetBinding;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.service.MediaManager;
@@ -96,6 +99,46 @@ public class PlayerBottomSheetFragment extends Fragment {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        if (headerLine != null) headerLine.reload();   // the line style may have changed in Settings
+        applyPanelColors();
+    }
+
+    /** Settings > Colors: the control panel's background and text (and its icons and line). */
+    private void applyPanelColors() {
+        if (bind == null) return;
+        View root = bind.playerHeaderLayout.getRoot();
+        Integer bg = AppColors.color(AppColors.PANEL_BG);
+        Integer text = AppColors.color(AppColors.PANEL_TEXT);
+        if (bg != null) {
+            root.setBackgroundColor(bg);
+            bind.playerHeaderLayout.playerHeaderSeekBar.setBackground(null);
+        }
+        if (text != null) {
+            android.content.res.ColorStateList tint = android.content.res.ColorStateList.valueOf(text);
+            for (TextView t : new TextView[]{bind.playerHeaderLayout.playerHeaderMediaTitleLabel,
+                    bind.playerHeaderLayout.playerHeaderMediaArtistLabel,
+                    bind.playerHeaderLayout.playerHeaderElapsedText,
+                    bind.playerHeaderLayout.playerHeaderDurationText}) {
+                t.setTextColor(text);
+            }
+            for (View b : new View[]{bind.playerHeaderLayout.playerHeaderRewindMediaButton,
+                    bind.playerHeaderLayout.playerHeaderButton,
+                    bind.playerHeaderLayout.playerHeaderNextMediaButton,
+                    bind.playerHeaderLayout.playerHeaderFastForwardMediaButton,
+                    bind.playerHeaderLayout.playerHeaderBookmarkMediaButton}) {
+                b.setBackgroundTintList(tint);
+            }
+            if (headerLine != null) {
+                android.util.TypedValue tv = new android.util.TypedValue();
+                requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true);
+                headerLine.setColors(tv.data, (text & 0x00FFFFFF) | 0x55000000);
+            }
+        }
+    }
+
+    @Override
     public void onStart() {
         super.onStart();
 
@@ -135,6 +178,7 @@ public class PlayerBottomSheetFragment extends Fragment {
         bind.playerHeaderLayout.playerHeaderRemoteButton.setOnClickListener(v -> com.eddyizm.tempus.lan.LanDevicePicker.toggle(requireActivity()));
         bind.playerHeaderLayout.getRoot().setOnClickListener(view -> ((MainActivity) requireActivity()).expandBottomSheet());
         initHeaderSeekBar();
+        if (!"bottom".equals(Preferences.getPanelPosition())) layoutHeaderAsColumn("left".equals(Preferences.getPanelPosition()));
         // The queue opens over whatever is on screen, so Back returns there.
         bind.playerHeaderLayout.playerHeaderQueueButton.setOnClickListener(view -> goToQueuePage());
     }
@@ -325,12 +369,21 @@ public class PlayerBottomSheetFragment extends Fragment {
     }
 
 
+    private int lastQueueCount;
+
     private void setQueueCount(MediaBrowser mediaBrowser) {
         if (bind == null) return;
-        int count = mediaBrowser.getMediaItemCount();
-        bind.playerHeaderLayout.playerHeaderQueueButton.setText(count > 0
-                ? getString(R.string.player_header_queue_count, count)
-                : getString(R.string.player_header_queue));
+        lastQueueCount = mediaBrowser.getMediaItemCount();
+        refreshQueueButton();
+    }
+
+    /** "Queue 47", or "Queue off" when Next follows the album/playlist (switch on the queue screen). */
+    public void refreshQueueButton() {
+        if (bind == null) return;
+        int count = lastQueueCount;
+        bind.playerHeaderLayout.playerHeaderQueueButton.setText(!Preferences.isQueueEnabled()
+                ? getString(R.string.player_header_queue_off)
+                : count > 0 ? getString(R.string.player_header_queue_count, count) : getString(R.string.player_header_queue));
     }
 
     private void setMediaControllerUI(MediaBrowser mediaBrowser) {
@@ -357,7 +410,133 @@ public class PlayerBottomSheetFragment extends Fragment {
     /** True while a finger is on the mini player timeline, so playback updates don't fight it. */
     private boolean scrubbing;
 
+    private ProgressLineDrawable headerLine;
+
+    /**
+     * Side column (Settings > control panel position): cover on top, then title, artist, the progress
+     * line and the buttons, stacked down a full-height column. The bar marks the edge facing the library.
+     */
+    private void layoutHeaderAsColumn(boolean panelOnLeft) {
+        androidx.constraintlayout.widget.ConstraintLayout root =
+                (androidx.constraintlayout.widget.ConstraintLayout) bind.playerHeaderLayout.getRoot();
+        ViewGroup.LayoutParams rootLp = root.getLayoutParams();
+        rootLp.height = ViewGroup.LayoutParams.MATCH_PARENT;
+        root.setLayoutParams(rootLp);
+        float d = getResources().getDisplayMetrics().density;
+        int p = androidx.constraintlayout.widget.ConstraintSet.PARENT_ID;
+        int m = Math.round(12 * d);
+        var h = bind.playerHeaderLayout;
+        androidx.constraintlayout.widget.ConstraintSet set = new androidx.constraintlayout.widget.ConstraintSet();
+        set.clone(root);
+        int[] all = {h.playerHeaderTopBar.getId(), h.playerHeaderMediaCoverImage.getId(), h.playerHeaderMediaTitleLabel.getId(),
+                h.playerHeaderMediaArtistLabel.getId(), h.playerHeaderQueueButton.getId(), h.playerHeaderRemoteButton.getId(),
+                h.placeholderLeftView.getId(), h.placeholderRightView.getId(), h.playerHeaderBookmarkMediaButton.getId(),
+                h.playerHeaderRewindMediaButton.getId(), h.playerHeaderButton.getId(), h.playerHeaderFastForwardMediaButton.getId(),
+                h.playerHeaderNextMediaButton.getId(), h.playerHeaderElapsedText.getId(), h.playerHeaderSeekBar.getId(),
+                h.playerHeaderDurationText.getId()};
+        // clear() also forgets visibility; keep what each view has now (e.g. the podcast bookmark stays hidden).
+        int[] visibility = new int[all.length];
+        for (int i = 0; i < all.length; i++) visibility[i] = root.findViewById(all[i]).getVisibility();
+        for (int id : all) set.clear(id);
+
+        // Bar down the inner edge.
+        int bar = h.playerHeaderTopBar.getId();
+        set.constrainWidth(bar, Math.round(3 * d));
+        set.constrainHeight(bar, 0);
+        set.connect(bar, androidx.constraintlayout.widget.ConstraintSet.TOP, p, androidx.constraintlayout.widget.ConstraintSet.TOP);
+        set.connect(bar, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, p, androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+        set.connect(bar, panelOnLeft ? androidx.constraintlayout.widget.ConstraintSet.END : androidx.constraintlayout.widget.ConstraintSet.START,
+                p, panelOnLeft ? androidx.constraintlayout.widget.ConstraintSet.END : androidx.constraintlayout.widget.ConstraintSet.START);
+
+        int cover = h.playerHeaderMediaCoverImage.getId();
+        set.constrainWidth(cover, 0);
+        set.constrainHeight(cover, 0);
+        set.setDimensionRatio(cover, "1:1");
+        set.connect(cover, androidx.constraintlayout.widget.ConstraintSet.TOP, p, androidx.constraintlayout.widget.ConstraintSet.TOP, m);
+        set.connect(cover, androidx.constraintlayout.widget.ConstraintSet.START, p, androidx.constraintlayout.widget.ConstraintSet.START, m + Math.round(4 * d));
+        set.connect(cover, androidx.constraintlayout.widget.ConstraintSet.END, p, androidx.constraintlayout.widget.ConstraintSet.END, m + Math.round(4 * d));
+
+        int title = h.playerHeaderMediaTitleLabel.getId(), artist = h.playerHeaderMediaArtistLabel.getId();
+        for (int id : new int[]{title, artist}) {
+            set.constrainWidth(id, 0);
+            set.constrainHeight(id, androidx.constraintlayout.widget.ConstraintSet.WRAP_CONTENT);
+            set.connect(id, androidx.constraintlayout.widget.ConstraintSet.START, p, androidx.constraintlayout.widget.ConstraintSet.START, Math.round(6 * d));
+            set.connect(id, androidx.constraintlayout.widget.ConstraintSet.END, p, androidx.constraintlayout.widget.ConstraintSet.END, Math.round(6 * d));
+        }
+        set.connect(title, androidx.constraintlayout.widget.ConstraintSet.TOP, cover, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, Math.round(8 * d));
+        set.connect(artist, androidx.constraintlayout.widget.ConstraintSet.TOP, title, androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+        h.playerHeaderMediaTitleLabel.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+        h.playerHeaderMediaArtistLabel.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+
+        int el = h.playerHeaderElapsedText.getId(), seek = h.playerHeaderSeekBar.getId(), du = h.playerHeaderDurationText.getId();
+        set.constrainWidth(seek, 0);
+        set.constrainHeight(seek, Math.round(22 * d));
+        set.connect(seek, androidx.constraintlayout.widget.ConstraintSet.TOP, artist, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, Math.round(6 * d));
+        set.connect(seek, androidx.constraintlayout.widget.ConstraintSet.START, el, androidx.constraintlayout.widget.ConstraintSet.END);
+        set.connect(seek, androidx.constraintlayout.widget.ConstraintSet.END, du, androidx.constraintlayout.widget.ConstraintSet.START);
+        for (int id : new int[]{el, du}) {
+            set.constrainWidth(id, Math.round(40 * d));
+            set.constrainHeight(id, 0);
+            set.connect(id, androidx.constraintlayout.widget.ConstraintSet.TOP, seek, androidx.constraintlayout.widget.ConstraintSet.TOP);
+            set.connect(id, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, seek, androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+        }
+        set.connect(el, androidx.constraintlayout.widget.ConstraintSet.START, p, androidx.constraintlayout.widget.ConstraintSet.START);
+        set.connect(du, androidx.constraintlayout.widget.ConstraintSet.END, p, androidx.constraintlayout.widget.ConstraintSet.END);
+
+        int size = getResources().getDimensionPixelSize(R.dimen.mini_player_button_size);
+        int[] row = {h.playerHeaderRewindMediaButton.getId(), h.playerHeaderButton.getId(),
+                h.playerHeaderFastForwardMediaButton.getId(), h.playerHeaderNextMediaButton.getId()};
+        for (int id : row) {
+            set.constrainWidth(id, size);
+            set.constrainHeight(id, size);
+            set.connect(id, androidx.constraintlayout.widget.ConstraintSet.TOP, seek, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, Math.round(6 * d));
+        }
+        set.createHorizontalChain(p, androidx.constraintlayout.widget.ConstraintSet.LEFT, p, androidx.constraintlayout.widget.ConstraintSet.RIGHT,
+                row, null, androidx.constraintlayout.widget.ConstraintSet.CHAIN_SPREAD_INSIDE);
+        for (int id : row) {
+            set.setMargin(id, androidx.constraintlayout.widget.ConstraintSet.LEFT, Math.round(8 * d));
+            set.setMargin(id, androidx.constraintlayout.widget.ConstraintSet.RIGHT, Math.round(8 * d));
+        }
+
+        int queue = h.playerHeaderQueueButton.getId(), remote = h.playerHeaderRemoteButton.getId(), book = h.playerHeaderBookmarkMediaButton.getId();
+        set.constrainWidth(queue, androidx.constraintlayout.widget.ConstraintSet.WRAP_CONTENT);
+        set.constrainHeight(queue, size);
+        set.connect(queue, androidx.constraintlayout.widget.ConstraintSet.TOP, row[0], androidx.constraintlayout.widget.ConstraintSet.BOTTOM, Math.round(8 * d));
+        set.connect(queue, androidx.constraintlayout.widget.ConstraintSet.START, p, androidx.constraintlayout.widget.ConstraintSet.START);
+        set.connect(queue, androidx.constraintlayout.widget.ConstraintSet.END, p, androidx.constraintlayout.widget.ConstraintSet.END);
+        set.constrainWidth(remote, Math.round(48 * d));
+        set.constrainHeight(remote, Math.round(48 * d));
+        set.connect(remote, androidx.constraintlayout.widget.ConstraintSet.TOP, queue, androidx.constraintlayout.widget.ConstraintSet.TOP);
+        set.connect(remote, androidx.constraintlayout.widget.ConstraintSet.START, queue, androidx.constraintlayout.widget.ConstraintSet.END, Math.round(6 * d));
+        set.constrainWidth(book, size);
+        set.constrainHeight(book, size);
+        set.connect(book, androidx.constraintlayout.widget.ConstraintSet.TOP, queue, androidx.constraintlayout.widget.ConstraintSet.TOP);
+        set.connect(book, androidx.constraintlayout.widget.ConstraintSet.END, queue, androidx.constraintlayout.widget.ConstraintSet.START, Math.round(6 * d));
+        for (int id : new int[]{h.placeholderLeftView.getId(), h.placeholderRightView.getId()}) {
+            set.constrainWidth(id, 0);
+            set.constrainHeight(id, 0);
+            set.connect(id, androidx.constraintlayout.widget.ConstraintSet.TOP, p, androidx.constraintlayout.widget.ConstraintSet.TOP);
+            set.connect(id, androidx.constraintlayout.widget.ConstraintSet.START, p, androidx.constraintlayout.widget.ConstraintSet.START);
+            set.setVisibility(id, View.GONE);
+        }
+        for (int i = 0; i < all.length; i++) {
+            if (all[i] != h.placeholderLeftView.getId() && all[i] != h.placeholderRightView.getId()) set.setVisibility(all[i], visibility[i]);
+        }
+        set.applyTo(root);
+    }
+
     private void initHeaderSeekBar() {
+        // The wavy (or straight) line from Settings, in place of the platform bar.
+        android.widget.SeekBar bar = bind.playerHeaderLayout.playerHeaderSeekBar;
+        android.util.TypedValue tv = new android.util.TypedValue();
+        requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true);
+        int played = tv.data;
+        requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, tv, true);
+        int rest = (tv.data & 0x00FFFFFF) | 0x66000000;
+        headerLine = new ProgressLineDrawable(requireContext(), played, rest);
+        int progress = bar.getProgress();
+        bar.setProgressDrawable(headerLine);
+        bar.setProgress(progress);
         bind.playerHeaderLayout.playerHeaderSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
@@ -409,8 +588,21 @@ public class PlayerBottomSheetFragment extends Fragment {
 
     private void setContentDuration(long duration) {
         if (com.eddyizm.tempus.lan.LanRemoteSession.isActive() || bind == null) return;
+        // Before the track is prepared (e.g. after a restart) the player doesn't know the length yet:
+        // use the length the server gave for the track rather than the "unknown" value.
+        if (duration <= 0 || duration == androidx.media3.common.C.TIME_UNSET) duration = knownDurationMs();
+        if (duration <= 0) return;
         bind.playerHeaderLayout.playerHeaderSeekBar.setMax((int) (duration / 1000));
         setHeaderTimes(bind.playerHeaderLayout.playerHeaderSeekBar.getProgress(), (int) (duration / 1000));
+    }
+
+    private long knownDurationMs() {
+        MediaBrowser browser = progressBarBrowser;
+        if (browser == null || browser.getCurrentMediaItem() == null) return 0;
+        androidx.media3.common.MediaMetadata m = browser.getCurrentMediaItem().mediaMetadata;
+        if (m.durationMs != null && m.durationMs > 0) return m.durationMs;
+        android.os.Bundle extras = m.extras;
+        return extras != null ? extras.getInt("duration", 0) * 1000L : 0;
     }
 
     private void setProgress(MediaBrowser mediaBrowser) {
@@ -587,6 +779,7 @@ public class PlayerBottomSheetFragment extends Fragment {
     /** Ticks once a second while playing; on pause, shows where it stopped instead of the last tick. */
     private void runProgressBarHandler(boolean isPlaying) {
         progressBarHandler.removeCallbacks(progressBarRunnable);
+        if (headerLine != null) headerLine.setPlaying(isPlaying);
         if (isPlaying) {
             progressBarHandler.post(progressBarRunnable);
         } else if (progressBarBrowser != null) {

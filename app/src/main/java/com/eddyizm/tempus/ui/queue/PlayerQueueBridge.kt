@@ -60,6 +60,7 @@ class PlayerQueueBridge @JvmOverloads constructor(
     private val downloadRepository: DownloadRepository = DownloadRepository()
 ) {
     var isQueueOpen by mutableStateOf(false)
+    private var queueEnabled by mutableStateOf(Preferences.isQueueEnabled())
         private set
 
     private var backCallback: OnBackPressedCallback? = null
@@ -151,8 +152,12 @@ class PlayerQueueBridge @JvmOverloads constructor(
                     ) {
                         playerIdx
                     } else if (currentSongIdState != null) {
-                        val idx = currentRawSongs.indexOfFirst { it.id == currentSongIdState }
-                        if (idx >= 0) idx else -1
+                        // The same song can be in the queue twice (history from an earlier queue, then the
+                        // new one): take the copy nearest the player's position, not the first.
+                        val target = if (playerIdx >= 0) playerIdx else 0
+                        currentRawSongs.indices
+                            .filter { currentRawSongs[it].id == currentSongIdState }
+                            .minByOrNull { kotlin.math.abs(it - target) } ?: -1
                     } else {
                         -1
                     }
@@ -206,6 +211,13 @@ class PlayerQueueBridge @JvmOverloads constructor(
                         }, ContextCompat.getMainExecutor(context))
                     },
                     onOpenAlbum = { song -> openAlbum(song) },
+                    controls = queueControls,
+                    queueEnabled = queueEnabled,
+                    onToggleQueue = {
+                        queueEnabled = !queueEnabled
+                        Preferences.setQueueEnabled(queueEnabled)
+                        fragment.refreshQueueButton()
+                    },
                     onRemoveTrack = { removeIndex ->
                         if (LanRemoteSession.isActive()) {
                             MediaManager.remove(
@@ -357,6 +369,25 @@ class PlayerQueueBridge @JvmOverloads constructor(
         backCallback?.isEnabled = false
         fragment.updateBottomSheetDraggableState()
     }
+
+    private fun withBrowser(action: (androidx.media3.session.MediaBrowser) -> Unit) {
+        val future = fragment.mediaBrowserListenableFuture ?: return
+        future.addListener({
+            try { action(future.get()) } catch (e: Exception) { Log.w("PlayerQueueBridge", "control failed", e) }
+        }, ContextCompat.getMainExecutor(fragment.requireContext()))
+    }
+
+    private val queueControls = QueueControlActions(
+        previous = { withBrowser { it.seekToPrevious() } },
+        seekBack = { withBrowser { it.seekTo((it.currentPosition - Preferences.getSeekSeconds() * 1000L).coerceAtLeast(0)) } },
+        playPause = { withBrowser { if (it.isPlaying) it.pause() else it.play() } },
+        seekForward = { withBrowser {
+            val d = it.duration
+            val t = it.currentPosition + Preferences.getSeekSeconds() * 1000L
+            it.seekTo(if (d > 0) t.coerceAtMost(d - 500) else t)
+        } },
+        next = { withBrowser { it.seekToNext() } },
+    )
 
     /** Opens the song's album page, closing the queue and the player over it. */
     private fun openAlbum(song: Child) {

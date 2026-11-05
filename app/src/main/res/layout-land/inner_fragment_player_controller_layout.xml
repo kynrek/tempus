@@ -211,21 +211,16 @@
         app:layout_constraintStart_toEndOf="@+id/vertical_guideline"
         app:layout_constraintTop_toBottomOf="@+id/exo_progress" />
 
-    <androidx.media3.ui.DefaultTimeBar
+    <com.eddyizm.tempus.ui.view.ProgressLineTimeBar
         android:id="@id/exo_progress"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        app:bar_height="2dp"
-        app:buffered_color="?attr/colorOnSecondaryContainer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/vertical_guideline"
         app:layout_constraintTop_toBottomOf="@+id/player_artist_name_label"
-        app:layout_constraintBottom_toTopOf="@+id/player_play_pause_placeholder_view"
-        app:played_color="?attr/colorOnPrimaryContainer"
-        app:scrubber_color="?attr/colorOnPrimaryContainer"
-        app:unplayed_color="?attr/colorPrimaryContainer" />
+        app:layout_constraintBottom_toTopOf="@+id/player_play_pause_placeholder_view" />
 
     <TextView
         android:id="@+id/exo_duration"

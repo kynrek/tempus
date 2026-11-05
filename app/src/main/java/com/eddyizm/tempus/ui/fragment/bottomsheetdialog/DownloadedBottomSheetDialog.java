@@ -15,6 +15,7 @@ import androidx.media3.session.MediaBrowser;
 import androidx.media3.session.SessionToken;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.util.QueueAdder;
 import com.eddyizm.tempus.glide.CustomGlideRequest;
 import com.eddyizm.tempus.model.Download;
 import com.eddyizm.tempus.service.MediaManager;
@@ -110,7 +111,7 @@ public class DownloadedBottomSheetDialog extends CarBottomSheetDialogFragment im
 
         TextView playNext = view.findViewById(R.id.play_next_text_view);
         playNext.setOnClickListener(v -> {
-            MediaManager.enqueue(mediaBrowserListenableFuture, songs, true);
+            MediaManager.enqueueAsQueued(mediaBrowserListenableFuture, songs, true);
             ((MainActivity) requireActivity()).setBottomSheetInPeek(true);
 
             dismissBottomSheet();
@@ -118,7 +119,7 @@ public class DownloadedBottomSheetDialog extends CarBottomSheetDialogFragment im
 
         TextView addToQueue = view.findViewById(R.id.add_to_queue_text_view);
         addToQueue.setOnClickListener(v -> {
-            MediaManager.enqueue(mediaBrowserListenableFuture, songs, false);
+            QueueAdder.add(requireActivity(), mediaBrowserListenableFuture, songs);
             ((MainActivity) requireActivity()).setBottomSheetInPeek(true);
 
             dismissBottomSheet();

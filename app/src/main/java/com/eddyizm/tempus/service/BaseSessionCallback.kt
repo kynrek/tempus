@@ -213,6 +213,26 @@ open class BaseSessionCallback(
     // onConnect
     // ─────────────────────────────────────────────────────────────
 
+    /** Queue off: Next goes to the next song of the album/playlist, passing over songs added to the queue. */
+    @Deprecated("Media3 still routes player commands through this")
+    override fun onPlayerCommandRequest(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        playerCommand: Int
+    ): Int {
+        if ((playerCommand == Player.COMMAND_SEEK_TO_NEXT || playerCommand == Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+            && !com.eddyizm.tempus.util.Preferences.isQueueEnabled()) {
+            val player = session.player
+            val next = service.nextContextIndex(player, player.currentMediaItemIndex)
+            if (next != androidx.media3.common.C.INDEX_UNSET && next != player.currentMediaItemIndex + 1) {
+                player.seekTo(next, 0L)
+                return androidx.media3.session.SessionResult.RESULT_INFO_SKIPPED
+            }
+        }
+        @Suppress("DEPRECATION")
+        return super.onPlayerCommandRequest(session, controller, playerCommand)
+    }
+
     @OptIn(UnstableApi::class)
     override fun onPlayerInteractionFinished(
         session: MediaSession,
