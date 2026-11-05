@@ -949,15 +949,19 @@ public class MainActivity extends BaseActivity {
             int leftPadding = Math.max(systemBars.left, displayCutout.left);
             int rightPadding = Math.max(systemBars.right, displayCutout.right);
 
+            // A phone upright shows its navigation bar (the car hides it, so this is 0 there): keep
+            // the lists, the A–Z strip and the mini player above it instead of under its buttons.
+            int bottomPadding = systemBars.bottom;
+
             rootView.setPadding(
                     leftPadding,
                     topPadding,
                     rightPadding,
-                    0
+                    bottomPadding
             );
 
             return new WindowInsetsCompat.Builder(insets)
-                    .setInsets(WindowInsetsCompat.Type.systemBars(), Insets.of(0, 0, 0, systemBars.bottom))
+                    .setInsets(WindowInsetsCompat.Type.systemBars(), Insets.NONE)
                     .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.NONE)
                     .setInsets(WindowInsetsCompat.Type.displayCutout(), Insets.of(0, 0, 0, displayCutout.bottom))
                     .build();
