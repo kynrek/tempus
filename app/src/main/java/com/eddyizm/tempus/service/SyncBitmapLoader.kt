@@ -90,7 +90,9 @@ class SyncBitmapLoader(
 
     companion object {
         private const val TAG = "SyncBitmapLoader"
-        private const val CACHE_SIZE = 20
+        // Holds what BaseMediaService prewarms (previous, current and three ahead) with room
+        // for a skip or two; each cover is up to 512x512.
+        private const val CACHE_SIZE = 8
         // Cap decode dimensions: album art over AVRCP only needs a modest cover
         // image, and bounding this keeps the LRU cache's worst-case heap small.
         private const val MAX_ART_SIZE = 512

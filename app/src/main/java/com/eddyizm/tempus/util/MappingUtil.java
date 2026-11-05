@@ -507,20 +507,10 @@ public class MappingUtil {
         return map;
     }
 
-    private static Map<String, String> getDownloadUris() {
-        Map<String, Download> downloads = getCachedDownloads();
-        Map<String, String> uris = new HashMap<>();
-        for (Map.Entry<String, Download> entry : downloads.entrySet()) {
-            if (entry.getValue().getDownloadUri() != null && !entry.getValue().getDownloadUri().isEmpty()) {
-                uris.put(entry.getKey(), entry.getValue().getDownloadUri());
-            }
-        }
-        return uris;
-    }
-
     private static Uri getUri(Child media) {
-        String localUri = getDownloadUris().get(media.getId());
-        if (localUri != null) {
+        Download download = getCachedDownloads().get(media.getId());
+        String localUri = download != null ? download.getDownloadUri() : null;
+        if (localUri != null && !localUri.isEmpty()) {
             return Uri.parse(localUri);
         }
 

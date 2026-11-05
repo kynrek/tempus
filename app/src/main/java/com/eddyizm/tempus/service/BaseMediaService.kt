@@ -77,6 +77,7 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         const val ACTION_EQUALIZER_UPDATED = "com.eddyizm.tempus.service.EQUALIZER_UPDATED"
         const val ACTION_RELOAD_EQUALIZER = "com.eddyizm.tempus.service.ACTION_RELOAD_EQUALIZER"
         var activeBrowserCount = 0
+        private const val ARTWORK_PREWARM_AHEAD = 3
     }
 
     protected lateinit var exoplayer: ExoPlayer
@@ -228,6 +229,32 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         tryApplyPlayNextFixup()
     }
 
+    /**
+     * Loads the covers the session can show next (previous, current and a few ahead, in play
+     * order) so a track change finds its cover cached. The whole queue used to be loaded, and
+     * the small cache then held only the covers at its end.
+     */
+    private fun prewarmArtwork(player: Player) {
+        val timeline = player.currentTimeline
+        val current = player.currentMediaItemIndex
+        if (timeline.isEmpty || current == C.INDEX_UNSET) return
+        val window = Timeline.Window()
+        val prewarm = { index: Int ->
+            if (index != C.INDEX_UNSET && index < timeline.windowCount) {
+                timeline.getWindow(index, window)
+                window.mediaItem.mediaMetadata.artworkUri?.let { bitmapLoader.prewarm(it) }
+            }
+        }
+        prewarm(current)
+        prewarm(timeline.getPreviousWindowIndex(current, player.repeatMode, player.shuffleModeEnabled))
+        var next = current
+        repeat(ARTWORK_PREWARM_AHEAD) {
+            next = timeline.getNextWindowIndex(next, player.repeatMode, player.shuffleModeEnabled)
+            if (next == C.INDEX_UNSET) return
+            prewarm(next)
+        }
+    }
+
     private fun tryApplyPlayNextFixup() {
         val player = exoplayer
         while (playNextQueue.isNotEmpty()) {
@@ -371,6 +398,7 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
                 }
                 ReplayGainUtil.applyGain(player, mediaItem)
                 dropPlayedIfNotKept(player, reason)
+                prewarmArtwork(player)
 
                 // --- Add for AA : Constants.AA_START_INDEX if présent ---
                 val extras = mediaItem.mediaMetadata.extras
@@ -431,12 +459,7 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
                     Log.w(TAG, "prefetchQueueGains failed: $t")
                 }
                 QueuePreloader.preload(this@BaseMediaService, player)
-                if (timeline.isEmpty) return
-                val window = Timeline.Window()
-                for (i in 0 until timeline.windowCount) {
-                    timeline.getWindow(i, window)
-                    window.mediaItem.mediaMetadata.artworkUri?.let { bitmapLoader.prewarm(it) }
-                }
+                prewarmArtwork(player)
             }
 
             override fun onTracksChanged(tracks: Tracks) {

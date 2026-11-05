@@ -11,6 +11,7 @@ import com.eddyizm.tempus.util.ClientCertManager
 import com.eddyizm.tempus.util.ServerHeaders
 import com.google.gson.GsonBuilder
 import okhttp3.Cache
+import okhttp3.ConnectionPool
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -70,6 +71,13 @@ class RetrofitClient(subsonic: Subsonic) {
                 .create()
         }
 
+        /**
+         * One pool for every client, so they reuse the same few connections to the server instead
+         * of each keeping its own TLS sockets open. Each client keeps its own dispatcher, so how
+         * many requests run at once is unchanged.
+         */
+        private val connectionPool by lazy { ConnectionPool() }
+
         /** OkHttp allows only one [Cache] per directory, so the clients share it. */
         private val cache by lazy { Cache(App.getContext().cacheDir, 10L * 1024 * 1024) }
 
@@ -103,6 +111,7 @@ class RetrofitClient(subsonic: Subsonic) {
             .addNetworkInterceptor(ServerHeaders.createInterceptor())
             // .addNetworkInterceptor(cacheUtil.onlineInterceptor)
             .cache(cache)
+            .connectionPool(connectionPool)
             .setupSsl()
             .build()
     }

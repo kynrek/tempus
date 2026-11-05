@@ -82,6 +82,14 @@ android {
         }
     }
 
+    packaging {
+        dex {
+            // Stored uncompressed, the dex is mapped straight from the APK. Compressed (the default
+            // below minSdk 28), a debuggable install inflates all ~50 MB of it into private memory.
+            useLegacyPackaging = false
+        }
+    }
+
     buildFeatures {
         viewBinding = true
         buildConfig = true
