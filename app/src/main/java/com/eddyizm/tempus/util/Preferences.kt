@@ -74,6 +74,7 @@ object Preferences {
     private const val ALBUM_ARTIST_ATTEMPTS = "album_artist_backfill_attempts"
     private const val ALBUM_ARTIST_ATTEMPTS_VERSION = "album_artist_backfill_attempts_version"
     private const val DATA_SAVING_MODE = "data_saving_mode"
+    private const val DOWNLOADED_ONLY = "downloaded_only"
     private const val SERVER_UNREACHABLE = "server_unreachable"
     private const val SYNC_STARRED_ARTISTS_FOR_OFFLINE_USE = "sync_starred_artists_for_offline_use"
     private const val SYNC_STARRED_ALBUMS_FOR_OFFLINE_USE = "sync_starred_albums_for_offline_use"
@@ -823,6 +824,17 @@ object Preferences {
     fun setDataSavingMode(isDataSavingModeEnabled: Boolean) {
         App.getInstance().preferences.edit().putBoolean(DATA_SAVING_MODE, isDataSavingModeEnabled)
                 .apply()
+    }
+
+    /** Lists show only music downloaded to this device. Read through DownloadedOnly, which keeps it live. */
+    @JvmStatic
+    fun isDownloadedOnly(): Boolean {
+        return App.getInstance().preferences.getBoolean(DOWNLOADED_ONLY, false)
+    }
+
+    @JvmStatic
+    fun setDownloadedOnly(downloadedOnly: Boolean) {
+        App.getInstance().preferences.edit().putBoolean(DOWNLOADED_ONLY, downloadedOnly).apply()
     }
 
     @JvmStatic

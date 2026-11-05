@@ -228,7 +228,7 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
             playlistPageViewModel.setPinned(false);
             return true;
         } else if (item.getItemId() == R.id.action_add_to_queue) {
-            List<Child> songs = playlistPageViewModel.getPlaylistSongLiveList().getValue();
+            List<Child> songs = playlistPageViewModel.getShownSongList().getValue();
             if (isVisible() && getActivity() != null && songs != null && !songs.isEmpty()) {
                 QueueAdder.add(requireActivity(), mediaBrowserListenableFuture, songs);
             }
@@ -343,7 +343,7 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
 
     private void initMusicButton() {
 
-        playlistPageViewModel.getPlaylistSongLiveList()
+        playlistPageViewModel.getShownSongList()
                         .observe(getViewLifecycleOwner(), songs -> {
                             if (songs != null) {
 
@@ -467,16 +467,19 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
         setMediaBrowserListenableFuture();
         reapplyPlayback();
 
-        playlistPageViewModel.getPlaylistSongLiveList().observe(getViewLifecycleOwner(), songs -> {
+        playlistPageViewModel.getShownSongList().observe(getViewLifecycleOwner(), songs -> {
             songHorizontalAdapter.setItems(songs);
             if (songs != null) {
                 bind.emptyPlaylistLabel.setVisibility(songs.isEmpty() ? View.VISIBLE : View.GONE);
                 bind.playlistSongCountLabel.setText(getString(R.string.playlist_song_count, songs.size()));
                 long totalDuration = songs.stream().mapToLong(s -> s.getDuration() != null ? s.getDuration() : 0).sum();
                 bind.playlistDurationLabel.setText(getString(R.string.playlist_duration, MusicUtil.getReadableDurationString(totalDuration, false)));
-                if (keptSynced) syncIfChanged(songs);
             }
             reapplyPlayback();
+        });
+        // Syncing compares against the whole playlist, not the downloaded-only view of it.
+        playlistPageViewModel.getPlaylistSongLiveList().observe(getViewLifecycleOwner(), songs -> {
+            if (songs != null && keptSynced) syncIfChanged(songs);
         });
     }
 

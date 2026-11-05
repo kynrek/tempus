@@ -23,6 +23,7 @@ import com.eddyizm.tempus.service.MediaManager;
 import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.viewmodel.ArtistPageViewModel;
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -98,7 +99,7 @@ public class ArtistReleaseAdapter extends RecyclerView.Adapter<ArtistReleaseAdap
         holder.item.releaseTracks.setVisibility(open ? View.VISIBLE : View.GONE);
         if (open) {
             List<Child> albumTracks = tracks.get(album.getId());
-            if (albumTracks != null) holder.trackAdapter(album).setItems(albumTracks);
+            if (albumTracks != null) holder.trackAdapter(album).setItems(DownloadedOnly.songs(albumTracks));
         }
     }
 
@@ -119,13 +120,13 @@ public class ArtistReleaseAdapter extends RecyclerView.Adapter<ArtistReleaseAdap
     private void withTracks(AlbumID3 album, Consumer<List<Child>> use) {
         List<Child> cached = tracks.get(album.getId());
         if (cached != null) {
-            use.accept(cached);
+            use.accept(DownloadedOnly.songs(cached));
             return;
         }
         albumRepository.getAlbumTracks(album.getId(), loaded -> {
             List<Child> ordered = inAlbumOrder(loaded);
             tracks.put(album.getId(), ordered);
-            use.accept(ordered);
+            use.accept(DownloadedOnly.songs(ordered));
         });
     }
 

@@ -35,6 +35,7 @@ import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.AlbumCatalogueAdapter;
 import com.eddyizm.tempus.util.CatalogueView;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.util.Preferences;
 import com.eddyizm.tempus.util.TileSizeManager;
@@ -178,7 +179,7 @@ public class AlbumCatalogueFragment extends Fragment implements ClickCallback {
         bind.albumCatalogueRecyclerView.setAdapter(albumAdapter);
         bind.albumAlphabetScrubber.attach(bind.albumCatalogueRecyclerView, albumAdapter);
         bind.albumAlphabetScrubber.setOnScrubStartListener(() -> bind.appBarLayout.setExpanded(false));
-        albumCatalogueViewModel.getAlbumList().observe(getViewLifecycleOwner(), albums -> {
+        DownloadedOnly.albums(albumCatalogueViewModel.getAlbumList()).observe(getViewLifecycleOwner(), albums -> {
             originalAlbums = albums;
             currentSortOrder = Preferences.getAlbumSortOrder();
             applySortToAlbums(currentSortOrder);

@@ -290,6 +290,9 @@
     <string name="menu_last_year_name">Last year</string>
     <string name="menu_library_label">Library</string>
     <string name="menu_search_button">Search</string>
+    <string name="menu_downloaded_only">Downloaded only</string>
+    <string name="downloaded_only_on">Showing downloaded music only</string>
+    <string name="downloaded_only_off">Showing all music</string>
     <string name="settings_search_hint">Search settings</string>
     <string name="menu_settings_button">Settings</string>
     <string name="menu_sort_artist">Artist</string>

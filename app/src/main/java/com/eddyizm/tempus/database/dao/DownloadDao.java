@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 
 import com.eddyizm.tempus.model.Download;
+import com.eddyizm.tempus.model.DownloadedKeys;
 
 import java.util.List;
 
@@ -17,6 +18,12 @@ public interface DownloadDao {
 
     @Query("SELECT * FROM download WHERE download_state = 1 ORDER BY IFNULL(NULLIF(album_artist, ''), album), album, album_id, disc_number, track ASC")
     List<Download> getAllSync();
+
+    @Query("SELECT id, album_id, artist_id, album_artist, artist, genre FROM download WHERE download_state = 1")
+    LiveData<List<DownloadedKeys>> getDownloadedKeys();
+
+    @Query("SELECT * FROM download WHERE download_state = 1 AND (artist_id = :artistId OR album_artist = :name COLLATE NOCASE OR artist = :name COLLATE NOCASE)")
+    LiveData<List<Download>> getByArtist(String artistId, String name);
 
     @Query("SELECT * FROM download WHERE id = :id")
     Download getOne(String id);

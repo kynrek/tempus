@@ -20,6 +20,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.LiveData;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.util.UnstableApi;
 import androidx.navigation.Navigation;
@@ -36,6 +37,7 @@ import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.ArtistCatalogueAdapter;
 import com.eddyizm.tempus.util.CatalogueView;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.util.Preferences;
 import com.eddyizm.tempus.util.TileSizeManager;
@@ -52,6 +54,8 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
     private FragmentArtistCatalogueBinding bind;
     private MainActivity activity;
     private ArtistCatalogueViewModel artistCatalogueViewModel;
+    /** The artists the tab lists: all of them, or only those with downloads. */
+    private LiveData<List<ArtistID3>> shownArtists;
 
     private ArtistCatalogueAdapter artistAdapter;
 
@@ -149,7 +153,8 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
         bind.artistCatalogueRecyclerView.setAdapter(artistAdapter);
         bind.artistAlphabetScrubber.attach(bind.artistCatalogueRecyclerView, artistAdapter);
         bind.artistAlphabetScrubber.setOnScrubStartListener(() -> bind.appBarLayout.setExpanded(false));
-        artistCatalogueViewModel.getArtistList().observe(getViewLifecycleOwner(), artistList -> {
+        shownArtists = DownloadedOnly.artists(artistCatalogueViewModel.getArtistList());
+        shownArtists.observe(getViewLifecycleOwner(), artistList -> {
             artistAdapter.setItems(artistList);
             artistAdapter.sort(Preferences.getArtistSortOrder());
         });
@@ -192,7 +197,7 @@ public class ArtistCatalogueFragment extends Fragment implements ClickCallback {
     }
 
     private void filterArtists(String query) {
-        List<ArtistID3> allArtists = artistCatalogueViewModel.getArtistList().getValue();
+        List<ArtistID3> allArtists = shownArtists != null ? shownArtists.getValue() : null;
         
         if (allArtists == null || allArtists.isEmpty()) {
             return;

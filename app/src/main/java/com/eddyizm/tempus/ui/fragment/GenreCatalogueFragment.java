@@ -33,6 +33,7 @@ import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.GenreCatalogueAdapter;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.util.Preferences;
 import com.eddyizm.tempus.util.TileSizeManager;
@@ -129,7 +130,7 @@ public class GenreCatalogueFragment extends Fragment implements ClickCallback {
         genreCatalogueAdapter.setStateRestorationPolicy(RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY);
         bind.genreCatalogueRecyclerView.setAdapter(genreCatalogueAdapter);
 
-        genreCatalogueViewModel.getGenreList().observe(getViewLifecycleOwner(), genres -> genreCatalogueAdapter.setItems(genres) );
+        DownloadedOnly.genres(genreCatalogueViewModel.getGenreList()).observe(getViewLifecycleOwner(), genres -> genreCatalogueAdapter.setItems(genres) );
 
         bind.genreCatalogueRecyclerView.setOnTouchListener((v, event) -> {
             hideKeyboard(v);
