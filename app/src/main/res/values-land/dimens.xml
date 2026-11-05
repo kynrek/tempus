@@ -1,3 +1,6 @@
 <resources>
     <dimen name="activity_horizontal_margin">48dp</dimen>
+    <!-- Artist picture on a short landscape screen (a phone on its side, ~400dp tall): small, so
+         Top songs shows without scrolling. The car's 480dp pane keeps its size (values-h440dp-land). -->
+    <dimen name="artist_header_height">72dp</dimen>
 </resources>

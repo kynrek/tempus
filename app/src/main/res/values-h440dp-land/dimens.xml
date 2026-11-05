@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The car pane (833x480dp): the artist picture keeps its original size. -->
+    <dimen name="artist_header_height">132dp</dimen>
+</resources>

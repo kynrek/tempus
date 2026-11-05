@@ -370,6 +370,41 @@ public class MainActivity extends BaseActivity {
 
     public void setBottomSheetVisibility(boolean visibility) {
         bottomSheetController.setVisibility(visibility);
+        updateSidePlayer();
+    }
+
+    /** Landscape with Settings > UI > Mini player when sideways = side (and a layout that has the panel). */
+    public boolean usesSidePlayer() {
+        return isLandscape && "side".equals(Preferences.getMiniPlayerLandscape())
+                && findViewById(R.id.side_player_container) != null;
+    }
+
+    /** Height the collapsed sheet shows: the mini player, or nothing when it sits in the side panel instead. */
+    private int collapsedPeekDp() {
+        return usesSidePlayer() ? 0 : miniPlayerHeightDp();
+    }
+
+    /**
+     * Shows the side mini player while there's something to play and the sheet isn't hidden, and
+     * keeps the page out from under it. The full player still opens over everything.
+     */
+    public void updateSidePlayer() {
+        if (bind == null) return;
+        android.view.ViewGroup side = findViewById(R.id.side_player_container);
+        View row = findViewById(R.id.main_content_row);
+        if (side == null) return;
+        boolean show = usesSidePlayer() && side.getChildCount() > 0
+                && bind.playerBottomSheet.getVisibility() == View.VISIBLE
+                && bottomSheetBehavior != null && bottomSheetBehavior.getState() != BottomSheetBehavior.STATE_HIDDEN;
+        side.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (row != null && row.getLayoutParams() instanceof android.view.ViewGroup.MarginLayoutParams) {
+            android.view.ViewGroup.MarginLayoutParams lp = (android.view.ViewGroup.MarginLayoutParams) row.getLayoutParams();
+            int margin = show ? side.getLayoutParams().width : 0;
+            if (lp.rightMargin != margin) {
+                lp.rightMargin = margin;
+                row.setLayoutParams(lp);
+            }
+        }
     }
 
     @Nullable
@@ -426,6 +461,7 @@ public class MainActivity extends BaseActivity {
                 @Override
                 public void onStateChanged(@NonNull View view, int state) {
                     PlayerBottomSheetFragment playerBottomSheetFragment = (PlayerBottomSheetFragment) getSupportFragmentManager().findFragmentByTag("PlayerBottomSheet");
+                    updateSidePlayer();
 
                     switch (state) {
                         case BottomSheetBehavior.STATE_HIDDEN:
@@ -486,7 +522,7 @@ public class MainActivity extends BaseActivity {
         // Ignore orientation change, bottom navbar always hidden
         if (Preferences.getHideBottomNavbarOnPortrait()) {
             navigationController.setNavbarVisibility(false);
-            bottomSheetController.setPeekHeight(miniPlayerHeightDp(), displayDensity);
+            bottomSheetController.setPeekHeight(collapsedPeekDp(), displayDensity);
             navigationController.setSystemBarsVisibility(this, !isLandscape);
             return;
         }
@@ -498,7 +534,7 @@ public class MainActivity extends BaseActivity {
             navigationController.setSystemBarsVisibility(this, true);
         } else {
             // Hide app navbar + hide system bars
-            bottomSheetController.setPeekHeight(miniPlayerHeightDp(), displayDensity);
+            bottomSheetController.setPeekHeight(collapsedPeekDp(), displayDensity);
             navigationController.setNavbarVisibility(false);
             navigationController.setSystemBarsVisibility(this, false);
         }

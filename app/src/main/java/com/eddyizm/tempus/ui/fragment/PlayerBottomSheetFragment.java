@@ -70,6 +70,98 @@ public class PlayerBottomSheetFragment extends Fragment {
     private Runnable progressBarRunnable;
     private MediaBrowser progressBarBrowser;
 
+    @Nullable private ViewGroup sideHost;
+
+    // --- For the queue screen's control bar, which is drawn in the queue's own window over the
+    // player: it mirrors the mini player and presses its buttons, so remote (LAN) control,
+    // seek-button visibility and the rest behave exactly the same. ---
+
+    @Nullable
+    public CharSequence barTitle() {
+        return bind != null ? bind.playerHeaderLayout.playerHeaderMediaTitleLabel.getText() : null;
+    }
+
+    @Nullable
+    public CharSequence barArtist() {
+        return bind != null ? bind.playerHeaderLayout.playerHeaderMediaArtistLabel.getText() : null;
+    }
+
+    public boolean barPlaying() {
+        return bind != null && bind.playerHeaderLayout.playerHeaderButton.isChecked();
+    }
+
+    public int barPositionSeconds() {
+        return bind != null ? bind.playerHeaderLayout.playerHeaderSeekBar.getProgress() : 0;
+    }
+
+    public int barDurationSeconds() {
+        return bind != null ? bind.playerHeaderLayout.playerHeaderSeekBar.getMax() : 0;
+    }
+
+    public boolean barHasSeekButtons() {
+        return bind != null && bind.playerHeaderLayout.playerHeaderRewindMediaButton.getVisibility() == View.VISIBLE;
+    }
+
+    public boolean barNextEnabled() {
+        return bind != null && bind.playerHeaderLayout.playerHeaderNextMediaButton.getVisibility() == View.VISIBLE
+                && bind.playerHeaderLayout.playerHeaderNextMediaButton.isEnabled();
+    }
+
+    /** "rewind", "play", "forward" or "next": the same as tapping that mini player button. */
+    public void barPress(String button) {
+        if (bind == null) return;
+        View target;
+        switch (button) {
+            case "rewind": target = bind.playerHeaderLayout.playerHeaderRewindMediaButton; break;
+            case "forward": target = bind.playerHeaderLayout.playerHeaderFastForwardMediaButton; break;
+            case "next": target = bind.playerHeaderLayout.playerHeaderNextMediaButton; break;
+            default: target = bind.playerHeaderLayout.playerHeaderButton; break;
+        }
+        target.performClick();
+    }
+
+    public void barSeekTo(int seconds) {
+        if (bind == null || com.eddyizm.tempus.lan.LanRemoteSession.isActive() || mediaBrowserListenableFuture == null) return;
+        bind.playerHeaderLayout.playerHeaderSeekBar.setProgress(seconds);
+        mediaBrowserListenableFuture.addListener(() -> {
+            try {
+                mediaBrowserListenableFuture.get().seekTo(seconds * 1000L);
+            } catch (Exception e) {
+                Log.e(TAG, "Seek failed", e);
+            }
+        }, MoreExecutors.directExecutor());
+    }
+
+    /**
+     * Landscape with Settings > UI > Mini player when sideways = side: move the mini player's bar
+     * into the activity's side panel and rearrange it into a column (cover, title, transport,
+     * timeline, Queue). The views and their wiring stay the same, only their constraints change;
+     * the sheet itself then collapses to nothing and still opens the full player on a tap.
+     */
+    private void moveHeaderToSidePanel() {
+        if (!(getActivity() instanceof MainActivity) || !((MainActivity) getActivity()).usesSidePlayer()) return;
+        ViewGroup host = getActivity().findViewById(R.id.side_player_container);
+        androidx.constraintlayout.widget.ConstraintLayout header = bind.playerHeaderLayout.getRoot();
+        if (host == null) return;
+        if (header.getParent() instanceof ViewGroup) ((ViewGroup) header.getParent()).removeView(header);
+        host.removeAllViews();
+        host.addView(header, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        sideHost = host;
+
+        // The constraint set would also apply its own visibilities; the code decides those (remote, bookmark, seek buttons).
+        int[] visibility = new int[header.getChildCount()];
+        for (int i = 0; i < visibility.length; i++) visibility[i] = header.getChildAt(i).getVisibility();
+        androidx.constraintlayout.widget.ConstraintSet column = new androidx.constraintlayout.widget.ConstraintSet();
+        column.clone(requireContext(), R.layout.player_header_side_constraints);
+        column.applyTo(header);
+        for (int i = 0; i < visibility.length; i++) header.getChildAt(i).setVisibility(visibility[i]);
+
+        bind.playerHeaderLayout.playerHeaderMediaTitleLabel.setMaxLines(2);
+        bind.playerHeaderLayout.playerHeaderMediaTitleLabel.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+        bind.playerHeaderLayout.playerHeaderMediaArtistLabel.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+        ((MainActivity) getActivity()).updateSidePlayer();
+    }
+
     /**
      * A phone on its side puts the mini player's bottom row (elapsed time, timeline, total) right
      * on the screen's rounded bottom corners, which cut off the times. Pad the bar's sides by
@@ -127,6 +219,8 @@ public class PlayerBottomSheetFragment extends Fragment {
         com.eddyizm.tempus.lan.LanRemoteSession.state().observe(getViewLifecycleOwner(), this::renderRemote);
         // Settings is a fragment in this activity, so a flipped switch is heard here rather than on resume.
         com.eddyizm.tempus.App.getInstance().getPreferences().registerOnSharedPreferenceChangeListener(lanSwitchListener);
+
+        moveHeaderToSidePanel();
 
         if (getActivity() instanceof MainActivity) {
             MainActivity activity = (MainActivity) getActivity();
@@ -195,6 +289,11 @@ public class PlayerBottomSheetFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        // The bar may be living in the activity's side panel; take it back out with the rest of this view.
+        if (bind != null && sideHost != null && bind.playerHeaderLayout.getRoot().getParent() == sideHost) {
+            sideHost.removeView(bind.playerHeaderLayout.getRoot());
+        }
+        sideHost = null;
         super.onDestroyView();
         if (playerQueueBridge != null && playerQueueBridge.isQueueOpen()) {
             playerQueueBridge.closeQueue();

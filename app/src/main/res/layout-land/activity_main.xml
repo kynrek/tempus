@@ -12,6 +12,7 @@
         android:layout_height="match_parent">
 
         <LinearLayout
+            android:id="@+id/main_content_row"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:baselineAligned="false"
@@ -48,6 +49,18 @@
             app:behavior_hideable="true"
             app:behavior_peekHeight="@dimen/bottom_sheet_peek_height"
             app:layout_behavior="@string/bottom_sheet_behavior" />
+
+        <!--
+            Settings > UI > Mini player when sideways = side: the mini player's bar is moved in here
+            and laid out as a column (PlayerBottomSheetFragment), and the page gives up this width
+            instead of the bar's height. Above the sheet so it shows while the sheet is collapsed.
+        -->
+        <FrameLayout
+            android:id="@+id/side_player_container"
+            android:layout_width="@dimen/side_player_width"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/offline_mode_text_view"

@@ -35,4 +35,6 @@
     <dimen name="track_row_playlist_button_width">40dp</dimen>
     <dimen name="track_row_choose_button_width">24dp</dimen>
     <dimen name="track_row_album_button_width">48dp</dimen>
+    <!-- Width of the side mini player (landscape, Settings > UI > Mini player when sideways). -->
+    <dimen name="side_player_width">168dp</dimen>
 </resources>

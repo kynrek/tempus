@@ -267,8 +267,8 @@ public class SettingsContainerFragment extends PreferenceFragmentCompat {
             }
         }
 
-        // Colours are applied as the screens are built, so rebuild them after a change.
-        for (String key : new String[]{AppColors.MAIN_BG, AppColors.MAIN_TEXT, AppColors.TABS_BG,
+        // Colours, and where the mini player sits, are applied as the screens are built, so rebuild them after a change.
+        for (String key : new String[]{"mini_player_landscape", AppColors.MAIN_BG, AppColors.MAIN_TEXT, AppColors.TABS_BG,
                 AppColors.TABS_TEXT, AppColors.PANEL_BG, AppColors.PANEL_TEXT}) {
             Preference colour = findPreference(key);
             if (colour != null) colour.setOnPreferenceChangeListener((preference, newValue) -> {

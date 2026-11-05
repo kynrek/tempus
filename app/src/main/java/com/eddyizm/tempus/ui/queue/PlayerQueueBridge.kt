@@ -317,7 +317,8 @@ class PlayerQueueBridge @JvmOverloads constructor(
                     onSaveToPlaylist = ::saveToPlaylist,
                     onDownloadAll = ::downloadAll,
                     onLoadSavedQueue = ::loadSavedQueue,
-                    onSheetReady = { sheetHide = it }
+                    onSheetReady = { sheetHide = it },
+                    controls = { QueueControlsBar(fragment) }
                 )
             }
         }

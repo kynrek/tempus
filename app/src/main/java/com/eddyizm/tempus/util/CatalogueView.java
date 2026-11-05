@@ -53,8 +53,16 @@ public final class CatalogueView {
     }
 
     /** Items across for the window this context is shown in (follows rotation and split screen). */
+    @androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
     public static int spanCount(String view, Context context) {
-        return spanCount(view, context.getResources().getConfiguration().screenWidthDp);
+        int widthDp = context.getResources().getConfiguration().screenWidthDp;
+        // The side mini player (landscape) takes its width from the page.
+        if (context instanceof com.eddyizm.tempus.ui.activity.MainActivity
+                && ((com.eddyizm.tempus.ui.activity.MainActivity) context).usesSidePlayer()) {
+            widthDp -= Math.round(context.getResources().getDimension(com.eddyizm.tempus.R.dimen.side_player_width)
+                    / context.getResources().getDisplayMetrics().density);
+        }
+        return spanCount(view, widthDp);
     }
 
     /** Width the per-style counts were tuned on: the car display pane. */

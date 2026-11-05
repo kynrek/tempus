@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Not inflated as a screen: PlayerBottomSheetFragment reads only its constraints
+    (ConstraintSet.clone) and applies them to the mini player's own bar when it sits in the side
+    panel (landscape, Settings > UI > Mini player when sideways = side), so the same buttons and
+    their wiring are rearranged into a column. Ids match player_header_bottom_sheet.xml.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="@dimen/side_player_width"
+    android:layout_height="match_parent">
+
+    <!-- The accent line runs down the panel's inner edge instead of along the top. -->
+    <View
+        android:id="@+id/player_header_top_bar"
+        android:layout_width="3dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/player_header_media_cover_image"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:layout_marginTop="14dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/player_header_media_title_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/player_header_media_cover_image" />
+
+    <View
+        android:id="@+id/player_header_media_artist_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/player_header_media_title_label" />
+
+    <View
+        android:id="@+id/player_header_bookmark_media_button"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/player_header_remote_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/placeholder_left_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/placeholder_right_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Transport row, above the timeline. -->
+    <View
+        android:id="@+id/player_header_rewind_media_button"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintBottom_toTopOf="@+id/player_header_seek_bar"
+        app:layout_constraintEnd_toStartOf="@+id/player_header_button"
+        app:layout_constraintHorizontal_chainStyle="spread"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <View
+        android:id="@+id/player_header_button"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintBottom_toTopOf="@+id/player_header_seek_bar"
+        app:layout_constraintEnd_toStartOf="@+id/player_header_fast_forward_media_button"
+        app:layout_constraintStart_toEndOf="@+id/player_header_rewind_media_button" />
+
+    <View
+        android:id="@+id/player_header_fast_forward_media_button"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintBottom_toTopOf="@+id/player_header_seek_bar"
+        app:layout_constraintEnd_toStartOf="@+id/player_header_next_media_button"
+        app:layout_constraintStart_toEndOf="@+id/player_header_button" />
+
+    <View
+        android:id="@+id/player_header_next_media_button"
+        android:layout_width="@dimen/mini_player_button_size"
+        android:layout_height="@dimen/mini_player_button_size"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintBottom_toTopOf="@+id/player_header_seek_bar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/player_header_fast_forward_media_button" />
+
+    <!-- Timeline across the panel, with the times under its ends. -->
+    <View
+        android:id="@+id/player_header_seek_bar"
+        android:layout_width="0dp"
+        android:layout_height="30dp"
+        app:layout_constraintBottom_toTopOf="@+id/player_header_elapsed_text"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <View
+        android:id="@+id/player_header_elapsed_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintBottom_toTopOf="@+id/player_header_queue_button"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <View
+        android:id="@+id/player_header_duration_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintBottom_toTopOf="@+id/player_header_queue_button"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <View
+        android:id="@+id/player_header_queue_button"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginBottom="14dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

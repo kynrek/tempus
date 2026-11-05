@@ -475,6 +475,15 @@
         <item>top</item>
         <item>ask</item>
     </string-array>
+    <string-array name="mini_player_landscape_titles">
+        <item>@string/mini_player_landscape_side</item>
+        <item>@string/mini_player_landscape_bottom</item>
+    </string-array>
+    <string-array name="mini_player_landscape_values" translatable="false">
+        <item>side</item>
+        <item>bottom</item>
+    </string-array>
+
     <string-array name="catalogue_view_titles">
         <item>@string/catalogue_view_condensed</item>
         <item>@string/catalogue_view_rows_large</item>

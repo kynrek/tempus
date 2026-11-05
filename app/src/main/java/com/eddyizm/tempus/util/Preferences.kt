@@ -59,6 +59,7 @@ object Preferences {
     private const val DOWNLOAD_CELLULAR_LIMIT = "download_cellular_limit"
     private const val QUEUE_ADD_POSITION = "queue_add_position"
     private const val CATALOGUE_VIEW = "catalogue_view"
+    private const val MINI_PLAYER_LANDSCAPE = "mini_player_landscape"
     private const val ARTIST_TOP_SONGS_MODE = "artist_top_songs_mode"
     private const val ARTIST_ALBUMS_MODE = "artist_albums_mode"
     private const val ARTIST_FIRST_SECTION = "artist_first_section"
@@ -709,6 +710,17 @@ object Preferences {
     @JvmStatic
     fun getCatalogueView(): String {
         return App.getInstance().preferences.getString(CATALOGUE_VIEW, "condensed") ?: "condensed"
+    }
+
+    /**
+     * Mini player on a landscape screen: "side" (a panel down the right edge, leaving the full
+     * height to the page) or "bottom" (the bar under the page). The default comes from
+     * R.string.default_mini_player_landscape: side for the phone build, bottom otherwise.
+     */
+    @JvmStatic
+    fun getMiniPlayerLandscape(): String {
+        val fallback = App.getInstance().getString(com.eddyizm.tempus.R.string.default_mini_player_landscape)
+        return App.getInstance().preferences.getString(MINI_PLAYER_LANDSCAPE, fallback) ?: fallback
     }
 
     /** Where "Add to queue" puts songs: "bottom" (default), "top" (play next) or "ask". */

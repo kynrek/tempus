@@ -127,6 +127,8 @@ fun PlayerQueueSheet(
     currentSongId: String? = null,
     externalRefreshTrigger: Any? = null,
     onSheetReady: ((suspend () -> Unit)) -> Unit = {},
+    /** Playback controls along the bottom (the queue's window hides the mini player). */
+    controls: (@Composable () -> Unit)? = null,
 ) {
     if (!isOpen) return
 
@@ -263,6 +265,7 @@ fun PlayerQueueSheet(
                 )
 
                 PlayerQueueList(
+                    modifier = Modifier.weight(1f),
                     items = currentSongs,
                     currentIndex = effectiveCurrentIndex,
                     isPlaying = isPlaying,
@@ -294,6 +297,7 @@ fun PlayerQueueSheet(
                     },
                     onOpenAlbum = onOpenAlbum
                 )
+                controls?.invoke()
             }
         }
     }

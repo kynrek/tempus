@@ -337,6 +337,11 @@
     <string name="player_queue_back">Back</string>
     <string name="queued_view_queue">View queue</string>
     <string name="player_header_queue">Queue</string>
+    <string name="queue_bar_rewind">Back a few seconds</string>
+    <string name="queue_bar_forward">Ahead a few seconds</string>
+    <string name="queue_bar_play">Play</string>
+    <string name="queue_bar_pause">Pause</string>
+    <string name="queue_bar_next">Next song</string>
     <string name="player_skipped_unplayable">Couldn\'t play %1$s, skipped</string>
     <string name="player_header_queue_count">Queue %1$d</string>
     <string name="player_header_seek">Playback position</string>
@@ -350,6 +355,11 @@
     </plurals>
     <string name="settings_title_queue">Queue</string>
     <string name="settings_catalogue_view">Albums and Artists view</string>
+    <string name="settings_mini_player_landscape">Mini player when sideways</string>
+    <string name="mini_player_landscape_side">Panel down the side</string>
+    <string name="mini_player_landscape_bottom">Bar along the bottom</string>
+    <!-- Default for "Mini player when sideways"; the phone build overrides it to side. -->
+    <string name="default_mini_player_landscape" translatable="false">bottom</string>
     <string name="settings_artist_top_songs">Artist page: Top songs</string>
     <string name="settings_artist_albums">Artist page: Albums</string>
     <string name="settings_artist_first_section">Artist page: first section</string>

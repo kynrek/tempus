@@ -130,6 +130,86 @@ public class ArtistPageViewModel extends AndroidViewModel {
         return artistRepository.getTopSongs(artist.getName(), 20);
     }
 
+    /** What the Top songs section shows: the server's list, or a stand-in built from the artist's own tracks. */
+    public static final class TopSongs {
+        public final List<Child> songs;
+        public final boolean fromServer;
+
+        TopSongs(List<Child> songs, boolean fromServer) {
+            this.songs = songs;
+            this.fromServer = fromServer;
+        }
+    }
+
+    /** How many stand-in tracks to list when the server has no top songs. */
+    private static final int FALLBACK_TOP_SONGS = 5;
+    /** Top songs per artist for this run of the app, so turning the phone or coming back is instant. */
+    private static final android.util.LruCache<String, TopSongs> TOP_SONGS = new android.util.LruCache<>(40);
+
+    private MutableLiveData<TopSongs> topSongs;
+    private String topSongsArtistId;
+
+    /**
+     * Top songs for the current artist, worked out once per artist and kept. The page used to ask
+     * the server on every build (each rotation, each visit): a server without them (Navidrome
+     * without Last.fm) answered with nothing, the page waited three seconds to be sure, then
+     * fetched every track of the artist to rank its own. Null until the answer is in.
+     */
+    public LiveData<TopSongs> getTopSongs() {
+        String id = artist.getId();
+        if (topSongs != null && id.equals(topSongsArtistId)) return topSongs;
+        topSongsArtistId = id;
+        topSongs = new MutableLiveData<>(TOP_SONGS.get(id));
+        if (topSongs.getValue() != null) return topSongs;
+
+        MutableLiveData<TopSongs> target = topSongs;
+        String name = artist.getName();
+        com.eddyizm.tempus.App.getSubsonicClientInstance(false).getBrowsingClient().getTopSongs(name, 20)
+                .enqueue(new retrofit2.Callback<com.eddyizm.tempus.subsonic.base.ApiResponse>() {
+                    @Override
+                    public void onResponse(@NonNull retrofit2.Call<com.eddyizm.tempus.subsonic.base.ApiResponse> call,
+                                           @NonNull retrofit2.Response<com.eddyizm.tempus.subsonic.base.ApiResponse> response) {
+                        List<Child> fetched = null;
+                        if (response.isSuccessful() && response.body() != null
+                                && response.body().getSubsonicResponse() != null
+                                && response.body().getSubsonicResponse().getTopSongs() != null) {
+                            fetched = response.body().getSubsonicResponse().getTopSongs().getSongs();
+                        }
+                        if (fetched != null && !fetched.isEmpty()) publishTopSongs(id, target, new TopSongs(fetched, true));
+                        else rankOwnTracks(id, target);
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull retrofit2.Call<com.eddyizm.tempus.subsonic.base.ApiResponse> call, @NonNull Throwable t) {
+                        rankOwnTracks(id, target);
+                    }
+                });
+        return topSongs;
+    }
+
+    /** No top songs from the server: the artist's favourite, best rated and most played tracks (a random few if none yet). */
+    private void rankOwnTracks(String artistId, MutableLiveData<TopSongs> target) {
+        artistRepository.getArtistAllSongs(artistId, songs -> {
+            List<Child> played = new ArrayList<>(songs != null ? songs : Collections.emptyList());
+            played.sort((a, b) -> Long.compare(topScore(b), topScore(a)));
+            if (!played.isEmpty() && topScore(played.get(0)) == 0) Collections.shuffle(played);
+            List<Child> top = played.stream().limit(FALLBACK_TOP_SONGS).collect(Collectors.toList());
+            publishTopSongs(artistId, target, new TopSongs(top, false));
+        });
+    }
+
+    private void publishTopSongs(String artistId, MutableLiveData<TopSongs> target, TopSongs result) {
+        // Kept only when there's something to show, so an artist whose tracks failed to load is tried again.
+        if (!result.songs.isEmpty()) TOP_SONGS.put(artistId, result);
+        target.postValue(result);
+    }
+
+    private static long topScore(Child c) {
+        long plays = c.getPlayCount() != null ? c.getPlayCount() : 0;
+        int rating = c.getUserRating() != null ? c.getUserRating() : 0;
+        return (c.getStarred() != null ? 1_000_000L : 0) + rating * 10_000L + plays;
+    }
+
     public LiveData<List<Child>> getArtistShuffleList() {
         return artistRepository.getRandomSong(artist, Preferences.getQueueLimit());
     }

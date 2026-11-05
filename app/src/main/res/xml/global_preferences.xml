@@ -156,6 +156,15 @@
             app:useSimpleSummaryProvider="true" />
 
         <ListPreference
+            app:defaultValue="@string/default_mini_player_landscape"
+            app:dialogTitle="@string/settings_mini_player_landscape"
+            app:entries="@array/mini_player_landscape_titles"
+            app:entryValues="@array/mini_player_landscape_values"
+            app:key="mini_player_landscape"
+            app:title="@string/settings_mini_player_landscape"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
             app:defaultValue="condensed"
             app:dialogTitle="@string/settings_catalogue_view"
             app:entries="@array/catalogue_view_titles"

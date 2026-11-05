@@ -2,4 +2,6 @@
 <resources>
     <!-- The phone build sits beside the car build ("Music"), so it needs a name of its own. -->
     <string name="launcher_label" translatable="false">Music Phone</string>
+    <!-- On a phone on its side the bottom bar costs a fifth of the height: use the side panel. -->
+    <string name="default_mini_player_landscape" translatable="false">side</string>
 </resources>
