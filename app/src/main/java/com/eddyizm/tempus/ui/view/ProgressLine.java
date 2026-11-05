@@ -25,6 +25,8 @@ public final class ProgressLine {
     private final Paint rest = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private boolean wavy;
+    private boolean waveWholeLine;
+    private float lineRight;
     private float stroke;
 
     public ProgressLine(Context context) {
@@ -63,34 +65,49 @@ public final class ProgressLine {
         return Math.max(2 * density, stroke * 0.9f);
     }
 
+    /** Whether the unplayed part waves too while playing (the narrow side panel's line), not just the played part. */
+    public void setWaveWholeLine(boolean waveWholeLine) {
+        this.waveWholeLine = waveWholeLine;
+    }
+
     /**
      * Draws from {@code left} to {@code right} at {@code cy}, played up to {@code x}.
      * {@code moving} drifts the wave (playing); otherwise it holds still.
      */
     public void draw(Canvas canvas, float left, float right, float cy, float x, boolean moving) {
         x = Math.max(left, Math.min(right, x));
-        if (x < right) canvas.drawLine(x, cy, right, cy, rest);
+        lineRight = right;
+        boolean waveRest = wavy && waveWholeLine && moving;
+        if (x < right) {
+            if (waveRest) canvas.drawPath(wave(left, x, right, cy, moving), rest);
+            else canvas.drawLine(x, cy, right, cy, rest);
+        }
         if (x <= left) return;
         if (!wavy) {
             canvas.drawLine(left, cy, x, cy, played);
             return;
         }
+        canvas.drawPath(wave(left, left, x, cy, moving), played);
+    }
+
+    /** The wave between {@code from} and {@code to}, in phase with one starting at {@code left}. */
+    private Path wave(float left, float from, float to, float cy, boolean moving) {
         // A narrow line (the side panel's) gets shorter waves, or the first part of a song would
         // show no wave at all: at most a tenth of the line, but not under 8 dp.
-        float wavelength = Math.min(WAVELENGTH_DP * density, Math.max(8 * density, (right - left) / 10));
+        float wavelength = Math.min(WAVELENGTH_DP * density, Math.max(8 * density, (lineRight - left) / 10));
         float phase = moving ? (SystemClock.uptimeMillis() % WAVE_PERIOD_MS) / (float) WAVE_PERIOD_MS : 0f;
         float a = amplitude();
         path.rewind();
         float step = Math.max(1f, density * 1.5f);
         boolean first = true;
-        for (float px = left; ; px += step) {
-            if (px > x) px = x;
+        for (float px = from; ; px += step) {
+            if (px > to) px = to;
             // Eases in over the first quarter wave so the line starts on the centre.
             float ease = Math.min(1f, (px - left) / (wavelength / 4));
             float y = cy + (float) (a * ease * Math.sin(2 * Math.PI * ((px - left) / wavelength - phase)));
             if (first) { path.moveTo(px, y); first = false; } else path.lineTo(px, y);
-            if (px >= x) break;
+            if (px >= to) break;
         }
-        canvas.drawPath(path, played);
+        return path;
     }
 }

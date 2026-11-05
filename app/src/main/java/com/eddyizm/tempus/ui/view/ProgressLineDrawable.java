@@ -31,6 +31,12 @@ public final class ProgressLineDrawable extends Drawable {
         invalidateSelf();
     }
 
+    /** See {@link ProgressLine#setWaveWholeLine}. */
+    public void setWaveWholeLine(boolean waveWholeLine) {
+        line.setWaveWholeLine(waveWholeLine);
+        invalidateSelf();
+    }
+
     public void setColors(int playedColor, int restColor) {
         line.setColors(playedColor, restColor);
         invalidateSelf();

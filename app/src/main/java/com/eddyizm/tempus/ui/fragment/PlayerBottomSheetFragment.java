@@ -606,10 +606,13 @@ public class PlayerBottomSheetFragment extends Fragment {
         int progress = bar.getProgress();
         bar.setProgressDrawable(headerLine);
         bar.setProgress(progress);
-        // In the narrow side column the thumb would cover the start of the wave; the wave's end
+        // In the narrow side column the thumb would cover the start of the wave; the colour change
         // marks the position, and the thumb shows only while dragging.
         boolean thumbOnlyWhileDragging = !"bottom".equals(Preferences.getPanelPosition());
         if (thumbOnlyWhileDragging && bar.getThumb() != null) bar.getThumb().mutate().setAlpha(0);
+        if (thumbOnlyWhileDragging) bar.setSplitTrack(false);   // no gap left around the hidden thumb
+        // Too narrow for the played part alone to show a wave early in a song, so the rest waves too.
+        headerLine.setWaveWholeLine(thumbOnlyWhileDragging);
         bind.playerHeaderLayout.playerHeaderSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
