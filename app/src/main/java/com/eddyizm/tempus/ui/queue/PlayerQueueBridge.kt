@@ -60,8 +60,13 @@ class PlayerQueueBridge @JvmOverloads constructor(
     private val downloadRepository: DownloadRepository = DownloadRepository()
 ) {
     var isQueueOpen by mutableStateOf(false)
-    private var queueEnabled by mutableStateOf(Preferences.isQueueEnabled())
         private set
+    private var queueEnabled by mutableStateOf(Preferences.isQueueEnabled())
+
+    /** The queue was turned on or off elsewhere (sliding the mini player's Queue button). */
+    fun syncQueueEnabled() {
+        queueEnabled = Preferences.isQueueEnabled()
+    }
 
     private var backCallback: OnBackPressedCallback? = null
     private var sheetHide: (suspend () -> Unit)? = null
@@ -213,11 +218,7 @@ class PlayerQueueBridge @JvmOverloads constructor(
                     onOpenAlbum = { song -> openAlbum(song) },
                     controls = queueControls,
                     queueEnabled = queueEnabled,
-                    onToggleQueue = {
-                        queueEnabled = !queueEnabled
-                        Preferences.setQueueEnabled(queueEnabled)
-                        fragment.refreshQueueButton()
-                    },
+                    onToggleQueue = { fragment.setQueueEnabled(!queueEnabled) },
                     onRemoveTrack = { removeIndex ->
                         if (LanRemoteSession.isActive()) {
                             MediaManager.remove(

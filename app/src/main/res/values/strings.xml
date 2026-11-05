@@ -331,7 +331,7 @@
     <string name="player_queue_playing_next">Playing Next</string>
     <string name="player_queue_clear">Clear</string>
     <string name="player_queue_clear_history">Remove played</string>
-    <string name="player_queue_view_edit">View and edit queue</string>
+    <string name="player_queue_view_edit">Queue: tap to view and edit, slide right for on, left for off</string>
     <string name="player_queue_back">Back</string>
     <string name="queued_view_queue">View queue</string>
     <string name="player_header_queue">Queue</string>
@@ -440,6 +440,8 @@
     <string name="player_queue_play">Play</string>
     <string name="player_queue_pause">Pause</string>
     <string name="player_queue_on">Queue on</string>
+    <string name="player_queue_on_toast">Queue on: songs you added play next</string>
+    <string name="player_queue_off_toast">Queue off: Next follows the album or playlist</string>
     <string name="player_queue_off">Queue off</string>
     <string name="player_header_queue_off">Queue off</string>
     <string name="player_skipped_unplayable">Couldn\'t play %1$s, skipped</string>

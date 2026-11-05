@@ -181,6 +181,7 @@ public class PlayerBottomSheetFragment extends Fragment {
         if (!"bottom".equals(Preferences.getPanelPosition())) layoutHeaderAsColumn("left".equals(Preferences.getPanelPosition()));
         // The queue opens over whatever is on screen, so Back returns there.
         bind.playerHeaderLayout.playerHeaderQueueButton.setOnClickListener(view -> goToQueuePage());
+        initQueueSlide();
     }
 
     private void initPlayerController() {
@@ -377,10 +378,78 @@ public class PlayerBottomSheetFragment extends Fragment {
         refreshQueueButton();
     }
 
+    /**
+     * The Queue button is a switch you can slide: slide it sideways to turn the queue on or off, tap it to
+     * view or edit the queue. The button follows the finger a little while sliding, so it feels like a switch.
+     */
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private void initQueueSlide() {
+        View button = bind.playerHeaderLayout.playerHeaderQueueButton;
+        float d = getResources().getDisplayMetrics().density;
+        float slop = android.view.ViewConfiguration.get(requireContext()).getScaledTouchSlop();
+        float toggleAt = 28 * d, maxTravel = 22 * d;
+        float[] downX = new float[1];
+        boolean[] sliding = new boolean[1];
+        button.setOnTouchListener((v, e) -> {
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    downX[0] = e.getRawX();
+                    sliding[0] = false;
+                    return false;   // let the button press and click run as usual
+                case android.view.MotionEvent.ACTION_MOVE: {
+                    float dx = e.getRawX() - downX[0];
+                    if (!sliding[0] && Math.abs(dx) > slop * 2) {
+                        sliding[0] = true;
+                        v.getParent().requestDisallowInterceptTouchEvent(true);
+                        v.setPressed(false);
+                    }
+                    if (sliding[0]) v.setTranslationX(Math.max(-maxTravel, Math.min(maxTravel, dx)));
+                    return sliding[0];
+                }
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    if (!sliding[0]) return false;
+                    v.animate().translationX(0).setDuration(120).start();
+                    float moved = e.getRawX() - downX[0];
+                    // Like a switch: slide right turns the queue on, slide left turns it off.
+                    if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP && Math.abs(moved) >= toggleAt) {
+                        boolean want = moved > 0;
+                        if (want != Preferences.isQueueEnabled()) setQueueEnabled(want);
+                    }
+                    sliding[0] = false;
+                    return true;   // a slide isn't a tap
+                default:
+                    return sliding[0];
+            }
+        });
+    }
+
+    /** Turns the queue on or off from either place (this button or the queue screen's switch). */
+    public void setQueueEnabled(boolean on) {
+        Preferences.setQueueEnabled(on);
+        if (playerQueueBridge != null) playerQueueBridge.syncQueueEnabled();
+        refreshQueueButton();
+        if (getContext() != null) {
+            android.widget.Toast.makeText(getContext(), on ? R.string.player_queue_on_toast : R.string.player_queue_off_toast,
+                    android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
     /** "Queue 47", or "Queue off" when Next follows the album/playlist (switch on the queue screen). */
     public void refreshQueueButton() {
         if (bind == null) return;
         int count = lastQueueCount;
+        // Off looks off: outlined instead of filled, like a switch that's down.
+        com.google.android.material.button.MaterialButton qb = bind.playerHeaderLayout.playerHeaderQueueButton;
+        boolean on = Preferences.isQueueEnabled();
+        qb.setAlpha(on ? 1f : 0.75f);
+        android.util.TypedValue tv = new android.util.TypedValue();
+        requireContext().getTheme().resolveAttribute(
+                on ? com.google.android.material.R.attr.colorSecondaryContainer : android.R.attr.colorBackground, tv, true);
+        qb.setBackgroundTintList(android.content.res.ColorStateList.valueOf(tv.data));
+        requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOutline, tv, true);
+        qb.setStrokeColor(android.content.res.ColorStateList.valueOf(tv.data));
+        qb.setStrokeWidth(on ? 0 : Math.round(getResources().getDisplayMetrics().density));
         bind.playerHeaderLayout.playerHeaderQueueButton.setText(!Preferences.isQueueEnabled()
                 ? getString(R.string.player_header_queue_off)
                 : count > 0 ? getString(R.string.player_header_queue_count, count) : getString(R.string.player_header_queue));
