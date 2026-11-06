@@ -45,11 +45,16 @@ public class ProgressLineTimeBar extends View implements TimeBar {
         super(context, attrs);
         density = getResources().getDisplayMetrics().density;
         line = new ProgressLine(context);
-        int played = themeColor(com.google.android.material.R.attr.colorPrimary, 0xFF6FD3C0);
-        int rest = (themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFF888888) & 0x00FFFFFF) | 0x66000000;
-        line.setColors(played, rest);
-        thumb.setColor(played);
+        applyColors();
         setFocusable(true);
+    }
+
+    /** The theme's colours, or Settings > Colors > Progress line / Progress line circle. */
+    private void applyColors() {
+        int theme = themeColor(com.google.android.material.R.attr.colorPrimary, 0xFF6FD3C0);
+        int rest = (themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFF888888) & 0x00FFFFFF) | 0x66000000;
+        line.setColors(com.eddyizm.tempus.util.AppColors.progressLine(theme), rest);
+        thumb.setColor(com.eddyizm.tempus.util.AppColors.progressCircle(theme));
     }
 
     private int themeColor(int attr, int fallback) {
@@ -73,6 +78,7 @@ public class ProgressLineTimeBar extends View implements TimeBar {
         super.onWindowVisibilityChanged(visibility);
         if (visibility == VISIBLE) {
             line.reload();   // settings may have changed meanwhile
+            applyColors();
             requestLayout();
         }
     }
