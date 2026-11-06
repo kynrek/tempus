@@ -272,7 +272,7 @@ public final class WidgetViewsFactory {
             android.graphics.Bitmap bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888);
             float inset = line.height() / 2f;
             float x = inset + (width - 2 * inset) * (progress / (float) PROGRESS_MAX);
-            line.draw(new android.graphics.Canvas(bitmap), inset, width - inset, height / 2f, x);
+            line.draw(new android.graphics.Canvas(bitmap), inset, width - inset, height / 2f, x, false);
             rv.setImageViewBitmap(R.id.progress_wave, bitmap);
         } catch (RuntimeException e) {
             // Drawing failed: fall back to the plain bar rather than an empty widget.

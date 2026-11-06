@@ -382,6 +382,8 @@
     <string name="progress_style_wavy">Wavy</string>
     <string name="progress_style_straight">Straight</string>
     <string name="settings_progress_thickness">Progress line thickness</string>
+    <string name="settings_progress_animate">Animate the wave</string>
+    <string name="settings_progress_animate_summary">The wavy line drifts while playing. Off: drawn still, growing as the song plays.</string>
     <string name="progress_thickness_thin">Thin</string>
     <string name="progress_thickness_medium">Medium</string>
     <string name="progress_thickness_thick">Thick</string>

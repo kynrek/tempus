@@ -294,7 +294,7 @@ Turning the phone changes the layout, not what's on screen:
 - **Albums and Artists**: the number of items across follows the screen width. Upright, rows are one column, full art three covers across, big art two and medium art three. On its side you get the wide-screen counts: rows three, full art five, big art three, medium art four.
 - **Mini player**: upright it has two rows, with the cover, title and buttons on top and the timeline, remote and **Queue** under them. On its side it's a single row.
 
-The wavy progress line holds still and grows as the song plays; it doesn't animate. **Settings > UI** switches it to a straight line.
+The wavy progress line drifts gently while a song plays. Turn off **Settings > UI > Animate the wave** to have it drawn still, growing as the song plays; the same section switches it to a straight line. A circle on the mini player's line marks the position: drag it, or anywhere on the line, to scrub.
 
 **Downloaded only**: the download button in the toolbar switches the library to music on the phone. Artists, Albums, Genres, Favorites, Recent, album and artist pages (Top songs included) and playlist pages then list only downloaded songs. Tap it again to see everything.
 
