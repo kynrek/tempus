@@ -59,6 +59,11 @@ public class IndexedArtist {
     }
 
     @Override
+    public String toString() {
+        return "{" + id + " " + name + " albums=" + albumCount + " starred=" + starred + " cover=" + coverArtId + "}";
+    }
+
+    @Override
     public int hashCode() {
         return Objects.hash(id, name, coverArtId, albumCount, starred);
     }

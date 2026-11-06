@@ -89,31 +89,55 @@ public abstract class LibraryIndexDao {
     public static final class Changes {
         public final int written;
         public final int deleted;
+        /** Rows the server listed more than once (counted once in the index). */
+        public final int repeated;
+        /** A few changed rows, before and after, for the log. */
+        public final String sample;
 
-        Changes(int written, int deleted) {
+        Changes(int written, int deleted, int repeated, String sample) {
             this.written = written;
             this.deleted = deleted;
+            this.repeated = repeated;
+            this.sample = sample;
+        }
+
+        public boolean any() {
+            return written > 0 || deleted > 0;
         }
 
         @Override
         public String toString() {
-            return written + " written, " + deleted + " deleted";
+            return written + " written, " + deleted + " deleted"
+                    + (repeated > 0 ? ", " + repeated + " listed twice" : "")
+                    + (sample.isEmpty() ? "" : "; e.g. " + sample);
         }
     }
 
-    private interface Batch<T> {
+    interface Batch<T> {
         void run(List<T> items);
     }
 
-    private static <R> Changes sync(List<R> stored, List<R> fresh, Function<R, String> key,
+    static <R> Changes sync(List<R> stored, List<R> fresh, Function<R, String> key,
                                     Batch<R> upsert, Batch<String> delete) {
         Map<String, R> old = new HashMap<>(stored.size() * 2);
         for (R row : stored) old.put(key.apply(row), row);
 
         List<R> changed = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>(fresh.size() * 2);
+        List<R> unique = new ArrayList<>(fresh.size());
+        int repeated = 0;
+        StringBuilder sample = new StringBuilder();
+        int sampled = 0;
         for (R row : fresh) {
+            if (seen.add(key.apply(row))) unique.add(row);
+            else repeated++;
+        }
+        for (R row : unique) {
             R before = old.remove(key.apply(row));
-            if (!row.equals(before)) changed.add(row);
+            if (!row.equals(before)) {
+                changed.add(row);
+                if (before != null && sampled++ < 3) sample.append(before).append(" -> ").append(row).append("  ");
+            }
         }
         List<String> gone = new ArrayList<>(old.keySet());
 
@@ -123,6 +147,6 @@ public abstract class LibraryIndexDao {
         for (int i = 0; i < gone.size(); i += CHUNK) {
             delete.run(gone.subList(i, Math.min(i + CHUNK, gone.size())));
         }
-        return new Changes(changed.size(), gone.size());
+        return new Changes(changed.size(), gone.size(), repeated, sample.toString().trim());
     }
 }

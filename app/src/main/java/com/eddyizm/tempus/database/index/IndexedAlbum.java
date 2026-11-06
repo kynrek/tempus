@@ -132,6 +132,14 @@ public class IndexedAlbum {
     }
 
     @Override
+    public String toString() {
+        return "{" + id + " " + name + " / " + artist + " " + year + " songs=" + songCount + " dur=" + duration
+                + " plays=" + playCount + " created=" + created + " starred=" + starred + " played=" + played
+                + " genre=" + genre + " rating=" + userRating + " sort=" + sortName + " mbid=" + musicBrainzId
+                + " comp=" + isCompilation + " cover=" + coverArtId + " artistId=" + artistId + " display=" + displayArtist + "}";
+    }
+
+    @Override
     public int hashCode() {
         return Objects.hash(id, name, artist, coverArtId, year, played, playCount);
     }

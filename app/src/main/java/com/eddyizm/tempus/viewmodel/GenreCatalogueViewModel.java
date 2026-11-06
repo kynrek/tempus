@@ -34,9 +34,13 @@ public class GenreCatalogueViewModel extends AndroidViewModel {
         });
         genreRepository.fetchGenres(fresh -> {
             fromServer = true;
-            if (!LibraryIndex.sameGenres(genres.getValue(), fresh)) {
+            if (genres.getValue() == null) {
                 genres.setValue(fresh);
-                LibraryIndex.storeGenres(fresh);
+                LibraryIndex.storeGenres(fresh, null);
+            } else {
+                LibraryIndex.storeGenres(fresh, changed -> {
+                    if (changed) genres.setValue(fresh);
+                });
             }
         });
     }
