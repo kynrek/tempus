@@ -87,7 +87,9 @@ public final class LibraryIndex {
     private static <R, M> void read(String what, Function<LibraryIndexDao, List<R>> query,
                                     Function<R, M> convert, Consumer<List<M>> onMain) {
         String scope = scope();
-        IO.execute(() -> {
+        // Nothing of the index runs before the window's first frame (see FirstFrame): start-up on
+        // the box is CPU-bound, and the server's reply is later than that anyway.
+        FirstFrame.run(() -> IO.execute(() -> {
             List<M> result = null;
             try {
                 long start = SystemClock.elapsedRealtime();
@@ -105,9 +107,8 @@ public final class LibraryIndex {
                 Log.w(TAG, "Reading " + what + " failed", e);
             }
             List<M> out = result;
-            // Laid out after the window's first frame, one list per frame (see FirstFrame).
-            MAIN.post(() -> FirstFrame.run(() -> onMain.accept(out)));
-        });
+            MAIN.post(() -> onMain.accept(out));
+        }));
     }
 
     // ---- writing ---------------------------------------------------------------------------
@@ -137,7 +138,7 @@ public final class LibraryIndex {
                                      java.util.function.Predicate<M> valid, @Nullable Consumer<Boolean> changedOnMain) {
         String scope = scope();
         List<M> copy = new ArrayList<>(items);
-        IO.execute(() -> {
+        FirstFrame.run(() -> IO.execute(() -> {
             boolean changed = true;
             try {
                 if (disabled()) return;
@@ -166,7 +167,7 @@ public final class LibraryIndex {
                     MAIN.post(() -> changedOnMain.accept(result));
                 }
             }
-        });
+        }));
     }
 
     /**
