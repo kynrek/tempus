@@ -82,9 +82,16 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
         lyricsRepository = new LyricsRepository();
     }
 
+    /**
+     * The queue, one LiveData for the ViewModel's life. Each call used to make a new one, so a new
+     * read of the whole queue table: the queue screen asks for it on every recomposition.
+     */
     public LiveData<List<Queue>> getQueueSong() {
-        return queueRepository.getLiveQueue();
+        if (queueSong == null) queueSong = queueRepository.getLiveQueue();
+        return queueSong;
     }
+
+    private LiveData<List<Queue>> queueSong;
 
     public void setFavorite(Context context, Child media) {
         if (media != null) {

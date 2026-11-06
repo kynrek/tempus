@@ -25,6 +25,10 @@ public interface DownloadDao {
     @Query("SELECT * FROM download WHERE download_state = 1 AND (artist_id = :artistId OR album_artist = :name COLLATE NOCASE OR artist = :name COLLATE NOCASE)")
     LiveData<List<Download>> getByArtist(String artistId, String name);
 
+    /** Just the ids of finished downloads, for "is it downloaded" marks. */
+    @Query("SELECT id FROM download WHERE download_state = 1")
+    LiveData<List<String>> getDownloadedIds();
+
     @Query("SELECT * FROM download WHERE id = :id")
     Download getOne(String id);
 

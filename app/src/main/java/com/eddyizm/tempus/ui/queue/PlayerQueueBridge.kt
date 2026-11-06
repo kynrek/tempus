@@ -59,6 +59,10 @@ class PlayerQueueBridge @JvmOverloads constructor(
     private val playbackViewModel: PlaybackViewModel,
     private val downloadRepository: DownloadRepository = DownloadRepository()
 ) {
+    // One query for the life of the bridge. Asking the repository inside the composable made a
+    // new LiveData, so a new read of the whole download table, on every recomposition.
+    private val liveDownloadedIds = downloadRepository.liveDownloadedIds
+
     var isQueueOpen by mutableStateOf(false)
         private set
 
@@ -112,10 +116,8 @@ class PlayerQueueBridge @JvmOverloads constructor(
                 val lanState by LanRemoteSession.state().observeAsState(LanRemoteSession.current())
                 val isLanActive = lanState?.active == true
 
-                val liveDownloads by downloadRepository.liveDownload.observeAsState(emptyList())
-                val downloadedIds = remember(liveDownloads) {
-                    liveDownloads?.mapNotNull { it.id }?.toSet() ?: emptySet()
-                }
+                val liveIds by liveDownloadedIds.observeAsState(emptyList())
+                val downloadedIds = remember(liveIds) { liveIds?.toSet() ?: emptySet() }
                 val externalRefresh by ExternalAudioReader.getRefreshEvents().observeAsState()
                 val scope = rememberCoroutineScope()
                 val latestRaw by rememberUpdatedState(rawChildList)
