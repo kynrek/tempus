@@ -22,6 +22,11 @@ public class DownloadRepository {
         return downloadDao.getAll();
     }
 
+    /** Ids of finished downloads; each call is a new query, so keep the result rather than calling again. */
+    public LiveData<List<String>> getLiveDownloadedIds() {
+        return downloadDao.getDownloadedIds();
+    }
+
     public List<Download> getAllDownloads() {
         GetAllDownloadsThreadSafe getDownloads = new GetAllDownloadsThreadSafe(downloadDao);
         Thread thread = new Thread(getDownloads);
