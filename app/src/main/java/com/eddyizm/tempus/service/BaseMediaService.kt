@@ -968,7 +968,7 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
-            .setLoadControl(initializeLoadControl())
+            .setLoadControl(StartupLoadLimit(initializeLoadControl()))
             .build()
 
         exoplayer.shuffleModeEnabled = Preferences.isShuffleModeEnabled()
