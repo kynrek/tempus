@@ -502,8 +502,11 @@ public final class IndexedSimpleCache implements Cache {
           loadFromIndex(fileMetadata, layout);
         } else {
           Map<String, String> scattered = new HashMap<>();
+          unindexedFound = 0;
           loadDirectory(cacheDir, /* isRoot= */ true, files, fileMetadata, scattered);
           fileIndex.removeAll(fileMetadata.keySet());
+          Log.i(TAG, "Scanned " + cacheDir + ": " + totalSpans() + " spans, " + unindexedFound
+              + " of them had no metadata row and got one");
           writeLayout(uid, scattered);
         }
       } else {
@@ -536,8 +539,16 @@ public final class IndexedSimpleCache implements Cache {
    */
   // ---- Tempus: start-up from the metadata index --------------------------------------------
 
-  private static final String LAYOUT_HEADER = "uid=";
+  // v2: the scan also gives every file it finds a metadata row (a v1 record may lack some).
+  private static final String LAYOUT_HEADER = "v2 uid=";
   private static final String SPAN_SUFFIX = ".v3.exo";
+  private int unindexedFound;
+
+  private int totalSpans() {
+    int n = 0;
+    for (CachedContent content : contentIndex.getAll()) n += content.getSpans().size();
+    return n;
+  }
 
   /** The sub-folder for a file of content {@code id} starting at {@code position}. */
   /* package */ static String subdirFor(int id, long position) {
@@ -669,6 +680,17 @@ public final class IndexedSimpleCache implements Cache {
             SimpleCacheSpan.createCacheEntry(file, length, lastTouchTimestamp, contentIndex);
         if (span != null) {
           addSpan(span);
+          // Tempus: a file the metadata index doesn't know (SimpleCache measures those on disk at
+          // every start and never records them) gets a row, or a start from the index would miss
+          // it and that part of the song would be fetched from the server again.
+          if (scattered != null && fileMetadata != null && metadata == null && fileIndex != null) {
+            try {
+              fileIndex.set(span.file.getName(), span.length, span.lastTouchTimestamp);
+              unindexedFound++;
+            } catch (IOException e) {
+              Log.w(TAG, "Failed to index " + span.file, e);
+            }
+          }
           // Tempus: remember where it is, unless it is where subdirFor puts it.
           String subdir = isRoot ? "" : directory.getName();
           if (scattered != null && !subdir.equals(subdirFor(span.file.getName()))) {
