@@ -205,6 +205,11 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onStop() {
         outstandingProbe = null;
+        // Leaving the app with the full player open would bring you back to it, with the library
+        // hidden underneath: come back to the library instead (the media card still opens the player).
+        if (!isChangingConfigurations() && bottomSheetController != null && bottomSheetController.isExpanded()) {
+            bottomSheetController.collapse();
+        }
         super.onStop();
     }
 

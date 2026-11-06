@@ -177,6 +177,7 @@ public class PlayerBottomSheetFragment extends Fragment {
     private void customizeBottomSheetAction() {
         bind.playerHeaderLayout.playerHeaderRemoteButton.setOnClickListener(v -> com.eddyizm.tempus.lan.LanDevicePicker.toggle(requireActivity()));
         bind.playerHeaderLayout.getRoot().setOnClickListener(view -> ((MainActivity) requireActivity()).expandBottomSheet());
+        bind.playerBodyLayout.playerCollapseButton.setOnClickListener(view -> ((MainActivity) requireActivity()).collapseBottomSheetDelayed());
         initHeaderSeekBar();
         if (!"bottom".equals(Preferences.getPanelPosition())) layoutHeaderAsColumn("left".equals(Preferences.getPanelPosition()));
         // The queue opens over whatever is on screen, so Back returns there.

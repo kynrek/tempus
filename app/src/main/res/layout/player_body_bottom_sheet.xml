@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/player_body_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -9,6 +10,20 @@
         android:id="@+id/player_controller_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+
+    <!-- Car layout: the full player covers the library, and Back isn't always within reach. -->
+    <ImageButton
+        android:id="@+id/player_collapse_button"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="top|start"
+        android:layout_margin="6dp"
+        android:background="@drawable/bg_player_collapse"
+        android:contentDescription="@string/player_collapse"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_expand_more"
+        app:tint="?attr/colorOnSurface" />
 
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/player_queue_compose_view"
