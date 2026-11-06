@@ -495,22 +495,32 @@ public class MappingUtil {
     /** Set once the invalidation observer is registered; only then may a read be kept. */
     private static volatile boolean watching;
 
+    private static final Object DOWNLOADS_READ = new Object();
+
     public static Map<String, Download> getCachedDownloads() {
         watchDownloads();
         Map<String, Download> cache = cachedDownloads;
         if (cache != null) return cache;
 
-        // A change during the read makes this copy stale: use it, but don't keep it.
-        boolean keep = watching;
-        int version = downloadsVersion.get();
-        Map<String, Download> map = new HashMap<>();
-        for (Download download : new DownloadRepository().getAllDownloads()) {
-            if (download.getId() != null)
-                map.put(download.getId(), download);
+        // One read at a time: callers arriving together at start-up wait for it and share it.
+        synchronized (DOWNLOADS_READ) {
+            cache = cachedDownloads;
+            if (cache != null) return cache;
+
+            // A change during the read makes this copy stale: use it, but don't keep it.
+            boolean keep = watching;
+            int version = downloadsVersion.get();
+            Map<String, Download> map = new HashMap<>();
+            for (Download download : new DownloadRepository().getAllDownloads()) {
+                if (download.getId() != null)
+                    map.put(download.getId(), download);
+            }
+            map = java.util.Collections.unmodifiableMap(map);
+            boolean kept = keep && downloadsVersion.get() == version;
+            if (kept) cachedDownloads = map;
+            Log.i(TAG, "Read " + map.size() + " downloads" + (kept ? "" : " (not kept: table changing)"));
+            return map;
         }
-        map = java.util.Collections.unmodifiableMap(map);
-        if (keep && downloadsVersion.get() == version) cachedDownloads = map;
-        return map;
     }
 
     /** Registers (on a background thread, as Room requires) the observer that clears the copy. */

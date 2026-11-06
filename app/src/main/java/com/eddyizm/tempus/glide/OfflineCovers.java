@@ -139,7 +139,8 @@ public final class OfflineCovers {
         directoryFor(app);
         FETCHER.execute(() -> {
             try {
-                List<Download> downloads = new DownloadRepository().getAllDownloads();
+                // The shared copy MappingUtil keeps until the table changes, not another full read.
+                java.util.Collection<Download> downloads = com.eddyizm.tempus.util.MappingUtil.getCachedDownloads().values();
                 Set<String> seen = new HashSet<>();
                 boolean small = smallOnly();
                 int saved = 0;
