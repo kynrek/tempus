@@ -460,6 +460,11 @@
             android:defaultValue="true"
             android:summary="@string/settings_keep_played_in_queue_summary"
             android:key="keep_played_in_queue" />
+        <SwitchPreference
+            android:title="@string/settings_queue_show_history"
+            android:defaultValue="false"
+            android:summary="@string/settings_queue_show_history_summary"
+            android:key="queue_show_history" />
         <ListPreference
             app:defaultValue="500"
             app:dialogTitle="@string/settings_queue_limit"
