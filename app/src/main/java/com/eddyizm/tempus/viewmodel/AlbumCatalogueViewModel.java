@@ -63,8 +63,9 @@ public class AlbumCatalogueViewModel extends AndroidViewModel {
             indexRead = true;
             loading.setValue(true);
             LibraryIndex.albums(stored -> {
-                List<AlbumID3> shown = albumList.getValue();
-                if (stored != null && load == generation && (shown == null || shown.isEmpty())) {
+                // Also replaces the first pages of a load still in progress (they can beat the
+                // index, which waits for the first frame): the stored list is complete.
+                if (stored != null && load == generation && !showingComplete) {
                     showingComplete = true;
                     albumList.setValue(stored);
                     loading.setValue(false);
