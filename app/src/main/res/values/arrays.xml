@@ -616,4 +616,12 @@
         <item>top_songs</item>
         <item>albums</item>
     </string-array>
+    <string-array name="library_index_location_titles">
+        <item>@string/library_index_location_internal</item>
+        <item>@string/library_index_location_sd</item>
+    </string-array>
+    <string-array name="library_index_location_values">
+        <item>internal</item>
+        <item>sd</item>
+    </string-array>
 </resources>

@@ -708,6 +708,9 @@
     <string name="settings_share_title">Enable music sharing</string>
     <string name="settings_streaming_cache_size">Size of streaming cache</string>
     <string name="settings_streaming_cache_storage_title">Streaming cache storage</string>
+    <string name="settings_library_index_location">Library index storage</string>
+    <string name="library_index_location_internal">Internal (faster)</string>
+    <string name="library_index_location_sd">SD card</string>
     <string name="settings_sub_summary_scrobble">It\'s important to note that scrobbling also relies on the server being enabled to receive this data.</string>
     <string name="settings_summary_skip_min_star_rating">When listening to an artist\'s radio, an instant mix or when shuffling all, tracks below a certain user rating will be ignored.</string>
     <string name="settings_summary_replay_gain">Normalizes the volume level of audio tracks. Files must contain the necessary metadata.</string>

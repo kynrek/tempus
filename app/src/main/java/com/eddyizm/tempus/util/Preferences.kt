@@ -63,6 +63,7 @@ object Preferences {
     private const val MINI_PLAYER_LANDSCAPE = "mini_player_landscape"
     private const val QUEUE_MODE = "queue_mode"
     private const val WIDGET_PROGRESS_STYLE = "widget_progress_style"
+    private const val LIBRARY_INDEX_LOCATION = "library_index_location"
     private const val ARTIST_TOP_SONGS_MODE = "artist_top_songs_mode"
     private const val ARTIST_ALBUMS_MODE = "artist_albums_mode"
     private const val ARTIST_FIRST_SECTION = "artist_first_section"
@@ -773,6 +774,12 @@ object Preferences {
     fun getMiniPlayerLandscape(): String {
         val fallback = App.getContext()?.getString(com.eddyizm.tempus.R.string.default_mini_player_landscape) ?: "bottom"
         return App.getInstance().preferences.getString(MINI_PLAYER_LANDSCAPE, fallback) ?: fallback
+    }
+
+    /** Where the library index lives: "internal" (default, faster) or "sd" (the SD card). */
+    @JvmStatic
+    fun getLibraryIndexLocation(): String {
+        return App.getInstance().preferences.getString(LIBRARY_INDEX_LOCATION, "internal") ?: "internal"
     }
 
     /** Where "Add to queue" puts songs: "bottom" (default), "top" (play next) or "ask". */
