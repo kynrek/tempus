@@ -63,6 +63,20 @@
                     android:host="asset"
                     android:scheme="tempus" />
             </intent-filter>
+            <!-- A music app: listed by launchers and car UIs that look for one. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- Opens audio files shared or tapped in other apps. Xiaomi's Settings > Default apps >
+                 Music lists the apps that take this, so without it the app can't be the default. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
         </activity>
 
         <activity

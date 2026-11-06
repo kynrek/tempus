@@ -840,8 +840,36 @@ public class MainActivity extends BaseActivity {
         if (Constants.ACTION_PLAY_EXTERNAL_DOWNLOAD.equals(intent.getAction())
                 || intent.hasExtra(Constants.EXTRA_DOWNLOAD_URI)) {
             pendingDownloadPlaybackIntent = new Intent(intent);
+        } else if (isOpenedAudioFile(intent)) {
+            pendingDownloadPlaybackIntent = openedAudioFile(intent);
+            intent.setData(null);   // played once, not again on rotation
         }
         handleAssetLinkIntent(intent);
+    }
+
+    /** An audio file opened from another app (a file manager, a chat, Xiaomi's default Music app). */
+    private static boolean isOpenedAudioFile(Intent intent) {
+        if (!Intent.ACTION_VIEW.equals(intent.getAction()) || intent.getData() == null) return false;
+        if (!"content".equals(intent.getData().getScheme())) return false;
+        String type = intent.getType();
+        return type != null && type.startsWith("audio/");
+    }
+
+    /** The opened file as a play-this-file request, titled with its file name. */
+    private Intent openedAudioFile(Intent intent) {
+        Uri uri = intent.getData();
+        String title = null;
+        try (android.database.Cursor c = getContentResolver().query(uri,
+                new String[]{android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (c != null && c.moveToFirst() && !c.isNull(0)) title = c.getString(0);
+        } catch (Exception e) {
+            Log.w(TAG, "No name for " + uri, e);
+        }
+        if (title != null && title.lastIndexOf('.') > 0) title = title.substring(0, title.lastIndexOf('.'));
+        Intent play = new Intent(Constants.ACTION_PLAY_EXTERNAL_DOWNLOAD);
+        play.putExtra(Constants.EXTRA_DOWNLOAD_URI, uri.toString());
+        play.putExtra(Constants.EXTRA_DOWNLOAD_TITLE, title != null ? title : uri.getLastPathSegment());
+        return play;
     }
 
     private void consumePendingPlaybackIntent() {
