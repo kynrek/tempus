@@ -315,6 +315,7 @@
     <string name="menu_sort_year">Year</string>
     <string name="player_playback_speed">%1$.2fx</string>
     <string name="player_collapse">Back to library</string>
+    <string name="player_library_home">Library home</string>
     <string name="playback_speed_dialog_title">Playback Speed</string>
     <string name="playback_speed_decrease_button_content_description">Decrease playback speed</string>
     <string name="playback_speed_increase_button_content_description">Increase playback speed</string>

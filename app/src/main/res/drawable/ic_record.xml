@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A vinyl record: the side panel's button back to the library. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@android:color/white"
+        android:fillType="evenOdd"
+        android:pathData="M12,2a10,10 0 1,1 0,20a10,10 0 1,1 0,-20zM12,4.1a7.9,7.9 0 1,1 0,15.8a7.9,7.9 0 1,1 0,-15.8zM12,4.6a7.4,7.4 0 1,1 0,14.8a7.4,7.4 0 1,1 0,-14.8zM12,6.1a5.9,5.9 0 1,1 0,11.8a5.9,5.9 0 1,1 0,-11.8zM12,6.6a5.4,5.4 0 1,1 0,10.8a5.4,5.4 0 1,1 0,-10.8zM12,8.8a3.2,3.2 0 1,1 0,6.4a3.2,3.2 0 1,1 0,-6.4z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:fillType="evenOdd"
+        android:pathData="M12,9.6a2.4,2.4 0 1,1 0,4.8a2.4,2.4 0 1,1 0,-4.8zM12,11.2a0.8,0.8 0 1,1 0,1.6a0.8,0.8 0 1,1 0,-1.6z" />
+</vector>

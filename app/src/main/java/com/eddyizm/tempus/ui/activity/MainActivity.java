@@ -422,6 +422,14 @@ public class MainActivity extends BaseActivity {
         bottomSheetController.collapseDelayed();
     }
 
+    /** The side panel's record button: back to Home (the library tabs) from anywhere in the app. */
+    public void goToLibraryHome() {
+        if (bottomSheetController != null && bottomSheetController.isExpanded()) bottomSheetController.collapse();
+        if (navController == null || navController.getCurrentDestination() == null) return;
+        if (navController.getCurrentDestination().getId() == R.id.homeFragment) return;
+        if (!navController.popBackStack(R.id.homeFragment, false)) navController.navigate(R.id.homeFragment);
+    }
+
     /** Opens the full-panel queue over the current screen. */
     public void openQueue() {
         Fragment player = getSupportFragmentManager().findFragmentByTag("PlayerBottomSheet");

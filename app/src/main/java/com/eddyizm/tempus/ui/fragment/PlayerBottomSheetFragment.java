@@ -98,6 +98,8 @@ public class PlayerBottomSheetFragment extends Fragment {
         return view;
     }
 
+    @Nullable private android.widget.ImageButton libraryHomeButton;
+
     @Override
     public void onResume() {
         super.onResume();
@@ -108,6 +110,11 @@ public class PlayerBottomSheetFragment extends Fragment {
     /** Settings > Colors: the control panel's background and text (and its icons and line). */
     private void applyPanelColors() {
         if (bind == null) return;
+        if (libraryHomeButton != null) {
+            Integer panelText = AppColors.color(AppColors.PANEL_TEXT);
+            libraryHomeButton.setImageTintList(android.content.res.ColorStateList.valueOf(
+                    panelText != null ? panelText : android.graphics.Color.WHITE));
+        }
         View root = bind.playerHeaderLayout.getRoot();
         Integer bg = AppColors.color(AppColors.PANEL_BG);
         Integer text = AppColors.color(AppColors.PANEL_TEXT);
@@ -489,6 +496,7 @@ public class PlayerBottomSheetFragment extends Fragment {
     private void layoutHeaderAsColumn(boolean panelOnLeft) {
         androidx.constraintlayout.widget.ConstraintLayout root =
                 (androidx.constraintlayout.widget.ConstraintLayout) bind.playerHeaderLayout.getRoot();
+        addLibraryHomeButton(root);
         ViewGroup.LayoutParams rootLp = root.getLayoutParams();
         rootLp.height = ViewGroup.LayoutParams.MATCH_PARENT;
         root.setLayoutParams(rootLp);
@@ -592,7 +600,36 @@ public class PlayerBottomSheetFragment extends Fragment {
         for (int i = 0; i < all.length; i++) {
             if (all[i] != h.placeholderLeftView.getId() && all[i] != h.placeholderRightView.getId()) set.setVisibility(all[i], visibility[i]);
         }
+
+        // The record button, at the foot of the column.
+        int home = libraryHomeButton.getId();
+        set.constrainWidth(home, Math.round(56 * d));
+        set.constrainHeight(home, Math.round(56 * d));
+        set.connect(home, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, p, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, Math.round(8 * d));
+        set.connect(home, androidx.constraintlayout.widget.ConstraintSet.START, p, androidx.constraintlayout.widget.ConstraintSet.START);
+        set.connect(home, androidx.constraintlayout.widget.ConstraintSet.END, p, androidx.constraintlayout.widget.ConstraintSet.END);
         set.applyTo(root);
+    }
+
+    /**
+     * Side panel only: a record at the foot of the column that goes back to the app's main screen
+     * (the library tabs) from wherever you are, closing the full player if it's open.
+     */
+    private void addLibraryHomeButton(ViewGroup column) {
+        android.widget.ImageButton button = new android.widget.ImageButton(requireContext());
+        button.setId(View.generateViewId());
+        button.setImageResource(R.drawable.ic_record);
+        button.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        int pad = Math.round(10 * getResources().getDisplayMetrics().density);
+        button.setPadding(pad, pad, pad, pad);
+        android.util.TypedValue tv = new android.util.TypedValue();
+        requireContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv, true);
+        button.setBackgroundResource(tv.resourceId);
+        button.setContentDescription(getString(R.string.player_library_home));
+        button.setImageTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE));
+        button.setOnClickListener(v -> ((MainActivity) requireActivity()).goToLibraryHome());
+        column.addView(button);
+        libraryHomeButton = button;
     }
 
     private void initHeaderSeekBar() {
