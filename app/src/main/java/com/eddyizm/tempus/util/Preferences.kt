@@ -67,6 +67,7 @@ object Preferences {
     private const val OFFLINE_COVER_SIZES = "offline_cover_sizes"
     private const val PROGRESS_STYLE = "progress_style"
     private const val PROGRESS_THICKNESS = "progress_thickness"
+    private const val PROGRESS_ANIMATE = "progress_animate"
     private const val DOWNLOAD_DATABASE_REPAIRED = "download_database_repaired_version"
     private const val DOWNLOAD_REPAIR_ATTEMPTS = "download_repair_attempts"
     private const val ALBUM_ARTIST_BACKFILLED = "album_artist_backfilled_version"
@@ -716,6 +717,10 @@ object Preferences {
     fun getProgressStyle(): String {
         return App.getInstance().preferences.getString(PROGRESS_STYLE, "wavy") ?: "wavy"
     }
+
+    /** Whether the wavy progress line drifts while playing (default on); off, it's drawn still. */
+    @JvmStatic
+    fun isProgressAnimated(): Boolean = App.getInstance().preferences.getBoolean(PROGRESS_ANIMATE, true)
 
     /** Playback progress line thickness in dp (2, 3 or 5; default 3). */
     @JvmStatic

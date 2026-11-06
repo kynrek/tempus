@@ -632,6 +632,16 @@ public class PlayerBottomSheetFragment extends Fragment {
         libraryHomeButton = button;
     }
 
+    /** The side panel line's position circle, {@code sizeDp} across. */
+    private android.graphics.drawable.Drawable positionThumb(int color, int sizeDp) {
+        int size = Math.round(sizeDp * getResources().getDisplayMetrics().density);
+        android.graphics.drawable.GradientDrawable dot = new android.graphics.drawable.GradientDrawable();
+        dot.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        dot.setColor(color);
+        dot.setSize(size, size);
+        return dot;
+    }
+
     private void initHeaderSeekBar() {
         // The wavy (or straight) line from Settings, in place of the platform bar.
         android.widget.SeekBar bar = bind.playerHeaderLayout.playerHeaderSeekBar;
@@ -644,13 +654,12 @@ public class PlayerBottomSheetFragment extends Fragment {
         int progress = bar.getProgress();
         bar.setProgressDrawable(headerLine);
         bar.setProgress(progress);
-        // In the narrow side column the thumb would cover the start of the wave; the colour change
-        // marks the position, and the thumb shows only while dragging.
-        boolean thumbOnlyWhileDragging = !"bottom".equals(Preferences.getPanelPosition());
-        if (thumbOnlyWhileDragging && bar.getThumb() != null) bar.getThumb().mutate().setAlpha(0);
-        if (thumbOnlyWhileDragging) bar.setSplitTrack(false);   // no gap left around the hidden thumb
+        // A circle marks the position; drag it (or anywhere on the line) to scrub. It grows while held.
+        bar.setThumb(positionThumb(played, 12));
+        bar.setSplitTrack(false);   // the line runs under the circle, no gap around it
+        boolean sideColumn = !"bottom".equals(Preferences.getPanelPosition());
         // Too narrow for the played part alone to show a wave early in a song, so the rest waves too.
-        headerLine.setWaveWholeLine(thumbOnlyWhileDragging);
+        headerLine.setWaveWholeLine(sideColumn);
         bind.playerHeaderLayout.playerHeaderSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
@@ -660,13 +669,13 @@ public class PlayerBottomSheetFragment extends Fragment {
             @Override
             public void onStartTrackingTouch(android.widget.SeekBar seekBar) {
                 scrubbing = true;
-                if (thumbOnlyWhileDragging && seekBar.getThumb() != null) seekBar.getThumb().setAlpha(255);
+                seekBar.setThumb(positionThumb(played, 18));
             }
 
             @Override
             public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
                 scrubbing = false;
-                if (thumbOnlyWhileDragging && seekBar.getThumb() != null) seekBar.getThumb().setAlpha(0);
+                seekBar.setThumb(positionThumb(played, 12));
                 long positionMs = seekBar.getProgress() * 1000L;
                 if (com.eddyizm.tempus.lan.LanRemoteSession.isActive() || mediaBrowserListenableFuture == null) return;
                 mediaBrowserListenableFuture.addListener(() -> {

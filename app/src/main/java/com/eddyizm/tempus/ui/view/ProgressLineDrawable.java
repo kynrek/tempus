@@ -14,6 +14,7 @@ import androidx.annotation.Nullable;
 public final class ProgressLineDrawable extends Drawable {
     private final ProgressLine line;
     private boolean playing;
+    private final Runnable tick = this::invalidateSelf;
 
     public ProgressLineDrawable(Context context, int playedColor, int restColor) {
         line = new ProgressLine(context);
@@ -48,6 +49,10 @@ public final class ProgressLineDrawable extends Drawable {
         Rect b = getBounds();
         float x = b.left + b.width() * (getLevel() / 10000f);
         line.draw(canvas, b.left, b.right, b.exactCenterY(), x, playing);
+        if (playing && line.isAnimated() && getCallback() != null) {
+            unscheduleSelf(tick);
+            scheduleSelf(tick, ProgressLine.nextWaveFrameAt());
+        }
     }
 
     @Override

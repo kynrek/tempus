@@ -33,6 +33,7 @@ public class ProgressLineTimeBar extends View implements TimeBar {
     private long duration = C.TIME_UNSET;
     private long position;
     private long lastAdvanceAt;
+    private final android.graphics.Rect visible = new android.graphics.Rect();
     private boolean scrubbing;
     private long scrubPosition;
 
@@ -99,6 +100,11 @@ public class ProgressLineTimeBar extends View implements TimeBar {
         float x = xFor(shown);
         line.draw(canvas, left(), right(), cy, x, moving);
         if (isEnabled()) canvas.drawCircle(x, cy, (scrubbing ? 8 : 6) * density, thumb);
+        // Drift only while on screen: the full player's bar keeps getting drawn while the sheet is
+        // collapsed out of view. The next position update restarts it.
+        if (moving && line.isAnimated() && getGlobalVisibleRect(visible)) {
+            postInvalidateDelayed(Math.max(1, ProgressLine.nextWaveFrameAt() - SystemClock.uptimeMillis()));
+        }
     }
 
     @Override

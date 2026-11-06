@@ -119,6 +119,12 @@
             app:title="@string/settings_progress_style"
             app:useSimpleSummaryProvider="true" />
 
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="progress_animate"
+            android:summary="@string/settings_progress_animate_summary"
+            android:title="@string/settings_progress_animate" />
+
         <ListPreference
             app:defaultValue="3"
             app:dialogTitle="@string/settings_progress_thickness"
