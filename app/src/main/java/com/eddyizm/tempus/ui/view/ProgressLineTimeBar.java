@@ -99,7 +99,7 @@ public class ProgressLineTimeBar extends View implements TimeBar {
         float x = xFor(shown);
         line.draw(canvas, left(), right(), cy, x, moving);
         if (isEnabled()) canvas.drawCircle(x, cy, (scrubbing ? 8 : 6) * density, thumb);
-        if (moving && line.isWavy()) postInvalidateOnAnimation();
+        if (moving && line.isWavy()) postInvalidateDelayed(ProgressLine.WAVE_FRAME_MS);
     }
 
     @Override

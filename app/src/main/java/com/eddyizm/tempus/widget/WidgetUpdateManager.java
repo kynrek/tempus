@@ -29,6 +29,29 @@ public final class WidgetUpdateManager {
 
     private static final int WIDGET_SAFE_ART_SIZE = 512;
 
+    /** Whether any widget is on a home screen; null until asked (and again after a widget event). */
+    private static volatile Boolean placed;
+
+    /**
+     * The playback service refreshes the widget every second while playing, which loads the cover
+     * through Glide each time. With no widget placed (the usual case on the car box) that's all
+     * wasted, so updates check this first; the answer is kept until a widget is added or removed.
+     */
+    public static boolean anyPlaced(Context ctx) {
+        Boolean p = placed;
+        if (p == null) {
+            int[] ids = AppWidgetManager.getInstance(ctx).getAppWidgetIds(new ComponentName(ctx, WidgetProvider4x1.class));
+            p = ids != null && ids.length > 0;
+            placed = p;
+        }
+        return p;
+    }
+
+    /** A widget was added, removed or resized: look again next time. */
+    static void forgetPlaced() {
+        placed = null;
+    }
+
     public static void updateFromState(Context ctx,
                                        String title,
                                        String artist,
@@ -42,6 +65,7 @@ public final class WidgetUpdateManager {
                                        String songLink,
                                        String albumLink,
                                        String artistLink) {
+        if (!anyPlaced(ctx)) return;
         if (TextUtils.isEmpty(title)) title = ctx.getString(R.string.widget_not_playing);
         if (TextUtils.isEmpty(artist)) artist = ctx.getString(R.string.widget_placeholder_subtitle);
         if (TextUtils.isEmpty(album)) album = "";
@@ -82,6 +106,7 @@ public final class WidgetUpdateManager {
                                        String albumLink,
                                        String artistLink) {
         final Context appCtx = ctx.getApplicationContext();
+        if (!anyPlaced(appCtx)) return;
         final String t = TextUtils.isEmpty(title) ? appCtx.getString(R.string.widget_not_playing) : title;
         final String a = TextUtils.isEmpty(artist) ? appCtx.getString(R.string.widget_placeholder_subtitle) : artist;
         final String alb = !TextUtils.isEmpty(album) ? album : "";

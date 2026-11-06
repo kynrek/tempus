@@ -1,0 +1,45 @@
+# Baseline profile: what ART compiles ahead of time when the app is installed (non-debuggable
+# builds only; see the "box" build type). Hand-written rather than recorded: the whole app plus
+# the libraries on its hot paths (startup, the Home tabs, scrolling the catalogues, playback),
+# so nothing the car screen does waits on the interpreter or the JIT. AndroidX libraries add their
+# own profiles on top. "H" hot, "S" startup, "P" post-startup.
+
+# The app
+HSPLcom/eddyizm/tempus/**->**(**)**
+Lcom/eddyizm/tempus/**;
+
+# Views and layout
+HSPLandroidx/constraintlayout/**->**(**)**
+Landroidx/constraintlayout/**;
+HSPLcom/google/android/material/**->**(**)**
+Lcom/google/android/material/**;
+HSPLandroidx/appcompat/**->**(**)**
+Landroidx/appcompat/**;
+HSPLandroidx/coordinatorlayout/**->**(**)**
+Landroidx/coordinatorlayout/**;
+HSPLandroidx/drawerlayout/**->**(**)**
+HSPLandroidx/viewpager2/**->**(**)**
+HSPLandroidx/recyclerview/**->**(**)**
+Landroidx/recyclerview/**;
+HSPLandroidx/fragment/**->**(**)**
+HSPLandroidx/navigation/**->**(**)**
+HSPLandroidx/lifecycle/**->**(**)**
+HSPLandroidx/core/**->**(**)**
+
+# Images, network, data
+HSPLcom/bumptech/glide/**->**(**)**
+Lcom/bumptech/glide/**;
+HSPLokhttp3/**->**(**)**
+HSPLokio/**->**(**)**
+HSPLretrofit2/**->**(**)**
+HSPLcom/google/gson/**->**(**)**
+HSPLandroidx/room/**->**(**)**
+HSPLandroidx/sqlite/**->**(**)**
+
+# Playback
+HSPLandroidx/media3/**->**(**)**
+Landroidx/media3/**;
+
+# Kotlin
+HSPLkotlin/**->**(**)**
+HSPLkotlinx/coroutines/**->**(**)**

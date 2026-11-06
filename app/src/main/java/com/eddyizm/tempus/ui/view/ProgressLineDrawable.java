@@ -13,8 +13,6 @@ import androidx.annotation.Nullable;
 
 /** A SeekBar progress drawable that draws {@link ProgressLine}; the bar's level is the progress. */
 public final class ProgressLineDrawable extends Drawable {
-    private static final long FRAME_MS = 33;
-
     private final ProgressLine line;
     private boolean playing;
     private final Runnable tick = this::invalidateSelf;
@@ -54,7 +52,7 @@ public final class ProgressLineDrawable extends Drawable {
         line.draw(canvas, b.left, b.right, b.exactCenterY(), x, playing);
         if (playing && line.isWavy() && getCallback() != null) {
             unscheduleSelf(tick);
-            scheduleSelf(tick, SystemClock.uptimeMillis() + FRAME_MS);
+            scheduleSelf(tick, SystemClock.uptimeMillis() + ProgressLine.WAVE_FRAME_MS);
         }
     }
 
