@@ -98,6 +98,10 @@ public class PlayerBottomSheetFragment extends Fragment {
         return view;
     }
 
+    @Nullable private android.widget.ImageButton libraryHomeButton;
+    private int headerCircleColor;
+    private int headerRestColor;
+
     @Override
     public void onResume() {
         super.onResume();
@@ -108,6 +112,11 @@ public class PlayerBottomSheetFragment extends Fragment {
     /** Settings > Colors: the control panel's background and text (and its icons and line). */
     private void applyPanelColors() {
         if (bind == null) return;
+        if (libraryHomeButton != null) {
+            Integer panelText = AppColors.color(AppColors.PANEL_TEXT);
+            libraryHomeButton.setImageTintList(android.content.res.ColorStateList.valueOf(
+                    panelText != null ? panelText : android.graphics.Color.WHITE));
+        }
         View root = bind.playerHeaderLayout.getRoot();
         Integer bg = AppColors.color(AppColors.PANEL_BG);
         Integer text = AppColors.color(AppColors.PANEL_TEXT);
@@ -130,11 +139,15 @@ public class PlayerBottomSheetFragment extends Fragment {
                     bind.playerHeaderLayout.playerHeaderBookmarkMediaButton}) {
                 b.setBackgroundTintList(tint);
             }
-            if (headerLine != null) {
-                android.util.TypedValue tv = new android.util.TypedValue();
-                requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true);
-                headerLine.setColors(tv.data, (text & 0x00FFFFFF) | 0x55000000);
-            }
+            if (headerLine != null) headerRestColor = (text & 0x00FFFFFF) | 0x55000000;
+        }
+        // Settings > Colors > Progress line / Progress line circle (theme colour by default).
+        if (headerLine != null) {
+            android.util.TypedValue tv = new android.util.TypedValue();
+            requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true);
+            headerLine.setColors(AppColors.progressLine(tv.data), headerRestColor);
+            headerCircleColor = AppColors.progressCircle(tv.data);
+            if (!scrubbing) bind.playerHeaderLayout.playerHeaderSeekBar.setThumb(positionThumb(headerCircleColor, 12));
         }
     }
 
@@ -177,6 +190,7 @@ public class PlayerBottomSheetFragment extends Fragment {
     private void customizeBottomSheetAction() {
         bind.playerHeaderLayout.playerHeaderRemoteButton.setOnClickListener(v -> com.eddyizm.tempus.lan.LanDevicePicker.toggle(requireActivity()));
         bind.playerHeaderLayout.getRoot().setOnClickListener(view -> ((MainActivity) requireActivity()).expandBottomSheet());
+        bind.playerBodyLayout.playerCollapseButton.setOnClickListener(view -> ((MainActivity) requireActivity()).collapseBottomSheetDelayed());
         initHeaderSeekBar();
         if (!"bottom".equals(Preferences.getPanelPosition())) layoutHeaderAsColumn("left".equals(Preferences.getPanelPosition()));
         // The queue opens over whatever is on screen, so Back returns there.
@@ -488,6 +502,7 @@ public class PlayerBottomSheetFragment extends Fragment {
     private void layoutHeaderAsColumn(boolean panelOnLeft) {
         androidx.constraintlayout.widget.ConstraintLayout root =
                 (androidx.constraintlayout.widget.ConstraintLayout) bind.playerHeaderLayout.getRoot();
+        addLibraryHomeButton(root);
         ViewGroup.LayoutParams rootLp = root.getLayoutParams();
         rootLp.height = ViewGroup.LayoutParams.MATCH_PARENT;
         root.setLayoutParams(rootLp);
@@ -591,7 +606,46 @@ public class PlayerBottomSheetFragment extends Fragment {
         for (int i = 0; i < all.length; i++) {
             if (all[i] != h.placeholderLeftView.getId() && all[i] != h.placeholderRightView.getId()) set.setVisibility(all[i], visibility[i]);
         }
+
+        // The record button, at the foot of the column.
+        int home = libraryHomeButton.getId();
+        set.constrainWidth(home, Math.round(56 * d));
+        set.constrainHeight(home, Math.round(56 * d));
+        set.connect(home, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, p, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, Math.round(8 * d));
+        set.connect(home, androidx.constraintlayout.widget.ConstraintSet.START, p, androidx.constraintlayout.widget.ConstraintSet.START);
+        set.connect(home, androidx.constraintlayout.widget.ConstraintSet.END, p, androidx.constraintlayout.widget.ConstraintSet.END);
         set.applyTo(root);
+    }
+
+    /**
+     * Side panel only: a record at the foot of the column that goes back to the app's main screen
+     * (the library tabs) from wherever you are, closing the full player if it's open.
+     */
+    private void addLibraryHomeButton(ViewGroup column) {
+        android.widget.ImageButton button = new android.widget.ImageButton(requireContext());
+        button.setId(View.generateViewId());
+        button.setImageResource(R.drawable.ic_record);
+        button.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        int pad = Math.round(10 * getResources().getDisplayMetrics().density);
+        button.setPadding(pad, pad, pad, pad);
+        android.util.TypedValue tv = new android.util.TypedValue();
+        requireContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv, true);
+        button.setBackgroundResource(tv.resourceId);
+        button.setContentDescription(getString(R.string.player_library_home));
+        button.setImageTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE));
+        button.setOnClickListener(v -> ((MainActivity) requireActivity()).goToLibraryHome());
+        column.addView(button);
+        libraryHomeButton = button;
+    }
+
+    /** The side panel line's position circle, {@code sizeDp} across. */
+    private android.graphics.drawable.Drawable positionThumb(int color, int sizeDp) {
+        int size = Math.round(sizeDp * getResources().getDisplayMetrics().density);
+        android.graphics.drawable.GradientDrawable dot = new android.graphics.drawable.GradientDrawable();
+        dot.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        dot.setColor(color);
+        dot.setSize(size, size);
+        return dot;
     }
 
     private void initHeaderSeekBar() {
@@ -599,20 +653,22 @@ public class PlayerBottomSheetFragment extends Fragment {
         android.widget.SeekBar bar = bind.playerHeaderLayout.playerHeaderSeekBar;
         android.util.TypedValue tv = new android.util.TypedValue();
         requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true);
-        int played = tv.data;
+        int themePlayed = tv.data;
+        int played = AppColors.progressLine(themePlayed);
+        headerCircleColor = AppColors.progressCircle(themePlayed);
         requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, tv, true);
         int rest = (tv.data & 0x00FFFFFF) | 0x66000000;
+        headerRestColor = rest;
         headerLine = new ProgressLineDrawable(requireContext(), played, rest);
         int progress = bar.getProgress();
         bar.setProgressDrawable(headerLine);
         bar.setProgress(progress);
-        // In the narrow side column the thumb would cover the start of the wave; the colour change
-        // marks the position, and the thumb shows only while dragging.
-        boolean thumbOnlyWhileDragging = !"bottom".equals(Preferences.getPanelPosition());
-        if (thumbOnlyWhileDragging && bar.getThumb() != null) bar.getThumb().mutate().setAlpha(0);
-        if (thumbOnlyWhileDragging) bar.setSplitTrack(false);   // no gap left around the hidden thumb
+        // A circle marks the position; drag it (or anywhere on the line) to scrub. It grows while held.
+        bar.setThumb(positionThumb(headerCircleColor, 12));
+        bar.setSplitTrack(false);   // the line runs under the circle, no gap around it
+        boolean sideColumn = !"bottom".equals(Preferences.getPanelPosition());
         // Too narrow for the played part alone to show a wave early in a song, so the rest waves too.
-        headerLine.setWaveWholeLine(thumbOnlyWhileDragging);
+        headerLine.setWaveWholeLine(sideColumn);
         bind.playerHeaderLayout.playerHeaderSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
@@ -622,13 +678,13 @@ public class PlayerBottomSheetFragment extends Fragment {
             @Override
             public void onStartTrackingTouch(android.widget.SeekBar seekBar) {
                 scrubbing = true;
-                if (thumbOnlyWhileDragging && seekBar.getThumb() != null) seekBar.getThumb().setAlpha(255);
+                seekBar.setThumb(positionThumb(headerCircleColor, 18));
             }
 
             @Override
             public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
                 scrubbing = false;
-                if (thumbOnlyWhileDragging && seekBar.getThumb() != null) seekBar.getThumb().setAlpha(0);
+                seekBar.setThumb(positionThumb(headerCircleColor, 12));
                 long positionMs = seekBar.getProgress() * 1000L;
                 if (com.eddyizm.tempus.lan.LanRemoteSession.isActive() || mediaBrowserListenableFuture == null) return;
                 mediaBrowserListenableFuture.addListener(() -> {

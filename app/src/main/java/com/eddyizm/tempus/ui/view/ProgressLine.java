@@ -9,27 +9,24 @@ import android.os.SystemClock;
 import com.eddyizm.tempus.util.Preferences;
 
 /**
- * The playback progress line: the played part as a gentle wave that drifts while playing (or a
- * straight line, per Settings), the rest as a thin straight line. Shared by the mini player and
- * the full player so they always match.
+ * The playback progress line: the played part as a gentle wave that drifts while playing, or is
+ * drawn still if Settings says so (or a straight line, per Settings), the rest as a thin straight line. Shared by the mini
+ * player and the full player so they always match.
  */
 public final class ProgressLine {
     public static final String WAVY = "wavy";
     public static final String STRAIGHT = "straight";
 
-    private static final float WAVELENGTH_DP = 22f;
-    private static final long WAVE_PERIOD_MS = 1600;   // one wavelength of drift
+    private static final float WAVELENGTH_DP = 44f;
+    // One wavelength of drift when animated: about 14 dp a second.
+    private static final long WAVE_PERIOD_MS = 3200;
     /**
-     * How often a drifting wave is redrawn: 10 a second. The drift is slow (one wavelength in 1.6 s,
-     * so about 1.4 dp a step), and on the car box every frame drawn is CPU and compositor time
-     * taken from navigation running beside it.
+     * How often a drifting wave is redrawn: 10 a second. The drift is slow (about 1.4 dp a step), and
+     * on the car box every frame drawn is CPU and compositor time taken from navigation beside it.
      */
     public static final long WAVE_FRAME_MS = 100;
 
-    /**
-     * When the next wave frame is due, on a clock shared by every line: the side panel's line and the
-     * player's time bar then redraw in the same display frame instead of in two.
-     */
+    /** When the next drift frame is due, on a clock every line shares, so they redraw in the same frame. */
     public static long nextWaveFrameAt() {
         long now = SystemClock.uptimeMillis();
         return now - now % WAVE_FRAME_MS + WAVE_FRAME_MS;
@@ -40,8 +37,8 @@ public final class ProgressLine {
     private final Paint rest = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private boolean wavy;
+    private boolean animated;
     private boolean waveWholeLine;
-    private float lineRight;
     private float stroke;
 
     public ProgressLine(Context context) {
@@ -57,6 +54,7 @@ public final class ProgressLine {
     /** Re-reads the style and thickness settings. */
     public void reload() {
         wavy = !STRAIGHT.equals(Preferences.getProgressStyle());
+        animated = Preferences.isProgressAnimated();
         stroke = Preferences.getProgressThicknessDp() * density;
         played.setStrokeWidth(stroke);
         rest.setStrokeWidth(Math.max(density, stroke * 0.6f));
@@ -71,13 +69,18 @@ public final class ProgressLine {
         return wavy;
     }
 
+    /** Whether a playing line drifts, so its view must keep redrawing (Settings > Animate the wave). */
+    public boolean isAnimated() {
+        return wavy && animated;
+    }
+
     /** Height the line needs, wave included. */
     public float height() {
         return stroke + (wavy ? 2 * amplitude() : 0);
     }
 
     private float amplitude() {
-        return Math.max(2 * density, stroke * 0.9f);
+        return Math.max(1.5f * density, stroke * 0.6f);
     }
 
     /** Whether the unplayed part waves too while playing (the narrow side panel's line), not just the played part. */
@@ -87,11 +90,11 @@ public final class ProgressLine {
 
     /**
      * Draws from {@code left} to {@code right} at {@code cy}, played up to {@code x}.
-     * {@code moving} drifts the wave (playing); otherwise it holds still.
+     * {@code moving} is whether it's playing: the wave drifts then if {@link #isAnimated}, and see
+     * {@link #setWaveWholeLine}.
      */
     public void draw(Canvas canvas, float left, float right, float cy, float x, boolean moving) {
         x = Math.max(left, Math.min(right, x));
-        lineRight = right;
         boolean waveRest = wavy && waveWholeLine && moving;
         if (x < right) {
             if (waveRest) canvas.drawPath(wave(left, x, right, cy, moving), rest);
@@ -107,10 +110,9 @@ public final class ProgressLine {
 
     /** The wave between {@code from} and {@code to}, in phase with one starting at {@code left}. */
     private Path wave(float left, float from, float to, float cy, boolean moving) {
-        // A narrow line (the side panel's) gets shorter waves, or the first part of a song would
-        // show no wave at all: at most a tenth of the line, but not under 8 dp.
-        float wavelength = Math.min(WAVELENGTH_DP * density, Math.max(8 * density, (lineRight - left) / 10));
-        float phase = moving ? (SystemClock.uptimeMillis() % WAVE_PERIOD_MS) / (float) WAVE_PERIOD_MS : 0f;
+        // The same waves on every line, the side panel's included, so they all look alike.
+        float wavelength = WAVELENGTH_DP * density;
+        float phase = moving && animated ? (SystemClock.uptimeMillis() % WAVE_PERIOD_MS) / (float) WAVE_PERIOD_MS : 0f;
         float a = amplitude();
         path.rewind();
         float step = Math.max(1f, density * 1.5f);

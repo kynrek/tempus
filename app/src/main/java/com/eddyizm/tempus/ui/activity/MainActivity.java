@@ -207,6 +207,11 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onStop() {
         outstandingProbe = null;
+        // Leaving the app with the full player open would bring you back to it, with the library
+        // hidden underneath: come back to the library instead (the media card still opens the player).
+        if (!isChangingConfigurations() && bottomSheetController != null && bottomSheetController.isExpanded()) {
+            bottomSheetController.collapse();
+        }
         super.onStop();
     }
 
@@ -417,6 +422,14 @@ public class MainActivity extends BaseActivity {
 
     public void collapseBottomSheetDelayed() {
         bottomSheetController.collapseDelayed();
+    }
+
+    /** The side panel's record button: back to Home (the library tabs) from anywhere in the app. */
+    public void goToLibraryHome() {
+        if (bottomSheetController != null && bottomSheetController.isExpanded()) bottomSheetController.collapse();
+        if (navController == null || navController.getCurrentDestination() == null) return;
+        if (navController.getCurrentDestination().getId() == R.id.homeFragment) return;
+        if (!navController.popBackStack(R.id.homeFragment, false)) navController.navigate(R.id.homeFragment);
     }
 
     /** Opens the full-panel queue over the current screen. */

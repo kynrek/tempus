@@ -45,6 +45,10 @@ public class BottomSheetController {
         helper.checkAfterStateChanged(mainViewModel);
     }
 
+    public void collapse() {
+        helper.setState(BottomSheetBehavior.STATE_COLLAPSED);
+    }
+
     public void collapseDelayed() {
         helper.collapseDelayed();
     }

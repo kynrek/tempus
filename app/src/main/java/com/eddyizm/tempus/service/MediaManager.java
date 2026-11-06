@@ -14,7 +14,6 @@ import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
-import androidx.media3.common.Timeline;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.session.MediaBrowser;
 import androidx.media3.session.SessionCommand;
@@ -305,25 +304,17 @@ public class MediaManager {
                             new Handler(Looper.getMainLooper()).post(() -> {
                                 if (LanRemoteSession.isActive()) return;
                                 justStarted.set(true);
+                                if (items.isEmpty() || start < 0 || start >= items.size()) {
+                                    Log.d(TAG, "Cannot start playback: itemCount=" + items.size() + ", start=" + start);
+                                    return;
+                                }
+                                // setMediaItems already starts at the chosen song and position, so play at
+                                // once. This used to wait for the next timeline change and then seek there
+                                // again, which held playback back until the service's later queue update
+                                // (seconds on the car box) and then restarted the stream it had begun.
                                 browser.setMediaItems(items, start, startPositionMs);
                                 browser.prepare();
-
-                                Player.Listener timelineListener = new Player.Listener() {
-                                    @Override
-                                    public void onTimelineChanged(Timeline timeline, int reason) {
-                                        int itemCount = browser.getMediaItemCount();
-                                        if (itemCount > 0 && start >= 0 && start < itemCount) {
-                                            if (LanRemoteSession.isActive()) { browser.removeListener(this); return; }
-                                            browser.seekTo(start, startPositionMs);
-                                            browser.play();
-                                            browser.removeListener(this);
-                                        } else {
-                                            Log.d(TAG, "Cannot start playback: itemCount=" + itemCount + ", start=" + start);
-                                        }
-                                    }
-                                };
-
-                                browser.addListener(timelineListener);
+                                browser.play();
                             });
 
                             if (!LanRemoteSession.isActive()) enqueueDatabase(queue, true, 0);

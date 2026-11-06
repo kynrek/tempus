@@ -58,6 +58,7 @@ object Preferences {
     private const val DOWNLOAD_WIFI_ONLY = "download_wifi_only"
     private const val DOWNLOAD_CELLULAR_LIMIT = "download_cellular_limit"
     private const val QUEUE_ADD_POSITION = "queue_add_position"
+    private const val QUEUE_SHOW_HISTORY = "queue_show_history"
     private const val CATALOGUE_VIEW = "catalogue_view"
     private const val LIBRARY_INDEX_LOCATION = "library_index_location"
     private const val PANEL_POSITION = "panel_position"
@@ -68,6 +69,7 @@ object Preferences {
     private const val OFFLINE_COVER_SIZES = "offline_cover_sizes"
     private const val PROGRESS_STYLE = "progress_style"
     private const val PROGRESS_THICKNESS = "progress_thickness"
+    private const val PROGRESS_ANIMATE = "progress_animate"
     private const val DOWNLOAD_DATABASE_REPAIRED = "download_database_repaired_version"
     private const val DOWNLOAD_REPAIR_ATTEMPTS = "download_repair_attempts"
     private const val ALBUM_ARTIST_BACKFILLED = "album_artist_backfilled_version"
@@ -720,6 +722,10 @@ object Preferences {
         return App.getInstance().preferences.getString(PROGRESS_STYLE, "wavy") ?: "wavy"
     }
 
+    /** Whether the wavy progress line drifts while playing (default on); off, it's drawn still. */
+    @JvmStatic
+    fun isProgressAnimated(): Boolean = App.getInstance().preferences.getBoolean(PROGRESS_ANIMATE, true)
+
     /** Playback progress line thickness in dp (2, 3 or 5; default 3). */
     @JvmStatic
     fun getProgressThicknessDp(): Float {
@@ -739,6 +745,9 @@ object Preferences {
     }
 
     /** Where "Add to queue" puts songs: "bottom" (default), "top" (play next) or "ask". */
+    @JvmStatic
+    fun isQueueHistoryShown(): Boolean = App.getInstance().preferences.getBoolean(QUEUE_SHOW_HISTORY, false)
+
     @JvmStatic
     fun getQueueAddPosition(): String {
         return App.getInstance().preferences.getString(QUEUE_ADD_POSITION, "bottom") ?: "bottom"

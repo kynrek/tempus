@@ -111,6 +111,24 @@
             app:useSimpleSummaryProvider="true" />
 
         <ListPreference
+            app:defaultValue="default"
+            app:dialogTitle="@string/settings_color_progress_line"
+            app:entries="@array/color_accent_titles"
+            app:entryValues="@array/color_accent_values"
+            app:key="color_progress_line"
+            app:title="@string/settings_color_progress_line"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="default"
+            app:dialogTitle="@string/settings_color_progress_circle"
+            app:entries="@array/color_accent_titles"
+            app:entryValues="@array/color_accent_values"
+            app:key="color_progress_circle"
+            app:summary="@string/settings_color_progress_circle_summary"
+            app:title="@string/settings_color_progress_circle" />
+
+        <ListPreference
             app:defaultValue="wavy"
             app:dialogTitle="@string/settings_progress_style"
             app:entries="@array/progress_style_titles"
@@ -118,6 +136,12 @@
             app:key="progress_style"
             app:title="@string/settings_progress_style"
             app:useSimpleSummaryProvider="true" />
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="progress_animate"
+            android:summary="@string/settings_progress_animate_summary"
+            android:title="@string/settings_progress_animate" />
 
         <ListPreference
             app:defaultValue="3"
@@ -443,6 +467,11 @@
             android:defaultValue="true"
             android:summary="@string/settings_keep_played_in_queue_summary"
             android:key="keep_played_in_queue" />
+        <SwitchPreference
+            android:title="@string/settings_queue_show_history"
+            android:defaultValue="false"
+            android:summary="@string/settings_queue_show_history_summary"
+            android:key="queue_show_history" />
         <ListPreference
             app:defaultValue="500"
             app:dialogTitle="@string/settings_queue_limit"

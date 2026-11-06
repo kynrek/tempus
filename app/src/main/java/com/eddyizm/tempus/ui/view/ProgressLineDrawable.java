@@ -23,7 +23,7 @@ public final class ProgressLineDrawable extends Drawable {
         line.setColors(playedColor, restColor);
     }
 
-    /** Drift the wave while playing, hold still when paused. */
+    /** Playing: the side panel's line then waves end to end (see ProgressLine#setWaveWholeLine). */
     public void setPlaying(boolean playing) {
         if (this.playing == playing) return;
         this.playing = playing;
@@ -51,7 +51,7 @@ public final class ProgressLineDrawable extends Drawable {
         Rect b = getBounds();
         float x = b.left + b.width() * (getLevel() / 10000f);
         line.draw(canvas, b.left, b.right, b.exactCenterY(), x, playing);
-        if (playing && line.isWavy() && onScreen()) {
+        if (playing && line.isAnimated() && onScreen()) {
             unscheduleSelf(tick);
             scheduleSelf(tick, ProgressLine.nextWaveFrameAt());
         }
