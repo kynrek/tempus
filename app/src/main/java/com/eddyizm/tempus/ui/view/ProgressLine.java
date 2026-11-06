@@ -17,10 +17,10 @@ public final class ProgressLine {
     public static final String WAVY = "wavy";
     public static final String STRAIGHT = "straight";
 
-    private static final float WAVELENGTH_DP = 22f;
-    private static final long WAVE_PERIOD_MS = 1600;   // one wavelength of drift
+    private static final float WAVELENGTH_DP = 44f;
+    private static final long WAVE_PERIOD_MS = 3200;   // one wavelength of drift: about 14 dp a second
     /**
-     * How often a drifting wave is redrawn: 10 a second. The drift is slow (one wavelength in 1.6 s,
+     * How often a drifting wave is redrawn: 10 a second. The drift is slow (about 14 dp a second,
      * so about 1.4 dp a step), and on the car box every frame drawn is CPU and compositor time
      * taken from navigation running beside it.
      */
@@ -108,8 +108,8 @@ public final class ProgressLine {
     /** The wave between {@code from} and {@code to}, in phase with one starting at {@code left}. */
     private Path wave(float left, float from, float to, float cy, boolean moving) {
         // A narrow line (the side panel's) gets shorter waves, or the first part of a song would
-        // show no wave at all: at most a tenth of the line, but not under 8 dp.
-        float wavelength = Math.min(WAVELENGTH_DP * density, Math.max(8 * density, (lineRight - left) / 10));
+        // show no wave at all: at most a fifth of the line, but not under 16 dp.
+        float wavelength = Math.min(WAVELENGTH_DP * density, Math.max(16 * density, (lineRight - left) / 5));
         float phase = moving ? (SystemClock.uptimeMillis() % WAVE_PERIOD_MS) / (float) WAVE_PERIOD_MS : 0f;
         float a = amplitude();
         path.rewind();
