@@ -205,7 +205,7 @@
         app:layout_constraintTop_toTopOf="@+id/player_media_title_label"
         app:tint="?attr/colorPrimary"/>
 
-    <TextView
+    <com.eddyizm.tempus.ui.view.StableTextView
         android:id="@+id/exo_position"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -228,7 +228,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/player_artist_name_label" />
 
-    <TextView
+    <com.eddyizm.tempus.ui.view.StableTextView
         android:id="@+id/exo_duration"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

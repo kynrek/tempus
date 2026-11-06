@@ -89,6 +89,18 @@ android {
             applicationIdSuffix = ".phone"
             matchingFallbacks = ['debug']
         }
+
+        // Car box build, for the JoyeBox head unit (Snapdragon 665: arm64, Android 13 / API 33),
+        // which runs navigation alongside. Release-like (R8, resource shrinking, not debuggable,
+        // so ART compiles it ahead of time from the baseline profile), arm64 only, minSdk 33.
+        // Same app id and debug signing key as the debug build, so it installs over it and keeps
+        // the sign-in, settings and downloads. Build with ./gradlew assembleDegoogledBox.
+        box {
+            initWith release
+            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.debug
+            matchingFallbacks = ['release']
+        }
     }
 
     packaging {
@@ -119,6 +131,17 @@ android {
     }
 }
 
+androidComponents {
+    beforeVariants(selector().withBuildType("box")) { variantBuilder ->
+        // Only the box runs it: no compatibility code or API checks below Android 13.
+        variantBuilder.minSdk = 33
+    }
+    onVariants(selector().withBuildType("box")) { variant ->
+        // arm64 native code only (ffmpeg and androidx.graphics).
+        variant.packaging.jniLibs.excludes.addAll(["lib/armeabi-v7a/**", "lib/armeabi/**", "lib/x86/**", "lib/x86_64/**"])
+    }
+}
+
 dependencies {
     implementation files('../libs/lib-decoder-ffmpeg-release.aar')
 
@@ -138,6 +161,8 @@ dependencies {
     implementation libs.androidx.splashscreen
     implementation libs.androidx.appcompat
     implementation libs.androidx.swiperefreshlayout
+    // Installs the baseline profile (src/main/baseline-prof.txt) on sideloaded installs too.
+    implementation libs.androidx.profileinstaller
 
     // Compose
     implementation platform(libs.androidx.compose.bom)

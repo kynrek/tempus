@@ -19,6 +19,12 @@ public final class ProgressLine {
 
     private static final float WAVELENGTH_DP = 22f;
     private static final long WAVE_PERIOD_MS = 1600;   // one wavelength of drift
+    /**
+     * How often a drifting wave is redrawn: 10 a second. The drift is slow (one wavelength in 1.6 s,
+     * so about 1.4 dp a step), and on the car box every frame drawn is CPU and compositor time
+     * taken from navigation running beside it.
+     */
+    public static final long WAVE_FRAME_MS = 100;
 
     private final float density;
     private final Paint played = new Paint(Paint.ANTI_ALIAS_FLAG);

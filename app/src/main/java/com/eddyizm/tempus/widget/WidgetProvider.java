@@ -39,8 +39,9 @@ public class WidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onReceive(Context ctx, Intent intent) {
-        super.onReceive(ctx, intent);
         String a = intent.getAction();
+        if (a != null && a.startsWith("android.appwidget.action.")) WidgetUpdateManager.forgetPlaced();
+        super.onReceive(ctx, intent);
         Log.d(TAG, "onReceive action=" + a);
         if (ACT_PLAY_PAUSE.equals(a) || ACT_NEXT.equals(a) || ACT_PREV.equals(a)
                 || ACT_TOGGLE_SHUFFLE.equals(a) || ACT_CYCLE_REPEAT.equals(a) || ACT_CLOSE.equals(a)) {

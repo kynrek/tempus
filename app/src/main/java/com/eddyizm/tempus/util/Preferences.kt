@@ -174,6 +174,8 @@ object Preferences {
     // MB of JSON churn per operation (see capResumePoints).
     private const val MAX_RESUME_POINTS = 200
 
+    // Kept as JSON by Gson, which reads the field names: R8 mustn't rename them.
+    @androidx.annotation.Keep
     data class ResumePoint(
         val id: String,
         val position: Long,
