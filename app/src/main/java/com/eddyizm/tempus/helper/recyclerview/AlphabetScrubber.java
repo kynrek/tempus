@@ -205,6 +205,27 @@ public class AlphabetScrubber extends View {
         else glide.resumeRequests();
     }
 
+    /**
+     * While scrubbing, covers load once the list rests under the finger: this long after the last
+     * jump. Racing through letters they stay held back, so the rows flashing past queue nothing.
+     */
+    private static final long IMAGES_AFTER_REST_MS = 220;
+    /** Letters changing slower than this are read as browsing, not racing: covers keep loading. */
+    private static final long SLOW_SCRUB_MS = 350;
+    private long lastScrubJumpAt;
+    private final Runnable showImagesAtRest = () -> {
+        if (this.touching) setImagesPaused(false);
+    };
+
+    /** The scrub moved the list: hold covers back if it's racing, and load them once it rests. */
+    private void onScrubJump() {
+        long now = SystemClock.uptimeMillis();
+        if (now - lastScrubJumpAt < SLOW_SCRUB_MS) setImagesPaused(true);
+        lastScrubJumpAt = now;
+        removeCallbacks(showImagesAtRest);
+        postDelayed(showImagesAtRest, IMAGES_AFTER_REST_MS);
+    }
+
     private boolean touching;
     private float touchY;
     private int currentLetter = -1;
@@ -362,6 +383,10 @@ public class AlphabetScrubber extends View {
     protected void onDetachedFromWindow() {
         getViewTreeObserver().removeOnGlobalLayoutListener(layoutListener);
         cancelHold();
+        // Leaving mid-scrub: don't leave the app's covers held back.
+        removeCallbacks(showImagesAtRest);
+        touching = false;
+        setImagesPaused(false);
         player = null;
         lastVisibleBottom = -1f;
         super.onDetachedFromWindow();
@@ -631,6 +656,7 @@ public class AlphabetScrubber extends View {
                 if (recyclerView != null) recyclerView.stopScroll();
                 if (onScrubStart != null) onScrubStart.run();
                 setImagesPaused(true);
+                lastScrubJumpAt = SystemClock.uptimeMillis();
                 resetZoom();
                 animatePress(1f);
                 holdStartY = event.getY();
@@ -645,6 +671,7 @@ public class AlphabetScrubber extends View {
             case MotionEvent.ACTION_CANCEL:
                 if (!touching) return false;
                 touching = false;
+                removeCallbacks(showImagesAtRest);
                 cancelHold();
                 getParent().requestDisallowInterceptTouchEvent(false);
                 setImagesPaused(false);
@@ -678,7 +705,10 @@ public class AlphabetScrubber extends View {
         if (section != currentLetter) {
             currentLetter = section;
             int position = positionFor(section);
-            if (position >= 0) scrollTo(position);
+            if (position >= 0) {
+                scrollTo(position);
+                onScrubJump();
+            }
             performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
             animatePop();
         }
@@ -710,6 +740,7 @@ public class AlphabetScrubber extends View {
         if (day == currentDay) return;
         currentDay = day;
         scrollTo(dayLevel.sections.get(day).firstPosition);
+        onScrubJump();
         if (feedback) performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
         animatePop();
     }
