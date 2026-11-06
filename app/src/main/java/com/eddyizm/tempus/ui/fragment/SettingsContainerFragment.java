@@ -45,6 +45,7 @@ import androidx.preference.PreferenceScreen;
 import androidx.preference.SeekBarPreference;
 import androidx.preference.SwitchPreference;
 
+import com.eddyizm.tempus.repository.LibraryIndex;
 import com.eddyizm.tempus.BuildConfig;
 import com.eddyizm.tempus.R;
 import com.eddyizm.tempus.interfaces.DialogClickCallback;
@@ -309,6 +310,7 @@ public class SettingsContainerFragment extends PreferenceFragmentCompat {
         checkSystemEqualizer();
         checkCacheStorage();
         checkStorage();
+        checkLibraryIndexLocation();
         checkDownloadDirectory();
         checkEqualizerBands();
         checkMusicLibrary();
@@ -420,6 +422,22 @@ public class SettingsContainerFragment extends PreferenceFragmentCompat {
                 equalizer.setVisible(false);
             }
         }
+    }
+
+    /** Library index storage: offered only when there is an SD card; moving it keeps its contents. */
+    private void checkLibraryIndexLocation() {
+        ListPreference location = findPreference("library_index_location");
+        if (location == null) return;
+
+        location.setVisible(LibraryIndex.hasRemovableStorage(requireContext())
+                || LibraryIndex.LOCATION_SD.equals(location.getValue()));
+        location.setOnPreferenceChangeListener((preference, newValue) -> {
+            if (!newValue.equals(location.getValue())) {
+                // The preference is saved after this returns; move once it is.
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(LibraryIndex::relocate);
+            }
+            return true;
+        });
     }
 
     private void checkCacheStorage() {

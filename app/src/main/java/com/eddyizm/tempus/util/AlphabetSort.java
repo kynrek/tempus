@@ -125,6 +125,11 @@ public final class AlphabetSort {
         return isLetter(key) ? String.valueOf(Character.toUpperCase(key.charAt(0))) : OTHER;
     }
 
+    /** Whether a {@link #sortKey} files under A–Z (true) or under {@link #OTHER}, which sorts first. */
+    public static boolean isLetterKey(@NonNull String key) {
+        return isLetter(key);
+    }
+
     private static boolean isLetter(String key) {
         return !key.isEmpty() && key.charAt(0) >= 'a' && key.charAt(0) <= 'z';
     }

@@ -59,6 +59,7 @@ object Preferences {
     private const val DOWNLOAD_CELLULAR_LIMIT = "download_cellular_limit"
     private const val QUEUE_ADD_POSITION = "queue_add_position"
     private const val CATALOGUE_VIEW = "catalogue_view"
+    private const val LIBRARY_INDEX_LOCATION = "library_index_location"
     private const val PANEL_POSITION = "panel_position"
     private const val QUEUE_ENABLED = "queue_enabled"
     private const val ARTIST_TOP_SONGS_MODE = "artist_top_songs_mode"
@@ -729,6 +730,12 @@ object Preferences {
     @JvmStatic
     fun getCatalogueView(): String {
         return App.getInstance().preferences.getString(CATALOGUE_VIEW, "condensed") ?: "condensed"
+    }
+
+    /** Where the library index lives: "internal" (default, faster) or "sd" (the SD card). */
+    @JvmStatic
+    fun getLibraryIndexLocation(): String {
+        return App.getInstance().preferences.getString(LIBRARY_INDEX_LOCATION, "internal") ?: "internal"
     }
 
     /** Where "Add to queue" puts songs: "bottom" (default), "top" (play next) or "ask". */

@@ -5,15 +5,19 @@ import android.app.Application;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import com.eddyizm.tempus.repository.GenreRepository;
+import com.eddyizm.tempus.repository.LibraryIndex;
 import com.eddyizm.tempus.subsonic.models.Genre;
 
 import java.util.List;
 
+/** Genres tab: the library index at once, then the server's list if it differs. */
 public class GenreCatalogueViewModel extends AndroidViewModel {
     private final GenreRepository genreRepository;
-    private LiveData<List<Genre>> genres;
+    private MutableLiveData<List<Genre>> genres;
+    private boolean fromServer;
 
     public GenreCatalogueViewModel(@NonNull Application application) {
         super(application);
@@ -22,9 +26,19 @@ public class GenreCatalogueViewModel extends AndroidViewModel {
     }
 
     public void loadGenreList() {
-        if (genres == null) {
-            genres = genreRepository.getGenres(false, -1);
-        }
+        if (genres != null) return;
+        genres = new MutableLiveData<>();
+
+        LibraryIndex.genres(stored -> {
+            if (stored != null && !fromServer && genres.getValue() == null) genres.setValue(stored);
+        });
+        genreRepository.fetchGenres(fresh -> {
+            fromServer = true;
+            if (!LibraryIndex.sameGenres(genres.getValue(), fresh)) {
+                genres.setValue(fresh);
+                LibraryIndex.storeGenres(fresh);
+            }
+        });
     }
 
     public LiveData<List<Genre>> getGenreList() {

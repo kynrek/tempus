@@ -607,6 +607,15 @@
             android:order="104"
             app:isPreferenceVisible="false" />
 
+        <ListPreference
+            app:defaultValue="internal"
+            app:dialogTitle="@string/settings_library_index_location"
+            app:entries="@array/library_index_location_titles"
+            app:entryValues="@array/library_index_location_values"
+            app:key="library_index_location"
+            app:title="@string/settings_library_index_location"
+            app:useSimpleSummaryProvider="true" />
+
         <Preference
             android:key="delete_download_storage"
             app:title="@string/settings_delete_download_storage_title"
