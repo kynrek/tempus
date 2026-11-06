@@ -17,10 +17,10 @@ public final class ProgressLine {
     public static final String WAVY = "wavy";
     public static final String STRAIGHT = "straight";
 
-    private static final float WAVELENGTH_DP = 22f;
-    private static final long WAVE_PERIOD_MS = 1600;   // one wavelength of drift
+    private static final float WAVELENGTH_DP = 32f;   // long, gentle waves
+    private static final long WAVE_PERIOD_MS = 2300;   // one wavelength of drift, ~14 dp a second
     /**
-     * How often a drifting wave is redrawn: 10 a second. The drift is slow (one wavelength in 1.6 s,
+     * How often a drifting wave is redrawn: 10 a second. The drift is slow (one wavelength in 2.3 s,
      * so about 1.4 dp a step), and on the car box every frame drawn is CPU and compositor time
      * taken from navigation running beside it.
      */
@@ -80,7 +80,8 @@ public final class ProgressLine {
     }
 
     private float amplitude() {
-        return Math.max(2 * density, stroke * 0.9f);
+        // Low peaks: a little over half the line thickness either side of the centre.
+        return Math.max(1.5f * density, stroke * 0.6f);
     }
 
     /**
