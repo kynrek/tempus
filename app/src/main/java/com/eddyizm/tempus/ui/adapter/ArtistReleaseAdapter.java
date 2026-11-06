@@ -24,6 +24,9 @@ import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.util.AlbumDownload;
 import com.eddyizm.tempus.util.AlbumFavorite;
+import com.eddyizm.tempus.util.ProgressCircles;
+import com.eddyizm.tempus.service.DownloadProgress;
+import com.eddyizm.tempus.ui.fragment.bottomsheetdialog.DownloadQueueSheet;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.viewmodel.ArtistPageViewModel;
@@ -58,6 +61,36 @@ public class ArtistReleaseAdapter extends RecyclerView.Adapter<ArtistReleaseAdap
     public ArtistReleaseAdapter(LifecycleOwner lifecycleOwner, ClickCallback click) {
         this.lifecycleOwner = lifecycleOwner;
         this.click = click;
+        DownloadProgress.changes().observe(lifecycleOwner, v -> refreshDownloads());
+    }
+
+    private static final String PAYLOAD_DOWNLOAD = "payload_download";
+    /** Albums showing a progress circle last time, so they go back to the button when done. */
+    private final Set<String> shownDownloading = new HashSet<>();
+
+    private void refreshDownloads() {
+        Set<String> now = new HashSet<>();
+        for (int i = 0; i < releases.size(); i++) {
+            String id = releases.get(i).getId();
+            boolean downloading = DownloadProgress.album(id) != null;
+            if (downloading) now.add(id);
+            if (downloading || shownDownloading.contains(id)) notifyItemChanged(i, PAYLOAD_DOWNLOAD);
+        }
+        shownDownloading.clear();
+        shownDownloading.addAll(now);
+    }
+
+    private static void bindDownload(ViewHolder holder, AlbumID3 album) {
+        Float progress = DownloadProgress.album(album.getId());
+        holder.item.releaseDownloadButton.setVisibility(progress != null ? View.INVISIBLE : View.VISIBLE);
+        ProgressCircles.show(holder.item.releaseDownloadProgress,
+                progress == null ? null : progress > 0 ? progress : DownloadProgress.WAITING);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position, @NonNull List<Object> payloads) {
+        if (payloads.contains(PAYLOAD_DOWNLOAD)) bindDownload(holder, releases.get(position));
+        else super.onBindViewHolder(holder, position, payloads);
     }
 
     public void setItems(List<AlbumID3> releases) {
@@ -95,6 +128,7 @@ public class ArtistReleaseAdapter extends RecyclerView.Adapter<ArtistReleaseAdap
                 .into(holder.item.releaseCover);
 
         showFavorite(holder, AlbumFavorite.isFavorite(album));
+        bindDownload(holder, album);
 
         boolean open = expanded.contains(album.getId());
         holder.item.releaseExpandButton.setRotation(open ? 180f : 0f);
@@ -180,6 +214,7 @@ public class ArtistReleaseAdapter extends RecyclerView.Adapter<ArtistReleaseAdap
                 if (album == null) return;
                 showFavorite(this, AlbumFavorite.toggle(album));
             });
+            item.releaseDownloadProgress.setOnClickListener(v -> DownloadQueueSheet.show(v.getContext()));
             item.releaseDownloadButton.setOnClickListener(v -> {
                 AlbumID3 album = album();
                 if (album == null) return;

@@ -47,6 +47,9 @@ import com.eddyizm.tempus.util.AssetLinkUtil;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.AlbumDownload;
 import com.eddyizm.tempus.util.AlbumFavorite;
+import com.eddyizm.tempus.util.ProgressCircles;
+import com.eddyizm.tempus.service.DownloadProgress;
+import com.eddyizm.tempus.ui.fragment.bottomsheetdialog.DownloadQueueSheet;
 import com.eddyizm.tempus.util.DownloadUtil;
 import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.util.MappingUtil;
@@ -70,6 +73,9 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
     private FragmentAlbumPageBinding bind;
     private MainActivity activity;
     private AlbumPageViewModel albumPageViewModel;
+    /** The toolbar's album download circle while the album downloads, else null. */
+    @Nullable private com.google.android.material.progressindicator.CircularProgressIndicator albumDownloadCircle;
+    private boolean albumDownloading;
     private PlaybackViewModel playbackViewModel;
     private SongHorizontalAdapter songHorizontalAdapter;
     private ListenableFuture<MediaBrowser> mediaBrowserListenableFuture;
@@ -100,6 +106,51 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
         boolean favorite = AlbumFavorite.isFavorite(album);
         star.setIcon(favorite ? R.drawable.ic_star : R.drawable.ic_star_outlined);
         star.setTitle(favorite ? R.string.album_favorite_remove : R.string.album_favorite_add);
+
+        // Download: a filling circle while the album downloads (tap it for the queue), a done
+        // mark once every song is here, else the download button.
+        MenuItem download = menu.findItem(R.id.action_download_album);
+        if (download == null) return;
+        Float progress = DownloadProgress.album(album.getId());
+        albumDownloading = progress != null;
+        if (progress != null) {
+            download.setActionView(R.layout.action_download_progress);
+            View circleHolder = download.getActionView();
+            circleHolder.setOnClickListener(v -> DownloadQueueSheet.show(requireActivity().getSupportFragmentManager()));
+            albumDownloadCircle = circleHolder.findViewById(R.id.action_download_circle);
+            ProgressCircles.show(albumDownloadCircle, progress > 0 ? progress : DownloadProgress.WAITING);
+        } else {
+            download.setActionView(null);
+            albumDownloadCircle = null;
+            boolean done = allDownloaded(albumPageViewModel.getAlbumSongLiveList().getValue());
+            download.setIcon(done ? R.drawable.ic_download_done : R.drawable.ic_file_download);
+            download.setTitle(done ? R.string.album_page_downloaded : R.string.album_page_download_button);
+        }
+    }
+
+    private boolean allDownloaded(@Nullable List<Child> songs) {
+        if (songs == null || songs.isEmpty() || DownloadedOnly.isEnabled()) return false;
+        for (Child song : songs) {
+            boolean here = Preferences.getDownloadDirectoryUri() == null
+                    ? DownloadUtil.getDownloadTracker(requireContext()).isDownloaded(song.getId())
+                    : com.eddyizm.tempus.util.ExternalAudioReader.getUri(song) != null;
+            if (!here) return false;
+        }
+        return true;
+    }
+
+    /** Follows the album's downloads: the circle fills in place; starting and finishing redraw the toolbar. */
+    private void followAlbumDownload() {
+        DownloadProgress.changes().observe(getViewLifecycleOwner(), v -> {
+            AlbumID3 album = albumPageViewModel.getAlbum().getValue();
+            if (album == null) return;
+            Float progress = DownloadProgress.album(album.getId());
+            if ((progress != null) != albumDownloading || (progress != null && albumDownloadCircle == null)) {
+                requireActivity().invalidateOptionsMenu();
+            } else if (progress != null) {
+                ProgressCircles.show(albumDownloadCircle, progress > 0 ? progress : DownloadProgress.WAITING);
+            }
+        });
     }
 
     @Override
@@ -401,7 +452,9 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
     }
 
     private void initMusicButton() {
+        followAlbumDownload();
         albumPageViewModel.getAlbumSongLiveList().observe(getViewLifecycleOwner(), songs -> {
+            if (songs != null) requireActivity().invalidateOptionsMenu();   // downloaded or not
             if (bind != null && songs != null && !songs.isEmpty()) {
                 bind.albumPagePlayButton.setOnClickListener(v -> playAlbum());
 

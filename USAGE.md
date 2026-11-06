@@ -300,6 +300,8 @@ The wavy progress line drifts gently while a song plays. Turn off **Settings > U
 
 **Albums**: the album page's toolbar has a star (favourite) and a download button for the whole album. On an artist's page each album has the same two under its year and track count. Downloading takes every track, even while Downloaded only hides some of them.
 
+**Download progress**: a song that's downloading shows a circle on its row that fills as it comes in (it spins while waiting its turn). An album shows one too, over the songs asked for: in the album page's toolbar and on its row of the artist page. Tap an album's circle, or the download button on the Downloads page, for the **download queue**: everything waiting or downloading, kept apart from the play queue. Check songs (or **Select all**) and tap **Cancel**, or swipe a song sideways to cancel it.
+
 **Default music app**: the app opens audio files from other apps (file managers, chats), so it can be picked under Settings > Apps > Manage apps > ⋮ > Other settings > Default apps > Music on Xiaomi phones.
 
 A separate *phone* build (`./gradlew assembleDegoogledPhone`) installs as **Music Phone** next to the regular build.

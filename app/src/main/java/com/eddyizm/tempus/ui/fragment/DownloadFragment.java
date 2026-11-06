@@ -19,6 +19,7 @@ import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.eddyizm.tempus.R;
+import com.eddyizm.tempus.ui.fragment.bottomsheetdialog.DownloadQueueSheet;
 import com.eddyizm.tempus.databinding.FragmentDownloadBinding;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.model.DownloadStack;
@@ -77,6 +78,21 @@ public class DownloadFragment extends Fragment implements ClickCallback {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        // Toolbar: the download queue (what's waiting or downloading now).
+        requireActivity().addMenuProvider(new androidx.core.view.MenuProvider() {
+            @Override
+            public void onCreateMenu(@NonNull android.view.Menu menu, @NonNull android.view.MenuInflater inflater) {
+                inflater.inflate(R.menu.download_page_menu, menu);
+            }
+
+            @Override
+            public boolean onMenuItemSelected(@NonNull android.view.MenuItem item) {
+                if (item.getItemId() != R.id.action_download_queue) return false;
+                DownloadQueueSheet.show(getChildFragmentManager());
+                return true;
+            }
+        }, getViewLifecycleOwner(), androidx.lifecycle.Lifecycle.State.RESUMED);
 
         initAppBar();
         initDownloadedView();

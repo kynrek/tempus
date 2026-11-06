@@ -192,6 +192,7 @@ public class MainActivity extends BaseActivity {
         initService();
         consumePendingPlaybackIntent();
         consumePendingNowPlayingIntent();
+        com.eddyizm.tempus.service.DownloadProgress.resume(this);
     }
 
     @Override

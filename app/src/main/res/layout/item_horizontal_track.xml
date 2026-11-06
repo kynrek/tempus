@@ -205,10 +205,22 @@
         tools:visibility="visible">
 
         <ImageView
+            android:id="@+id/download_done_icon"
             android:layout_width="18dp"
             android:layout_height="18dp"
             android:background="@drawable/ic_download"
             android:foreground="?android:attr/selectableItemBackgroundBorderless" />
+
+        <!-- While the song downloads: how far along, or spinning while it waits its turn. -->
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/download_progress"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:contentDescription="@string/download_in_progress"
+            android:visibility="gone"
+            app:indicatorSize="16dp"
+            app:trackCornerRadius="1dp"
+            app:trackThickness="2dp" />
     </FrameLayout>
 
     <!-- Add to queue: appends the track; playback carries on. -->
