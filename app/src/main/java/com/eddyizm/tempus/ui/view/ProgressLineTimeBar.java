@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Rect;
 import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -30,7 +29,6 @@ public class ProgressLineTimeBar extends View implements TimeBar {
     private final Paint thumb = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final CopyOnWriteArraySet<OnScrubListener> listeners = new CopyOnWriteArraySet<>();
     private final float density;
-    private final Rect visible = new Rect();
 
     private long duration = C.TIME_UNSET;
     private long position;
@@ -101,11 +99,6 @@ public class ProgressLineTimeBar extends View implements TimeBar {
         float x = xFor(shown);
         line.draw(canvas, left(), right(), cy, x, moving);
         if (isEnabled()) canvas.drawCircle(x, cy, (scrubbing ? 8 : 6) * density, thumb);
-        // Drift only while on screen: the full player's bar keeps getting drawn while the sheet is
-        // collapsed out of view. The next position update (a few times a second) restarts it.
-        if (moving && line.isWavy() && getGlobalVisibleRect(visible)) {
-            postInvalidateDelayed(Math.max(1, ProgressLine.nextWaveFrameAt() - SystemClock.uptimeMillis()));
-        }
     }
 
     @Override
