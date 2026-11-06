@@ -597,7 +597,7 @@
             android:key="sync_starred_artists_for_offline_use" />
 
         <ListPreference
-            app:defaultValue="60"
+            app:defaultValue="30"
             app:dialogTitle="@string/settings_song_preload_buffer"
             app:entries="@array/song_preload_buffer_titles"
             app:entryValues="@array/song_preload_buffer_values"

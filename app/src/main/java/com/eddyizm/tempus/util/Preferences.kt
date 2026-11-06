@@ -104,6 +104,7 @@ object Preferences {
     private const val SHARE = "share"
     private const val SCROBBLING = "scrobbling"
     private const val SONG_PRELOAD_BUFFER = "song_preload_buffer"
+    private const val SONG_PRELOAD_BUFFER_30 = "song_preload_buffer_default_30"
     private const val PRECACHE_TRACKS_COUNT = "precache_tracks_count"
     private const val PRECACHE_WIFI_ONLY = "precache_wifi_only"
     private const val SKIP_MIN_STAR_RATING = "skip_min_star_rating"
@@ -1059,9 +1060,20 @@ object Preferences {
         return App.getInstance().preferences.getBoolean(SCROBBLING, true)
     }
 
+    /**
+     * Seconds of a song the player reads ahead. 30 by default (was 60). The settings screen saves
+     * its default the first time it is shown, so a stored "60" is most likely the old default:
+     * it becomes "30" once. Any other choice is left alone.
+     */
     @JvmStatic
     fun getSongPreloadBuffer(): Int {
-        return App.getInstance().preferences.getString(SONG_PRELOAD_BUFFER, "60")!!.toInt()
+        val prefs = App.getInstance().preferences
+        if (!prefs.getBoolean(SONG_PRELOAD_BUFFER_30, false)) {
+            val edit = prefs.edit().putBoolean(SONG_PRELOAD_BUFFER_30, true)
+            if (prefs.getString(SONG_PRELOAD_BUFFER, null) == "60") edit.putString(SONG_PRELOAD_BUFFER, "30")
+            edit.apply()
+        }
+        return prefs.getString(SONG_PRELOAD_BUFFER, "30")!!.toInt()
     }
 
     @JvmStatic

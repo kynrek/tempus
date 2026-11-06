@@ -440,7 +440,7 @@ Tempus takes the values from your server and, if the server sends none, from the
 
 These are under **Settings → Data**.
 
-**Song preload buffer** sets how much music ahead of where you are Tempus downloads while streaming, 1 minute by default. Restart Tempus after changing it.
+**Song preload buffer** sets how much music ahead of where you are Tempus downloads while streaming, 30 seconds by default (a setting still on the old 1 minute default moves to 30 seconds once). Until you first press play after Tempus starts, it reads only 10 seconds of the song it reopens on. Restart Tempus after changing it.
 
 **Size of streaming cache** keeps the music you stream on the phone, so playing it again does not download it again. It is 256 MiB by default, and when it is full the music you played longest ago is removed first. The setting shows how much of it is in use. A new size takes effect after Tempus restarts, and **Disabled** turns the cache off.
 
