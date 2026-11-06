@@ -4,8 +4,6 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Rect;
-import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -24,17 +22,14 @@ import java.util.concurrent.CopyOnWriteArraySet;
  */
 @UnstableApi
 public class ProgressLineTimeBar extends View implements TimeBar {
-    private static final long MOVING_GRACE_MS = 1500;   // position updates this recent count as playing
 
     private final ProgressLine line;
     private final Paint thumb = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final CopyOnWriteArraySet<OnScrubListener> listeners = new CopyOnWriteArraySet<>();
     private final float density;
-    private final Rect visible = new Rect();
 
     private long duration = C.TIME_UNSET;
     private long position;
-    private long lastAdvanceAt;
     private boolean scrubbing;
     private long scrubPosition;
 
@@ -97,15 +92,9 @@ public class ProgressLineTimeBar extends View implements TimeBar {
     protected void onDraw(@NonNull Canvas canvas) {
         float cy = getPaddingTop() + (getHeight() - getPaddingTop() - getPaddingBottom()) / 2f;
         long shown = scrubbing ? scrubPosition : position;
-        boolean moving = !scrubbing && SystemClock.uptimeMillis() - lastAdvanceAt < MOVING_GRACE_MS;
         float x = xFor(shown);
-        line.draw(canvas, left(), right(), cy, x, moving);
+        line.draw(canvas, left(), right(), cy, x);
         if (isEnabled()) canvas.drawCircle(x, cy, (scrubbing ? 8 : 6) * density, thumb);
-        // Drift only while on screen: the full player's bar keeps getting drawn while the sheet is
-        // collapsed out of view. The next position update (a few times a second) restarts it.
-        if (moving && line.isWavy() && getGlobalVisibleRect(visible)) {
-            postInvalidateDelayed(Math.max(1, ProgressLine.nextWaveFrameAt() - SystemClock.uptimeMillis()));
-        }
     }
 
     @Override
@@ -152,7 +141,6 @@ public class ProgressLineTimeBar extends View implements TimeBar {
     @Override
     public void setPosition(long position) {
         if (position != this.position) {
-            if (position > this.position && position - this.position < 5000) lastAdvanceAt = SystemClock.uptimeMillis();
             this.position = position;
             invalidate();
         }

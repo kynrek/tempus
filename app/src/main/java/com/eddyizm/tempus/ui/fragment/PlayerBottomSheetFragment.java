@@ -873,7 +873,6 @@ public class PlayerBottomSheetFragment extends Fragment {
     /** Ticks once a second while playing; on pause, shows where it stopped instead of the last tick. */
     private void runProgressBarHandler(boolean isPlaying) {
         progressBarHandler.removeCallbacks(progressBarRunnable);
-        if (headerLine != null) headerLine.setPlaying(isPlaying);
         if (isPlaying) {
             progressBarHandler.post(progressBarRunnable);
         } else if (progressBarBrowser != null) {

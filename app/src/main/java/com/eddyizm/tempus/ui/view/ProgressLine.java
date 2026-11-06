@@ -4,13 +4,12 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.os.SystemClock;
 
 import com.eddyizm.tempus.util.Preferences;
 
 /**
- * The playback progress line: the played part as a gentle wave that drifts while playing (or a
- * straight line, per Settings), the rest as a thin straight line. Shared by the mini player and
+ * The playback progress line: the played part as a gentle wave, drawn still and redrawn only as the
+ * playhead moves (or a straight line, per Settings), the rest as a thin straight line. Shared by the mini player and
  * the full player so they always match.
  */
 public final class ProgressLine {
@@ -18,22 +17,6 @@ public final class ProgressLine {
     public static final String STRAIGHT = "straight";
 
     private static final float WAVELENGTH_DP = 32f;   // long, gentle waves
-    private static final long WAVE_PERIOD_MS = 2300;   // one wavelength of drift, ~14 dp a second
-    /**
-     * How often a drifting wave is redrawn: 10 a second. The drift is slow (one wavelength in 2.3 s,
-     * so about 1.4 dp a step), and on the car box every frame drawn is CPU and compositor time
-     * taken from navigation running beside it.
-     */
-    public static final long WAVE_FRAME_MS = 100;
-
-    /**
-     * When the next wave frame is due, on a clock shared by every line: the side panel's line and the
-     * player's time bar then redraw in the same display frame instead of in two.
-     */
-    public static long nextWaveFrameAt() {
-        long now = SystemClock.uptimeMillis();
-        return now - now % WAVE_FRAME_MS + WAVE_FRAME_MS;
-    }
 
     private final float density;
     private final Paint played = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -85,10 +68,10 @@ public final class ProgressLine {
     }
 
     /**
-     * Draws from {@code left} to {@code right} at {@code cy}, played up to {@code x}.
-     * {@code moving} drifts the wave (playing); otherwise it holds still.
+     * Draws from {@code left} to {@code right} at {@code cy}, played up to {@code x}. The wave is fixed
+     * to the line (it doesn't drift), so nothing redraws it between playhead moves.
      */
-    public void draw(Canvas canvas, float left, float right, float cy, float x, boolean moving) {
+    public void draw(Canvas canvas, float left, float right, float cy, float x) {
         x = Math.max(left, Math.min(right, x));
         if (x < right) canvas.drawLine(x, cy, right, cy, rest);
         if (x <= left) return;
@@ -97,7 +80,6 @@ public final class ProgressLine {
             return;
         }
         float wavelength = WAVELENGTH_DP * density;
-        float phase = moving ? (SystemClock.uptimeMillis() % WAVE_PERIOD_MS) / (float) WAVE_PERIOD_MS : 0f;
         float a = amplitude();
         path.rewind();
         float step = Math.max(1f, density * 1.5f);
@@ -106,7 +88,7 @@ public final class ProgressLine {
             if (px > x) px = x;
             // Eases in over the first half wave so the line starts on the centre.
             float ease = Math.min(1f, (px - left) / (wavelength / 2));
-            float y = cy + (float) (a * ease * Math.sin(2 * Math.PI * ((px - left) / wavelength - phase)));
+            float y = cy + (float) (a * ease * Math.sin(2 * Math.PI * ((px - left) / wavelength)));
             if (first) { path.moveTo(px, y); first = false; } else path.lineTo(px, y);
             if (px >= x) break;
         }
