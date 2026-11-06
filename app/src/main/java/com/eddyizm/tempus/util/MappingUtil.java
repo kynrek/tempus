@@ -3,7 +3,6 @@ package com.eddyizm.tempus.util;
 import android.content.ContentResolver;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.util.Log;
 import android.util.Base64;
 
@@ -502,26 +501,50 @@ public class MappingUtil {
         return child;
     }
 
-    // One second memo of the download table so a mapping burst does one query instead of
-    // a Thread spawn and join per song. A download finishing inside the window streams for it.
-    private static final long DOWNLOAD_CACHE_TTL_MS = 1000;
+    // The download table, kept in memory until Room reports a change to it. It used to be a one
+    // second memo: list rows (the audio quality badge), queue restores and every track change
+    // re-read all ~3,000 rows on a new thread, many times a start and on the main thread for the
+    // badge. Room's invalidation tracker clears it after any write to the table, so a download that
+    // finishes or is removed is seen as soon as Room reports it (a few ms after the commit).
     private static volatile Map<String, Download> cachedDownloads;
-    private static volatile long cachedDownloadsAt = -1;
+    private static final java.util.concurrent.atomic.AtomicInteger downloadsVersion = new java.util.concurrent.atomic.AtomicInteger();
+    private static final java.util.concurrent.atomic.AtomicBoolean watchStarted = new java.util.concurrent.atomic.AtomicBoolean();
+    /** Set once the invalidation observer is registered; only then may a read be kept. */
+    private static volatile boolean watching;
 
     public static Map<String, Download> getCachedDownloads() {
+        watchDownloads();
         Map<String, Download> cache = cachedDownloads;
-        long now = SystemClock.elapsedRealtime();
-        if (cache != null && cachedDownloadsAt >= 0 && now - cachedDownloadsAt < DOWNLOAD_CACHE_TTL_MS)
-            return cache;
+        if (cache != null) return cache;
 
+        // A change during the read makes this copy stale: use it, but don't keep it.
+        boolean keep = watching;
+        int version = downloadsVersion.get();
         Map<String, Download> map = new HashMap<>();
         for (Download download : new DownloadRepository().getAllDownloads()) {
             if (download.getId() != null)
                 map.put(download.getId(), download);
         }
-        cachedDownloads = map;
-        cachedDownloadsAt = now;
+        map = java.util.Collections.unmodifiableMap(map);
+        if (keep && downloadsVersion.get() == version) cachedDownloads = map;
         return map;
+    }
+
+    /** Registers (on a background thread, as Room requires) the observer that clears the copy. */
+    private static void watchDownloads() {
+        if (!watchStarted.compareAndSet(false, true)) return;
+        new Thread(() -> {
+            com.eddyizm.tempus.database.AppDatabase.getInstance().getInvalidationTracker().addObserver(
+                    new androidx.room.InvalidationTracker.Observer("download") {
+                        @Override
+                        public void onInvalidated(@androidx.annotation.NonNull java.util.Set<String> tables) {
+                            downloadsVersion.incrementAndGet();
+                            cachedDownloads = null;
+                        }
+                    });
+            downloadsVersion.incrementAndGet();   // anything read before this point isn't kept
+            watching = true;
+        }, "DownloadsWatch").start();
     }
 
     private static Uri getUri(Child media) {
