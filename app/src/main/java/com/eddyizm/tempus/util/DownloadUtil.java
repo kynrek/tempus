@@ -19,7 +19,12 @@ import androidx.media3.datasource.cache.Cache;
 import androidx.media3.datasource.cache.CacheDataSource;
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor;
 import androidx.media3.datasource.cache.NoOpCacheEvictor;
+import androidx.media3.common.C;
+import androidx.media3.datasource.cache.CacheDataSink;
+import androidx.media3.datasource.cache.IndexedSimpleCache;
 import androidx.media3.datasource.cache.SimpleCache;
+import androidx.media3.exoplayer.offline.DefaultDownloadIndex;
+import androidx.media3.exoplayer.offline.DefaultDownloaderFactory;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.RenderersFactory;
 import androidx.media3.exoplayer.offline.DownloadManager;
@@ -199,7 +204,13 @@ public final class DownloadUtil {
     private static synchronized Cache getDownloadCache(Context context) {
         if (downloadCache == null) {
             File downloadContentDirectory = new File(getDownloadDirectory(context), DOWNLOAD_CONTENT_DIRECTORY);
-            downloadCache = new SimpleCache(downloadContentDirectory, new NoOpCacheEvictor(), getDatabaseProvider(context));
+            // Not SimpleCache: that lists every downloaded piece at each start, which on the SD card
+            // (served through MediaProvider) took seconds of I/O and ~10 s of MediaProvider CPU.
+            downloadCache = new IndexedSimpleCache(
+                    downloadContentDirectory,
+                    new NoOpCacheEvictor(),
+                    getDatabaseProvider(context),
+                    new File(context.getNoBackupFilesDir(), "download_cache_layout.txt"));
         }
 
         return downloadCache;
@@ -221,13 +232,19 @@ public final class DownloadUtil {
 
     private static synchronized void ensureDownloadManagerInitialized(Context context) {
         if (downloadManager == null) {
+            Cache cache = getDownloadCache(context);
+            CacheDataSource.Factory writer = new CacheDataSource.Factory()
+                    .setCache(cache)
+                    // Paced on mobile data (Settings) so navigation still gets through.
+                    .setUpstreamDataSourceFactory(new ThrottledDataSource.Factory(context, getHttpDataSourceFactory()))
+                    // One file per song instead of a file per 5 MiB: fewer files on the card.
+                    .setCacheWriteDataSinkFactory(new CacheDataSink.Factory()
+                            .setCache(cache)
+                            .setFragmentSize(C.LENGTH_UNSET));
             downloadManager = new DownloadManager(
                     context,
-                    getDatabaseProvider(context),
-                    getDownloadCache(context),
-                    // Paced on mobile data (Settings) so navigation still gets through.
-                    new ThrottledDataSource.Factory(context, getHttpDataSourceFactory()),
-                    Executors.newFixedThreadPool(6)
+                    new DefaultDownloadIndex(getDatabaseProvider(context)),
+                    new DefaultDownloaderFactory(writer, Executors.newFixedThreadPool(6))
             );
 
             if (Preferences.isDownloadWifiOnly()) {
