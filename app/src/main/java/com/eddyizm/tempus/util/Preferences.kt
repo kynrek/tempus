@@ -58,6 +58,7 @@ object Preferences {
     private const val DOWNLOAD_WIFI_ONLY = "download_wifi_only"
     private const val DOWNLOAD_CELLULAR_LIMIT = "download_cellular_limit"
     private const val QUEUE_ADD_POSITION = "queue_add_position"
+    private const val QUEUE_SHOW_HISTORY = "queue_show_history"
     private const val CATALOGUE_VIEW = "catalogue_view"
     private const val PANEL_POSITION = "panel_position"
     private const val QUEUE_ENABLED = "queue_enabled"
@@ -735,6 +736,9 @@ object Preferences {
     }
 
     /** Where "Add to queue" puts songs: "bottom" (default), "top" (play next) or "ask". */
+    @JvmStatic
+    fun isQueueHistoryShown(): Boolean = App.getInstance().preferences.getBoolean(QUEUE_SHOW_HISTORY, false)
+
     @JvmStatic
     fun getQueueAddPosition(): String {
         return App.getInstance().preferences.getString(QUEUE_ADD_POSITION, "bottom") ?: "bottom"

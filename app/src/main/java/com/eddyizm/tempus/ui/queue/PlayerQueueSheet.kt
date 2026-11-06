@@ -193,13 +193,22 @@ fun PlayerQueueSheet(
         }
     }
 
+    // Settings > Show played songs in the queue (off by default): the list then starts at the song
+    // playing now. Fixed from the player's queue, not the drag-reordered copy, so it holds still
+    // while a row is being dragged; every index the list hands back is shifted by it.
+    val historyOffset = remember(queueSongs, currentIndex) {
+        if (!Preferences.isQueueHistoryShown() && currentIndex in queueSongs.indices) currentIndex else 0
+    }
+    val shownSongs = remember(currentSongs, historyOffset) { currentSongs.drop(historyOffset) }
+    val shownCurrentIndex = (effectiveCurrentIndex - historyOffset).let { if (it >= 0) it else -1 }
+
     // Full panel: no half-open state.
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     LaunchedEffect(sheetState) {
         onSheetReady { sheetState.hide() }
     }
     val lazyListState = rememberLazyListState(
-        initialFirstVisibleItemIndex = effectiveCurrentIndex.coerceAtLeast(0)
+        initialFirstVisibleItemIndex = shownCurrentIndex.coerceAtLeast(0)
     )
 
     val hapticFeedback = LocalHapticFeedback.current
@@ -215,14 +224,16 @@ fun PlayerQueueSheet(
         lazyListState = lazyListState,
         scrollThresholdPadding = reorderScrollPadding
     ) { from, to ->
+        val fromIndex = from.index + historyOffset
+        val toIndex = to.index + historyOffset
         if (dragStartIndex == null) {
-            dragStartIndex = from.index
+            dragStartIndex = fromIndex
         }
-        dragEndIndex = to.index
+        dragEndIndex = toIndex
         val current = currentRawSongs.toMutableList()
-        if (from.index in current.indices && to.index in current.indices) {
-            val item = current.removeAt(from.index)
-            current.add(to.index, item)
+        if (fromIndex in current.indices && toIndex in current.indices) {
+            val item = current.removeAt(fromIndex)
+            current.add(toIndex, item)
             reorderedChildList = current
         }
         hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
@@ -271,8 +282,8 @@ fun PlayerQueueSheet(
 
                 PlayerQueueList(
                     modifier = Modifier.weight(1f),
-                    items = currentSongs,
-                    currentIndex = effectiveCurrentIndex,
+                    items = shownSongs,
+                    currentIndex = shownCurrentIndex,
                     isPlaying = isPlaying,
                     lazyListState = lazyListState,
                     reorderableState = reorderableState,
@@ -294,11 +305,11 @@ fun PlayerQueueSheet(
                         }
                     },
                     onTrackClick = { clickedIdx, clickedChild ->
-                        onTrackClick(clickedIdx, clickedChild, currentRawSongs)
+                        onTrackClick(clickedIdx + historyOffset, clickedChild, currentRawSongs)
                     },
                     onRemoveTrack = { removeIndex, _ ->
                         reorderedChildList = null
-                        onRemoveTrack(removeIndex)
+                        onRemoveTrack(removeIndex + historyOffset)
                     },
                     onOpenAlbum = onOpenAlbum
                 )
