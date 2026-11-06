@@ -1,12 +1,10 @@
-package com.eddyizm.tempus.repository;
+package com.eddyizm.tempus.database.index;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.eddyizm.tempus.database.index.IndexedAlbum;
-import com.eddyizm.tempus.database.index.IndexedArtist;
 import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.subsonic.models.ArtistID3;
 import com.eddyizm.tempus.subsonic.models.Genre;
@@ -79,28 +77,58 @@ public class LibraryIndexTest {
         assertEquals("beatles", IndexedArtist.from(a).nameKey);
     }
 
-    @Test
-    public void sameAlbumsIgnoresOrderButNotChanges() {
-        List<AlbumID3> stored = Arrays.asList(album("1", "A", "X", 2000), album("2", "B", "Y", 2001));
-        List<AlbumID3> reordered = new ArrayList<>(Arrays.asList(album("2", "B", "Y", 2001), album("1", "A", "X", 2000)));
-        assertTrue(LibraryIndex.sameAlbums(stored, reordered));
+    private static List<IndexedAlbum> rows(AlbumID3... albums) {
+        List<IndexedAlbum> rows = new ArrayList<>();
+        for (AlbumID3 a : albums) rows.add(IndexedAlbum.from(a));
+        return rows;
+    }
 
-        reordered.get(0).setPlayCount(4L);
-        assertFalse(LibraryIndex.sameAlbums(stored, reordered));
-
-        assertFalse(LibraryIndex.sameAlbums(stored, Collections.singletonList(album("1", "A", "X", 2000))));
-        assertFalse(LibraryIndex.sameAlbums(stored, Arrays.asList(album("1", "A", "X", 2000), album("3", "B", "Y", 2001))));
-        assertFalse(LibraryIndex.sameAlbums(Collections.emptyList(), stored));
+    private static LibraryIndexDao.Changes sync(List<IndexedAlbum> stored, List<IndexedAlbum> fresh,
+                                                List<IndexedAlbum> written, List<String> deleted) {
+        return LibraryIndexDao.sync(stored, fresh, r -> r.id, written::addAll, deleted::addAll);
     }
 
     @Test
-    public void sameArtistsAndGenres() {
-        List<ArtistID3> a = Collections.singletonList(new ArtistID3("1", "Muse", "c", 9, null));
-        assertTrue(LibraryIndex.sameArtists(a, Collections.singletonList(new ArtistID3("1", "Muse", "c", 9, null))));
-        assertFalse(LibraryIndex.sameArtists(a, Collections.singletonList(new ArtistID3("1", "Muse", "c", 10, null))));
+    public void syncWritesNothingWhenOnlyTheOrderDiffers() {
+        List<IndexedAlbum> written = new ArrayList<>();
+        List<String> deleted = new ArrayList<>();
+        LibraryIndexDao.Changes c = sync(rows(album("1", "A", "X", 2000), album("2", "B", "Y", 2001)),
+                rows(album("2", "B", "Y", 2001), album("1", "A", "X", 2000)), written, deleted);
+        assertFalse(c.any());
+        assertTrue(written.isEmpty());
+        assertTrue(deleted.isEmpty());
+    }
 
-        List<Genre> g = Collections.singletonList(new Genre("Jazz", 10, 2));
-        assertTrue(LibraryIndex.sameGenres(g, Collections.singletonList(new Genre("Jazz", 10, 2))));
-        assertFalse(LibraryIndex.sameGenres(g, Collections.singletonList(new Genre("Jazz", 11, 2))));
+    @Test
+    public void syncWritesChangedAndNewRowsAndDeletesGoneOnes() {
+        AlbumID3 changed = album("1", "A", "X", 2000);
+        changed.setPlayCount(4L);
+        List<IndexedAlbum> written = new ArrayList<>();
+        List<String> deleted = new ArrayList<>();
+        LibraryIndexDao.Changes c = sync(rows(album("1", "A", "X", 2000), album("2", "B", "Y", 2001)),
+                rows(changed, album("3", "C", "Z", 2002)), written, deleted);
+        assertTrue(c.any());
+        assertEquals(2, c.written);
+        assertEquals(1, c.deleted);
+        assertEquals(Arrays.asList("1", "3"), Arrays.asList(written.get(0).id, written.get(1).id));
+        assertEquals(Collections.singletonList("2"), deleted);
+    }
+
+    @Test
+    public void syncCountsARowListedTwiceOnce() {
+        List<IndexedAlbum> written = new ArrayList<>();
+        List<String> deleted = new ArrayList<>();
+        LibraryIndexDao.Changes c = sync(rows(album("1", "A", "X", 2000)),
+                rows(album("1", "A", "X", 2000), album("1", "A", "X", 2000)), written, deleted);
+        assertFalse(c.any());
+        assertEquals(1, c.repeated);
+    }
+
+    @Test
+    public void genreRoundTrip() {
+        Genre back = IndexedGenre.from(new Genre("Jazz", 10, 2)).toGenre();
+        assertEquals("Jazz", back.getGenre());
+        assertEquals(10, back.getSongCount());
+        assertEquals(2, back.getAlbumCount());
     }
 }

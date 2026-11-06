@@ -64,9 +64,15 @@ public class ArtistCatalogueViewModel extends AndroidViewModel {
                             }
 
                             fromServer = true;
-                            if (!LibraryIndex.sameArtists(artistList.getValue(), artists)) {
+                            List<ArtistID3> shown = artistList.getValue();
+                            if (shown == null || shown.isEmpty()) {
                                 artistList.setValue(artists);
-                                LibraryIndex.storeArtists(artists);
+                                LibraryIndex.storeArtists(artists, null);
+                            } else {
+                                // Showing the index (or an earlier fetch): swap only if it changed.
+                                LibraryIndex.storeArtists(artists, changed -> {
+                                    if (changed) artistList.setValue(artists);
+                                });
                             }
                         }
                     }

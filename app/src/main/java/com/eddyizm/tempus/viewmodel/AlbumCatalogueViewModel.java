@@ -115,11 +115,16 @@ public class AlbumCatalogueViewModel extends AndroidViewModel {
 
                 status = Status.STOPPED;
                 loading.setValue(false);
-                if (showingComplete && !LibraryIndex.sameAlbums(albumList.getValue(), fetched)) {
-                    albumList.setValue(fetched);
+                List<AlbumID3> complete = fetched;
+                if (showingComplete) {
+                    // Compared with the index off the main thread; swapped only if it changed.
+                    LibraryIndex.storeAlbums(complete, changed -> {
+                        if (changed && load == generation) albumList.setValue(complete);
+                    });
+                } else {
+                    showingComplete = true;
+                    LibraryIndex.storeAlbums(complete, null);
                 }
-                showingComplete = true;
-                LibraryIndex.storeAlbums(fetched);
             }
         }, PAGE_SIZE, PAGE_SIZE * page++);
     }

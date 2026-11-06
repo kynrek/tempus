@@ -29,9 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -60,6 +58,7 @@ public final class LibraryIndex {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
     /** Touched only on the IO thread. */
+    private static Boolean disabled;
     private static LibraryIndexDatabase db;
     private static File dbFile;
 
@@ -91,8 +90,8 @@ public final class LibraryIndex {
             List<M> result = null;
             try {
                 long start = SystemClock.elapsedRealtime();
-                LibraryIndexDao dao = dao();
-                if (scope.equals(dao.meta(META_SCOPE))) {
+                LibraryIndexDao dao = disabled() ? null : dao();
+                if (dao != null && scope.equals(dao.meta(META_SCOPE))) {
                     List<R> rows = query.apply(dao);
                     if (!rows.isEmpty()) {
                         result = new ArrayList<>(rows.size());
@@ -111,17 +110,21 @@ public final class LibraryIndex {
 
     // ---- writing ---------------------------------------------------------------------------
 
-    /** Stores the artists the server just returned, a complete list. */
-    public static void storeArtists(@NonNull List<ArtistID3> artists) {
-        store("artists", artists, IndexedArtist::from, LibraryIndexDao::syncArtists, a -> a.getId() != null);
+    /**
+     * Stores the artists the server just returned, a complete list, then tells {@code changedOnMain}
+     * (if given) whether they differ from what the index held, which is what the screen shows when
+     * it came from the index. With the index switched off it is always told they differ.
+     */
+    public static void storeArtists(@NonNull List<ArtistID3> artists, @Nullable Consumer<Boolean> changedOnMain) {
+        store("artists", artists, IndexedArtist::from, LibraryIndexDao::syncArtists, a -> a.getId() != null, changedOnMain);
     }
 
-    public static void storeAlbums(@NonNull List<AlbumID3> albums) {
-        store("albums", albums, IndexedAlbum::from, LibraryIndexDao::syncAlbums, a -> a.getId() != null);
+    public static void storeAlbums(@NonNull List<AlbumID3> albums, @Nullable Consumer<Boolean> changedOnMain) {
+        store("albums", albums, IndexedAlbum::from, LibraryIndexDao::syncAlbums, a -> a.getId() != null, changedOnMain);
     }
 
-    public static void storeGenres(@NonNull List<Genre> genres) {
-        store("genres", genres, IndexedGenre::from, LibraryIndexDao::syncGenres, g -> g.getGenre() != null);
+    public static void storeGenres(@NonNull List<Genre> genres, @Nullable Consumer<Boolean> changedOnMain) {
+        store("genres", genres, IndexedGenre::from, LibraryIndexDao::syncGenres, g -> g.getGenre() != null, changedOnMain);
     }
 
     private interface Sync<R> {
@@ -129,11 +132,13 @@ public final class LibraryIndex {
     }
 
     private static <M, R> void store(String what, List<M> items, Function<M, R> toRow, Sync<R> sync,
-                                     java.util.function.Predicate<M> valid) {
+                                     java.util.function.Predicate<M> valid, @Nullable Consumer<Boolean> changedOnMain) {
         String scope = scope();
         List<M> copy = new ArrayList<>(items);
         IO.execute(() -> {
+            boolean changed = true;
             try {
+                if (disabled()) return;
                 long start = SystemClock.elapsedRealtime();
                 List<R> rows = new ArrayList<>(copy.size());
                 for (M item : copy) if (valid.test(item)) rows.add(toRow.apply(item));
@@ -148,43 +153,39 @@ public final class LibraryIndex {
                     dao.putMeta(new IndexMeta(what + "_synced", String.valueOf(System.currentTimeMillis())));
                     return c;
                 });
+                changed = changes.any();
                 Log.i(TAG, what + ": stored " + rows.size() + " (" + changes + ") in "
                         + (SystemClock.elapsedRealtime() - start) + " ms");
             } catch (RuntimeException e) {
                 Log.w(TAG, "Storing " + what + " failed", e);
+            } finally {
+                if (changedOnMain != null) {
+                    boolean result = changed;
+                    MAIN.post(() -> changedOnMain.accept(result));
+                }
             }
         });
     }
 
-    // ---- comparing -------------------------------------------------------------------------
-
-    /** Whether two artist lists hold the same artists with the same fields, in any order. */
-    public static boolean sameArtists(@Nullable List<ArtistID3> a, @Nullable List<ArtistID3> b) {
-        return same(a, b, IndexedArtist::from, r -> r.id);
-    }
-
-    public static boolean sameAlbums(@Nullable List<AlbumID3> a, @Nullable List<AlbumID3> b) {
-        return same(a, b, IndexedAlbum::from, r -> r.id);
-    }
-
-    public static boolean sameGenres(@Nullable List<Genre> a, @Nullable List<Genre> b) {
-        return same(a, b, IndexedGenre::from, r -> r.genre);
-    }
-
-    private static <M, R> boolean same(List<M> a, List<M> b, Function<M, R> toRow, Function<R, String> key) {
-        if (a == null || b == null) return a == b;
-        if (a.size() != b.size()) return false;
-        Map<String, R> rows = new HashMap<>(a.size() * 2);
-        for (M item : a) {
-            R row = toRow.apply(item);
-            rows.put(key.apply(row), row);
+    /**
+     * For measuring: {@code adb shell setprop debug.music.noindex 1} makes the next start behave as
+     * if there were no index (nothing read or stored); {@code setprop debug.music.noindex 0} undoes it.
+     * IO thread only; read once per process.
+     */
+    private static boolean disabled() {
+        if (disabled == null) {
+            disabled = false;
+            try {
+                Process p = new ProcessBuilder("getprop", "debug.music.noindex").start();
+                try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()))) {
+                    disabled = "1".equals(String.valueOf(r.readLine()).trim());
+                }
+                p.destroy();
+            } catch (IOException | RuntimeException ignored) {
+            }
+            if (disabled) Log.i(TAG, "Index switched off (debug.music.noindex=1)");
         }
-        if (rows.size() != a.size()) return false;
-        for (M item : b) {
-            R row = toRow.apply(item);
-            if (!row.equals(rows.get(key.apply(row)))) return false;
-        }
-        return true;
+        return disabled;
     }
 
     // ---- where it lives --------------------------------------------------------------------
