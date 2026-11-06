@@ -26,6 +26,15 @@ public final class ProgressLine {
      */
     public static final long WAVE_FRAME_MS = 100;
 
+    /**
+     * When the next wave frame is due, on a clock shared by every line: the side panel's line and the
+     * player's time bar then redraw in the same display frame instead of in two.
+     */
+    public static long nextWaveFrameAt() {
+        long now = SystemClock.uptimeMillis();
+        return now - now % WAVE_FRAME_MS + WAVE_FRAME_MS;
+    }
+
     private final float density;
     private final Paint played = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rest = new Paint(Paint.ANTI_ALIAS_FLAG);
