@@ -17,8 +17,9 @@ public final class ProgressLine {
     public static final String WAVY = "wavy";
     public static final String STRAIGHT = "straight";
 
-    private static final float WAVELENGTH_DP = 44f;
-    private static final long WAVE_PERIOD_MS = 3200;   // one wavelength of drift: about 14 dp a second
+    private static final float WAVELENGTH_DP = 33f;
+    // One wavelength of drift: about 14 dp a second, whatever the wavelength.
+    private static final long WAVE_PERIOD_MS = 2400;
     /**
      * How often a drifting wave is redrawn: 10 a second. The drift is slow (about 14 dp a second,
      * so about 1.4 dp a step), and on the car box every frame drawn is CPU and compositor time
@@ -41,7 +42,6 @@ public final class ProgressLine {
     private final Path path = new Path();
     private boolean wavy;
     private boolean waveWholeLine;
-    private float lineRight;
     private float stroke;
 
     public ProgressLine(Context context) {
@@ -77,7 +77,7 @@ public final class ProgressLine {
     }
 
     private float amplitude() {
-        return Math.max(2 * density, stroke * 0.9f);
+        return Math.max(1.5f * density, stroke * 0.6f);
     }
 
     /** Whether the unplayed part waves too while playing (the narrow side panel's line), not just the played part. */
@@ -91,7 +91,6 @@ public final class ProgressLine {
      */
     public void draw(Canvas canvas, float left, float right, float cy, float x, boolean moving) {
         x = Math.max(left, Math.min(right, x));
-        lineRight = right;
         boolean waveRest = wavy && waveWholeLine && moving;
         if (x < right) {
             if (waveRest) canvas.drawPath(wave(left, x, right, cy, moving), rest);
@@ -107,9 +106,8 @@ public final class ProgressLine {
 
     /** The wave between {@code from} and {@code to}, in phase with one starting at {@code left}. */
     private Path wave(float left, float from, float to, float cy, boolean moving) {
-        // A narrow line (the side panel's) gets shorter waves, or the first part of a song would
-        // show no wave at all: at most a fifth of the line, but not under 16 dp.
-        float wavelength = Math.min(WAVELENGTH_DP * density, Math.max(16 * density, (lineRight - left) / 5));
+        // The same waves on every line, the side panel's included, so they all look alike.
+        float wavelength = WAVELENGTH_DP * density;
         float phase = moving ? (SystemClock.uptimeMillis() % WAVE_PERIOD_MS) / (float) WAVE_PERIOD_MS : 0f;
         float a = amplitude();
         path.rewind();
