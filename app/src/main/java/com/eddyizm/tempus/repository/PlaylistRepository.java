@@ -130,9 +130,37 @@ public class PlaylistRepository {
                     }
                 }
             }
-            playlistDao.insertAll(playlists);
-            android.util.Log.d("PlaylistRepository", "Cached " + playlists.size() + " playlists to local DB.");
+            // Write only new or changed playlists. Several screens ask for the list at start-up and
+            // each answer used to rewrite every row, which made every playlist screen reload; a
+            // rewrite also reset the locally kept "last played" to 0.
+            java.util.Map<String, Playlist> byId = new java.util.HashMap<>();
+            if (cachedPlaylists != null) for (Playlist cached : cachedPlaylists) byId.put(cached.getId(), cached);
+            List<Playlist> changed = new java.util.ArrayList<>();
+            for (Playlist remote : playlists) {
+                Playlist cached = byId.get(remote.getId());
+                if (cached != null) {
+                    if (sameServerFields(cached, remote)) continue;
+                    remote.setLastPlayed(cached.getLastPlayed());
+                }
+                changed.add(remote);
+            }
+            if (!changed.isEmpty()) playlistDao.insertAll(changed);
+            android.util.Log.d("PlaylistRepository", "Cached playlists: " + changed.size() + " of " + playlists.size() + " new or changed.");
         }).start();
+    }
+
+    /** Whether a cached playlist row already holds everything the server sent for it. */
+    private static boolean sameServerFields(Playlist a, Playlist b) {
+        return java.util.Objects.equals(a.getName(), b.getName())
+                && a.getDuration() == b.getDuration()
+                && java.util.Objects.equals(a.getCoverArtId(), b.getCoverArtId())
+                && java.util.Objects.equals(a.getComment(), b.getComment())
+                && java.util.Objects.equals(a.getOwner(), b.getOwner())
+                && java.util.Objects.equals(a.isUniversal(), b.isUniversal())
+                && a.getSongCount() == b.getSongCount()
+                && java.util.Objects.equals(a.getCreated(), b.getCreated())
+                && java.util.Objects.equals(a.getChanged(), b.getChanged())
+                && java.util.Objects.equals(a.getAllowedUsers(), b.getAllowedUsers());
     }
 
     public MutableLiveData<List<Playlist>> getPlaylists(boolean random, int size) {
