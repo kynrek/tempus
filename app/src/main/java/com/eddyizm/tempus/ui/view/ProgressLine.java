@@ -17,9 +17,9 @@ public final class ProgressLine {
     public static final String WAVY = "wavy";
     public static final String STRAIGHT = "straight";
 
-    private static final float WAVELENGTH_DP = 33f;
+    private static final float WAVELENGTH_DP = 44f;
     // One wavelength of drift: about 14 dp a second, whatever the wavelength.
-    private static final long WAVE_PERIOD_MS = 2400;
+    private static final long WAVE_PERIOD_MS = 3200;
     /**
      * How often a drifting wave is redrawn: 10 a second. The drift is slow (about 14 dp a second,
      * so about 1.4 dp a step), and on the car box every frame drawn is CPU and compositor time
