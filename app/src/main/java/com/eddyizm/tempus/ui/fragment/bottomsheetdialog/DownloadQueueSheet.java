@@ -141,6 +141,7 @@ public class DownloadQueueSheet extends CarBottomSheetDialogFragment {
                 : getString(R.string.download_queue_title_count, rows.size()));
         bind.downloadQueueEmpty.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
         bind.downloadQueueActions.setVisibility(rows.isEmpty() ? View.GONE : View.VISIBLE);
+        bind.downloadQueueHint.setVisibility(rows.isEmpty() ? View.GONE : View.VISIBLE);
         renderActions();
     }
 
