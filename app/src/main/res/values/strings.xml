@@ -383,6 +383,9 @@
     <string name="progress_style_straight">Straight</string>
     <string name="settings_progress_thickness">Progress line thickness</string>
     <string name="settings_progress_animate">Animate the wave</string>
+    <string name="settings_color_progress_line">Progress line</string>
+    <string name="settings_color_progress_circle">Progress line circle</string>
+    <string name="settings_color_progress_circle_summary">Theme default: the same as the line</string>
     <string name="settings_queue_show_history">Show played songs in the queue</string>
     <string name="settings_queue_show_history_summary">Off: the queue starts at the song playing now</string>
     <string name="settings_progress_animate_summary">The wavy line drifts while playing. Off: drawn still, growing as the song plays.</string>

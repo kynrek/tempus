@@ -562,6 +562,34 @@
         <item>teal</item>
         <item>sky</item>
     </string-array>
+    <string-array name="color_accent_titles">
+        <item>Theme default</item>
+        <item>Teal</item>
+        <item>Green</item>
+        <item>Lime</item>
+        <item>Sky</item>
+        <item>Blue</item>
+        <item>Purple</item>
+        <item>Pink</item>
+        <item>Red</item>
+        <item>Orange</item>
+        <item>Amber</item>
+        <item>White</item>
+    </string-array>
+    <string-array name="color_accent_values">
+        <item>default</item>
+        <item>teal</item>
+        <item>green</item>
+        <item>lime</item>
+        <item>sky</item>
+        <item>blue</item>
+        <item>purple</item>
+        <item>pink</item>
+        <item>red</item>
+        <item>orange</item>
+        <item>amber</item>
+        <item>white</item>
+    </string-array>
     <string-array name="offline_cover_sizes_titles">
         <item>@string/offline_cover_sizes_all</item>
         <item>@string/offline_cover_sizes_small</item>

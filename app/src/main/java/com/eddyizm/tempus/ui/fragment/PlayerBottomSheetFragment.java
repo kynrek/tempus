@@ -233,6 +233,9 @@ public class PlayerBottomSheetFragment extends Fragment {
         return view;
     }
 
+    private int headerCircleColor;
+    private int headerRestColor;
+
     @Override
     public void onResume() {
         super.onResume();
@@ -265,11 +268,15 @@ public class PlayerBottomSheetFragment extends Fragment {
                     bind.playerHeaderLayout.playerHeaderBookmarkMediaButton}) {
                 b.setBackgroundTintList(tint);
             }
-            if (headerLine != null) {
-                android.util.TypedValue tv = new android.util.TypedValue();
-                requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true);
-                headerLine.setColors(tv.data, (text & 0x00FFFFFF) | 0x55000000);
-            }
+            if (headerLine != null) headerRestColor = (text & 0x00FFFFFF) | 0x55000000;
+        }
+        // Settings > Colors > Progress line / Progress line circle (theme colour by default).
+        if (headerLine != null) {
+            android.util.TypedValue tv = new android.util.TypedValue();
+            requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true);
+            headerLine.setColors(AppColors.progressLine(tv.data), headerRestColor);
+            headerCircleColor = AppColors.progressCircle(tv.data);
+            if (!scrubbing) bind.playerHeaderLayout.playerHeaderSeekBar.setThumb(positionThumb(headerCircleColor, 12));
         }
     }
 
@@ -634,15 +641,18 @@ public class PlayerBottomSheetFragment extends Fragment {
         android.widget.SeekBar bar = bind.playerHeaderLayout.playerHeaderSeekBar;
         android.util.TypedValue tv = new android.util.TypedValue();
         requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true);
-        int played = tv.data;
+        int themePlayed = tv.data;
+        int played = AppColors.progressLine(themePlayed);
+        headerCircleColor = AppColors.progressCircle(themePlayed);
         requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, tv, true);
         int rest = (tv.data & 0x00FFFFFF) | 0x66000000;
+        headerRestColor = rest;
         headerLine = new ProgressLineDrawable(requireContext(), played, rest);
         int progress = bar.getProgress();
         bar.setProgressDrawable(headerLine);
         bar.setProgress(progress);
         // A circle marks the position; drag it (or anywhere on the line) to scrub. It grows while held.
-        bar.setThumb(positionThumb(played, 12));
+        bar.setThumb(positionThumb(headerCircleColor, 12));
         bar.setSplitTrack(false);   // the line runs under the circle, no gap around it
         bind.playerHeaderLayout.playerHeaderSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -653,13 +663,13 @@ public class PlayerBottomSheetFragment extends Fragment {
             @Override
             public void onStartTrackingTouch(android.widget.SeekBar seekBar) {
                 scrubbing = true;
-                seekBar.setThumb(positionThumb(played, 18));
+                seekBar.setThumb(positionThumb(headerCircleColor, 18));
             }
 
             @Override
             public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
                 scrubbing = false;
-                seekBar.setThumb(positionThumb(played, 12));
+                seekBar.setThumb(positionThumb(headerCircleColor, 12));
                 long positionMs = seekBar.getProgress() * 1000L;
                 if (com.eddyizm.tempus.lan.LanRemoteSession.isActive() || mediaBrowserListenableFuture == null) return;
                 mediaBrowserListenableFuture.addListener(() -> {

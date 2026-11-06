@@ -111,6 +111,24 @@
             app:useSimpleSummaryProvider="true" />
 
         <ListPreference
+            app:defaultValue="default"
+            app:dialogTitle="@string/settings_color_progress_line"
+            app:entries="@array/color_accent_titles"
+            app:entryValues="@array/color_accent_values"
+            app:key="color_progress_line"
+            app:title="@string/settings_color_progress_line"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="default"
+            app:dialogTitle="@string/settings_color_progress_circle"
+            app:entries="@array/color_accent_titles"
+            app:entryValues="@array/color_accent_values"
+            app:key="color_progress_circle"
+            app:summary="@string/settings_color_progress_circle_summary"
+            app:title="@string/settings_color_progress_circle" />
+
+        <ListPreference
             app:defaultValue="wavy"
             app:dialogTitle="@string/settings_progress_style"
             app:entries="@array/progress_style_titles"
