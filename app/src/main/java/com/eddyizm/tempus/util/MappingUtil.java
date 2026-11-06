@@ -494,6 +494,7 @@ public class MappingUtil {
     private static final java.util.concurrent.atomic.AtomicBoolean watchStarted = new java.util.concurrent.atomic.AtomicBoolean();
     /** Set once the invalidation observer is registered; only then may a read be kept. */
     private static volatile boolean watching;
+    private static final java.util.concurrent.CountDownLatch watchRegistered = new java.util.concurrent.CountDownLatch(1);
 
     private static final Object DOWNLOADS_READ = new Object();
 
@@ -507,6 +508,12 @@ public class MappingUtil {
             cache = cachedDownloads;
             if (cache != null) return cache;
 
+            // The first read waits (briefly) for the observer, so that it can be kept.
+            try {
+                watchRegistered.await(500, java.util.concurrent.TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             // A change during the read makes this copy stale: use it, but don't keep it.
             boolean keep = watching;
             int version = downloadsVersion.get();
@@ -537,6 +544,7 @@ public class MappingUtil {
                     });
             downloadsVersion.incrementAndGet();   // anything read before this point isn't kept
             watching = true;
+            watchRegistered.countDown();
         }, "DownloadsWatch").start();
     }
 
