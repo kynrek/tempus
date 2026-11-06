@@ -298,6 +298,10 @@ The wavy progress line drifts gently while a song plays. Turn off **Settings > U
 
 **Downloaded only**: the download button in the toolbar switches the library to music on the phone. Artists, Albums, Genres, Favorites, Recent, album and artist pages (Top songs included) and playlist pages then list only downloaded songs. Tap it again to see everything.
 
+**Albums**: the album page's toolbar has a star (favourite) and a download button for the whole album. On an artist's page each album has the same two under its year and track count. Downloading takes every track, even while Downloaded only hides some of them.
+
+**Default music app**: the app opens audio files from other apps (file managers, chats), so it can be picked under Settings > Apps > Manage apps > ⋮ > Other settings > Default apps > Music on Xiaomi phones.
+
 A separate *phone* build (`./gradlew assembleDegoogledPhone`) installs as **Music Phone** next to the regular build.
 
 [Back to top](#table-of-contents)

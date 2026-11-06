@@ -895,6 +895,9 @@
         <item quantity="one">%d artist to sync</item>
         <item quantity="other">%d artists to sync</item>
     </plurals>
+    <string name="album_page_download_button">Download album</string>
+    <string name="album_favorite_add">Add album to favorites</string>
+    <string name="album_favorite_remove">Remove album from favorites</string>
     <plurals name="songs_download_started">
         <item quantity="one">Downloading %d song</item>
         <item quantity="other">Downloading %d songs</item>
