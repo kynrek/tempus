@@ -316,6 +316,7 @@
     <string name="player_playback_speed">%1$.2fx</string>
     <string name="player_collapse">Back to library</string>
     <string name="player_library_home">Library home</string>
+    <string name="player_android_home">Home screen</string>
     <string name="playback_speed_dialog_title">Playback Speed</string>
     <string name="playback_speed_decrease_button_content_description">Decrease playback speed</string>
     <string name="playback_speed_increase_button_content_description">Increase playback speed</string>
@@ -351,6 +352,8 @@
     <string name="settings_logout_confirm">Sign out of this server? Your downloads stay on the device.</string>
     <string name="settings_catalogue_view">Albums and Artists view</string>
     <string name="settings_panel_position">Control panel position</string>
+    <string name="settings_panel_home_button">Home button in the control panel</string>
+    <string name="settings_panel_home_button_summary">A house button at the foot of the side control panel goes to the Android home screen.</string>
     <string name="panel_position_bottom">Bottom</string>
     <string name="panel_position_left">Left side (more height for art)</string>
     <string name="panel_position_right">Right side (more height for art)</string>

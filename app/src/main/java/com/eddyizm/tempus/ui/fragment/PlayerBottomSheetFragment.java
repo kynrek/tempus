@@ -99,6 +99,7 @@ public class PlayerBottomSheetFragment extends Fragment {
     }
 
     @Nullable private android.widget.ImageButton libraryHomeButton;
+    @Nullable private android.widget.ImageButton androidHomeButton;   // Settings > Home button in the control panel
     private int headerCircleColor;
     private int headerRestColor;
 
@@ -112,9 +113,9 @@ public class PlayerBottomSheetFragment extends Fragment {
     /** Settings > Colors: the control panel's background and text (and its icons and line). */
     private void applyPanelColors() {
         if (bind == null) return;
-        if (libraryHomeButton != null) {
-            Integer panelText = AppColors.color(AppColors.PANEL_TEXT);
-            libraryHomeButton.setImageTintList(android.content.res.ColorStateList.valueOf(
+        Integer panelText = AppColors.color(AppColors.PANEL_TEXT);
+        for (android.widget.ImageButton b : new android.widget.ImageButton[]{libraryHomeButton, androidHomeButton}) {
+            if (b != null) b.setImageTintList(android.content.res.ColorStateList.valueOf(
                     panelText != null ? panelText : android.graphics.Color.WHITE));
         }
         View root = bind.playerHeaderLayout.getRoot();
@@ -503,6 +504,7 @@ public class PlayerBottomSheetFragment extends Fragment {
         androidx.constraintlayout.widget.ConstraintLayout root =
                 (androidx.constraintlayout.widget.ConstraintLayout) bind.playerHeaderLayout.getRoot();
         addLibraryHomeButton(root);
+        if (Preferences.isPanelHomeButtonShown()) addAndroidHomeButton(root);
         ViewGroup.LayoutParams rootLp = root.getLayoutParams();
         rootLp.height = ViewGroup.LayoutParams.MATCH_PARENT;
         root.setLayoutParams(rootLp);
@@ -607,13 +609,21 @@ public class PlayerBottomSheetFragment extends Fragment {
             if (all[i] != h.placeholderLeftView.getId() && all[i] != h.placeholderRightView.getId()) set.setVisibility(all[i], visibility[i]);
         }
 
-        // The record button, at the foot of the column.
+        // The record button, at the foot of the column; with the house button (Android home) beside it.
         int home = libraryHomeButton.getId();
-        set.constrainWidth(home, Math.round(56 * d));
-        set.constrainHeight(home, Math.round(56 * d));
-        set.connect(home, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, p, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, Math.round(8 * d));
-        set.connect(home, androidx.constraintlayout.widget.ConstraintSet.START, p, androidx.constraintlayout.widget.ConstraintSet.START);
-        set.connect(home, androidx.constraintlayout.widget.ConstraintSet.END, p, androidx.constraintlayout.widget.ConstraintSet.END);
+        int[] foot = androidHomeButton != null ? new int[]{androidHomeButton.getId(), home} : new int[]{home};
+        for (int id : foot) {
+            set.constrainWidth(id, Math.round(56 * d));
+            set.constrainHeight(id, Math.round(56 * d));
+            set.connect(id, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, p, androidx.constraintlayout.widget.ConstraintSet.BOTTOM, Math.round(8 * d));
+        }
+        if (foot.length == 1) {
+            set.connect(home, androidx.constraintlayout.widget.ConstraintSet.START, p, androidx.constraintlayout.widget.ConstraintSet.START);
+            set.connect(home, androidx.constraintlayout.widget.ConstraintSet.END, p, androidx.constraintlayout.widget.ConstraintSet.END);
+        } else {
+            set.createHorizontalChain(p, androidx.constraintlayout.widget.ConstraintSet.LEFT, p, androidx.constraintlayout.widget.ConstraintSet.RIGHT,
+                    foot, null, androidx.constraintlayout.widget.ConstraintSet.CHAIN_SPREAD);
+        }
         set.applyTo(root);
     }
 
@@ -636,6 +646,34 @@ public class PlayerBottomSheetFragment extends Fragment {
         button.setOnClickListener(v -> ((MainActivity) requireActivity()).goToLibraryHome());
         column.addView(button);
         libraryHomeButton = button;
+    }
+
+    /**
+     * Side panel, Settings > Home button in the control panel (on by default): a house that goes to the Android
+     * home screen, as the Home button or gesture does.
+     */
+    private void addAndroidHomeButton(ViewGroup column) {
+        android.widget.ImageButton button = new android.widget.ImageButton(requireContext());
+        button.setId(View.generateViewId());
+        button.setImageResource(R.drawable.ic_home);
+        button.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        int pad = Math.round(12 * getResources().getDisplayMetrics().density);
+        button.setPadding(pad, pad, pad, pad);
+        android.util.TypedValue tv = new android.util.TypedValue();
+        requireContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv, true);
+        button.setBackgroundResource(tv.resourceId);
+        button.setContentDescription(getString(R.string.player_android_home));
+        button.setImageTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE));
+        button.setOnClickListener(v -> {
+            try {
+                startActivity(new android.content.Intent(android.content.Intent.ACTION_MAIN)
+                        .addCategory(android.content.Intent.CATEGORY_HOME)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (android.content.ActivityNotFoundException ignored) {
+            }
+        });
+        column.addView(button);
+        androidHomeButton = button;
     }
 
     /** The side panel line's position circle, {@code sizeDp} across. */

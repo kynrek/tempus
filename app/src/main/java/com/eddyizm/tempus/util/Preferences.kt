@@ -62,6 +62,7 @@ object Preferences {
     private const val CATALOGUE_VIEW = "catalogue_view"
     private const val LIBRARY_INDEX_LOCATION = "library_index_location"
     private const val PANEL_POSITION = "panel_position"
+    private const val PANEL_HOME_BUTTON = "panel_home_button"
     private const val QUEUE_ENABLED = "queue_enabled"
     private const val ARTIST_TOP_SONGS_MODE = "artist_top_songs_mode"
     private const val ARTIST_ALBUMS_MODE = "artist_albums_mode"
@@ -716,6 +717,10 @@ object Preferences {
     /** Where the control panel (mini player) sits: "bottom" (default), "left" or "right" (a side column). */
     @JvmStatic
     fun getPanelPosition(): String = App.getInstance().preferences.getString(PANEL_POSITION, "bottom") ?: "bottom"
+
+    /** A house button at the foot of the side control panel that goes to the Android home screen (default on). */
+    @JvmStatic
+    fun isPanelHomeButtonShown(): Boolean = App.getInstance().preferences.getBoolean(PANEL_HOME_BUTTON, true)
 
     /** Playback progress line: "wavy" (default) or "straight". */
     @JvmStatic

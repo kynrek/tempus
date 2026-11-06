@@ -161,6 +161,12 @@
             app:title="@string/settings_panel_position"
             app:useSimpleSummaryProvider="true" />
 
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="panel_home_button"
+            android:summary="@string/settings_panel_home_button_summary"
+            android:title="@string/settings_panel_home_button" />
+
         <ListPreference
             app:defaultValue="open"
             app:dialogTitle="@string/settings_artist_top_songs"
