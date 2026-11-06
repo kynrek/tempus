@@ -66,6 +66,7 @@ import com.eddyizm.tempus.util.AppColors;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.AlbumArtistBackfill;
 import com.eddyizm.tempus.util.DownloadRepair;
+import com.eddyizm.tempus.util.FirstFrame;
 import com.eddyizm.tempus.repository.PlaylistRepository;
 import com.eddyizm.tempus.util.ConnectionUtil;
 import com.eddyizm.tempus.util.Preferences;
@@ -180,6 +181,7 @@ public class MainActivity extends BaseActivity {
 
         DownloadRepair.repairIfNeeded(this);
         AlbumArtistBackfill.backfillIfNeeded();
+        FirstFrame.watch(this);
 
         maybeSchedulePlaybackIntent(getIntent());
         setupLoginActivity();

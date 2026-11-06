@@ -20,6 +20,7 @@ import com.eddyizm.tempus.database.index.LibraryIndexDatabase;
 import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.subsonic.models.ArtistID3;
 import com.eddyizm.tempus.subsonic.models.Genre;
+import com.eddyizm.tempus.util.FirstFrame;
 import com.eddyizm.tempus.util.Preferences;
 
 import java.io.File;
@@ -104,7 +105,8 @@ public final class LibraryIndex {
                 Log.w(TAG, "Reading " + what + " failed", e);
             }
             List<M> out = result;
-            MAIN.post(() -> onMain.accept(out));
+            // Laid out after the window's first frame, one list per frame (see FirstFrame).
+            MAIN.post(() -> FirstFrame.run(() -> onMain.accept(out)));
         });
     }
 
