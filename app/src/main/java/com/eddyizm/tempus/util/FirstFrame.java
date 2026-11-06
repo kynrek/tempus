@@ -14,9 +14,8 @@ import java.util.ArrayDeque;
 
 /**
  * Holds work that can wait until the app has drawn its first frame, then runs it one item per
- * frame. The library index uses it so that lists read from disk during start-up are laid out
- * after the window is on screen, not inside the first frame, and the visible tab before the
- * pages beside it.
+ * frame. The library index uses it so that its database work, and the lists it hands to the
+ * screens, stay out of the start-up window and the first frame.
  */
 @MainThread
 public final class FirstFrame {
