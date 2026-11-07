@@ -23,6 +23,9 @@ public class DownloadHorizontalAdapterTest {
 
     @Before
     public void setUp() {
+        // setItems works on a thread pool and shows the result on the main thread; here, in place.
+        DownloadHorizontalAdapter.listWork = Runnable::run;
+        DownloadHorizontalAdapter.listResult = Runnable::run;
         adapter = spy(new DownloadHorizontalAdapter(mock(ClickCallback.class)));
         doNothing().when(adapter).notifyDataSetChanged();
     }

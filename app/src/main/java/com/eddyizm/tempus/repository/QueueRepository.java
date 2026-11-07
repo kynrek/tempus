@@ -35,7 +35,7 @@ import retrofit2.Response;
 
 public class QueueRepository {
     private static final String TAG = "QueueRepository";
-    private static final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
+    private static final ExecutorService dbExecutor = AppExecutors.backgroundSerial("queue-writes");
 
     private final QueueDao queueDao = AppDatabase.getInstance().queueDao();
 

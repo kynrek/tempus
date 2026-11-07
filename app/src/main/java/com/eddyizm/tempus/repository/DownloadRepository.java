@@ -1,5 +1,7 @@
 package com.eddyizm.tempus.repository;
 
+import com.eddyizm.tempus.util.AppExecutors;
+
 import androidx.lifecycle.LiveData;
 
 import com.eddyizm.tempus.database.AppDatabase;
@@ -14,7 +16,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class DownloadRepository {
-    private static final ExecutorService DOWNLOAD_WRITE_EXECUTOR = Executors.newSingleThreadExecutor();
+    private static final ExecutorService DOWNLOAD_WRITE_EXECUTOR = AppExecutors.backgroundSerial("download-writes");
 
     private final DownloadDao downloadDao = AppDatabase.getInstance().downloadDao();
 

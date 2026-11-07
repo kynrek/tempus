@@ -50,6 +50,9 @@ public class DownloadHorizontalAdapter extends RecyclerView.Adapter<DownloadHori
     private Map<String, Integer> counts = Collections.emptyMap();
     private int generation;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    /** Where the list is worked out, and where the result is shown; tests run both in place. */
+    static java.util.concurrent.Executor listWork = command -> AppExecutors.compute().execute(command);
+    static java.util.concurrent.Executor listResult = command -> MAIN.post(command);
 
     private final java.util.Map<String, String> playlistCoverCache = new java.util.HashMap<>();
     private final java.util.Set<String> playlistCoverLookups = new java.util.HashSet<>();
@@ -111,7 +114,7 @@ public class DownloadHorizontalAdapter extends RecyclerView.Adapter<DownloadHori
         final List<Child> input = songs != null ? new ArrayList<>(songs) : new ArrayList<>();
         final int gen = ++generation;
 
-        AppExecutors.compute().execute(() -> {
+        listWork.execute(() -> {
             List<Child> result = groupSong(newView, filterKey, filterValue, input);
             if (!Constants.DOWNLOAD_TYPE_TRACK.equals(newView)) {
                 result = sortByDisplayLabel(newView, result);
@@ -120,7 +123,7 @@ public class DownloadHorizontalAdapter extends RecyclerView.Adapter<DownloadHori
             Map<String, Integer> counts = countsFor(newView, input);
             final List<Child> grouping = result;
 
-            MAIN.post(() -> {
+            listResult.execute(() -> {
                 if (gen != generation) return;
                 this.view = newView;
                 this.filterKey = filterKey;

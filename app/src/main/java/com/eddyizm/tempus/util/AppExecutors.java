@@ -47,6 +47,19 @@ public final class AppExecutors {
         return Math.max(1, Math.min(4, CORES - 1));
     }
 
+    /**
+     * A single ordered thread of its own (writes that must stay in order), at background priority:
+     * nobody waits on these, so they should not take a fast core from the screen or the audio.
+     */
+    public static ExecutorService backgroundSerial(String name) {
+        return java.util.concurrent.Executors.newSingleThreadExecutor(factory(name, Process.THREAD_PRIORITY_BACKGROUND));
+    }
+
+    /** A pool of its own at background priority. */
+    public static ExecutorService backgroundPool(String name, int threads) {
+        return java.util.concurrent.Executors.newFixedThreadPool(threads, factory(name, Process.THREAD_PRIORITY_BACKGROUND));
+    }
+
     private static ExecutorService pool(String name, int threads, int priority) {
         ThreadPoolExecutor executor = new ThreadPoolExecutor(
                 threads, threads, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), factory(name, priority));
