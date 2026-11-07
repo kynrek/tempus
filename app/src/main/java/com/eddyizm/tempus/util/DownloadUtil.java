@@ -367,27 +367,30 @@ public final class DownloadUtil {
             List<Child> missing = byId.values().stream()
                     .filter(song -> !manager.isDownloaded(song.getId()) && !manager.isRequested(song.getId()))
                     .collect(Collectors.toList());
-            int sent = manager.download(
-                    MappingUtil.mapDownloads(missing),
-                    missing.stream().map(child -> {
-                        Download toDownload = new Download(child);
-                        toDownload.setPlaylistId(playlistId);
-                        toDownload.setPlaylistName(playlistName);
-                        return toDownload;
-                    }).collect(Collectors.toList())
-            );
-            onQueued.accept(sent == 0 && !missing.isEmpty() ? -1 : sent);
+            // Mapped and sent on a worker: a kept playlist can be hundreds of songs.
+            AppExecutors.io().execute(() -> {
+                int sent = manager.download(
+                        MappingUtil.mapDownloads(missing),
+                        missing.stream().map(child -> {
+                            Download toDownload = new Download(child);
+                            toDownload.setPlaylistId(playlistId);
+                            toDownload.setPlaylistName(playlistName);
+                            return toDownload;
+                        }).collect(Collectors.toList())
+                );
+                main.post(() -> onQueued.accept(sent == 0 && !missing.isEmpty() ? -1 : sent));
+            });
         } else {
             // The folder index only builds off main. While a rebuild runs it is empty and every track reads as
             // missing, and the writer's own size check is what keeps a file already there from being written again.
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 ExternalAudioReader.ensureCache();
                 List<Child> missing = byId.values().stream()
                         .filter(song -> ExternalAudioReader.getUri(song) == null && !ExternalAudioWriter.isPending(song.getId()))
                         .collect(Collectors.toList());
                 missing.forEach(child -> ExternalAudioWriter.downloadToUserDirectory(appContext, child, playlistId, playlistName));
                 main.post(() -> onQueued.accept(missing.size()));
-            }).start();
+            });
         }
     }
 
