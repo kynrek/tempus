@@ -1,5 +1,7 @@
 package com.eddyizm.tempus.repository;
 
+import com.eddyizm.tempus.util.AppExecutors;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -54,7 +56,7 @@ public class PlaylistRepository {
     }
 
     private void handleMissingPlaylist(String id, Runnable onMissing) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             // Must delete dependent records first to avoid foreign key constraint violations
             playlistSongDao.deleteForPlaylist(id);
             pinnedPlaylistDao.unpin(id);
@@ -66,7 +68,7 @@ public class PlaylistRepository {
                 new Handler(Looper.getMainLooper()).post(onMissing);
             }
             refreshAllPlaylists();
-        }).start();
+        });
     }
 
     @androidx.media3.common.util.UnstableApi
@@ -110,7 +112,7 @@ public class PlaylistRepository {
 
     @OptIn(markerClass = UnstableApi.class)
     private void cacheAllPlaylists(List<Playlist> playlists) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             // Remove playlists from DB that are not in the new list
             List<Playlist> cachedPlaylists = playlistDao.getAllSync();
             if (cachedPlaylists != null) {
@@ -146,7 +148,7 @@ public class PlaylistRepository {
             }
             if (!changed.isEmpty()) playlistDao.insertAll(changed);
             android.util.Log.d("PlaylistRepository", "Cached playlists: " + changed.size() + " of " + playlists.size() + " new or changed.");
-        }).start();
+        });
     }
 
     /** Whether a cached playlist row already holds everything the server sent for it. */
@@ -274,7 +276,7 @@ public class PlaylistRepository {
     }
 
     private void cachePlaylistSongs(Playlist playlist, List<Child> songs) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String playlistId = playlist.getId();
             // playlist_song has a foreign key to playlist.id, so the playlist row must
             // exist before its songs are inserted. The full-list path caches playlists via
@@ -311,11 +313,11 @@ public class PlaylistRepository {
             playlistSongDao.deleteForPlaylist(playlistId);
             playlistSongDao.insertAll(playlistSongs);
             android.util.Log.d("PlaylistRepository", "Cached " + playlistSongs.size() + " songs for playlist " + playlistId);
-        }).start();
+        });
     }
 
     private void fetchCachedPlaylistSongs(String playlistId, MutableLiveData<List<Child>> liveData) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<PlaylistSong> cached = playlistSongDao.getSongsForPlaylistSync(playlistId);
             if (cached != null && !cached.isEmpty()) {
                 List<Child> songs = new ArrayList<>();
@@ -333,7 +335,7 @@ public class PlaylistRepository {
                 }
                 liveData.postValue(songs);
             }
-        }).start();
+        });
     }
 
     public MutableLiveData<Playlist> getPlaylist(String id) {
@@ -389,7 +391,7 @@ public class PlaylistRepository {
             if (callback != null) callback.onAllSkipped();
             return;
         }
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             Boolean isPublic = Boolean.TRUE.equals(playlistVisibilityIsPublic)
                     ? Boolean.TRUE
                     : visibilityToSend(playlistId);
@@ -411,7 +413,7 @@ public class PlaylistRepository {
                             if (callback != null) callback.onFailure();
                         }
                     });
-        }).start();
+        });
     }
 
     /**
@@ -436,7 +438,7 @@ public class PlaylistRepository {
     public void removeSongFromPlaylist(String playlistId, int index, AddToPlaylistCallback callback) {
         ArrayList<Integer> indexes = new ArrayList<>();
         indexes.add(index);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             App.getSubsonicClientInstance(false)
                     .getPlaylistClient()
                     .updatePlaylist(playlistId, null, visibilityToSend(playlistId), null, indexes)
@@ -455,7 +457,7 @@ public class PlaylistRepository {
                             if (callback != null) callback.onFailure();
                         }
                     });
-        }).start();
+        });
     }
 
     public void addSongToPlaylist(String playlistId, ArrayList<String> songsId, Boolean playlistVisibilityIsPublic) {
@@ -470,7 +472,7 @@ public class PlaylistRepository {
     }
 
     public void updatePlaylist(String playlistId, String name, ArrayList<String> songsId, PlaylistActionCallback callback) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             App.getSubsonicClientInstance(false)
                     .getPlaylistClient()
                     .updatePlaylist(playlistId, name, visibilityToSend(playlistId), null, null)
@@ -490,7 +492,7 @@ public class PlaylistRepository {
                             if (callback != null) callback.onFailure();
                         }
                     });
-        }).start();
+        });
     }
 
     /**
@@ -549,30 +551,30 @@ public class PlaylistRepository {
 
     @OptIn(markerClass = UnstableApi.class)
     private void updateLocalPlaylistName(String id, String newName) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             playlistDao.updateName(id, newName);
-        }).start();
+        });
     }
 
     @OptIn(markerClass = UnstableApi.class)
     public void updateLastPlayed(String playlistId) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             playlistDao.updateLastPlayed(playlistId, System.currentTimeMillis());
-        }).start();
+        });
     }
 
     @OptIn(markerClass = UnstableApi.class)
     public void pin(String id) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             pinnedPlaylistDao.pin(id);
-        }).start();
+        });
     }
 
     @OptIn(markerClass = UnstableApi.class)
     public void unpin(String id) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             pinnedPlaylistDao.unpin(id);
-        }).start();
+        });
     }
 
     // Keyed by the server URL, not the server id preference, which only one of the two login screens writes.
@@ -608,7 +610,7 @@ public class PlaylistRepository {
         // Once per server per app open, and a failed fetch hands the gate back so an offline open does not spend it.
         if (server.equals(keptSyncRanFor)) return;
         keptSyncRanFor = server;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<Playlist> kept = syncedPlaylistDao.getAllSynced(server);
             if (kept.isEmpty()) return;
 
@@ -628,7 +630,7 @@ public class PlaylistRepository {
                     });
                 }
             });
-        }).start();
+        });
     }
 
     public static void resetKeptSync() {
@@ -653,12 +655,12 @@ public class PlaylistRepository {
                     public void onResponse(@NonNull Call<ApiResponse> call, @NonNull Response<ApiResponse> response) {
                         if (isAccepted(response)) {
                             String server = Preferences.getServer();
-                            new Thread(() -> {
+                            AppExecutors.io().execute(() -> {
                                 playlistSongDao.deleteForPlaylist(playlistId);
                                 if (server != null) syncedPlaylistDao.remove(playlistId, server);
                                 playlistDao.deleteById(playlistId);
                                 android.util.Log.d("PlaylistRepository", "Deleted playlist " + playlistId + " and its songs from local DB.");
-                            }).start();
+                            });
                             notifyPlaylistChanged();
                             if (callback != null) callback.onSuccess();
                         } else {
@@ -680,15 +682,13 @@ public class PlaylistRepository {
     @androidx.media3.common.util.UnstableApi
     public void insertIfAbsent(Playlist playlist) {
         InsertIfAbsentThreadSafe insert = new InsertIfAbsentThreadSafe(playlistDao, playlist);
-        Thread thread = new Thread(insert);
-        thread.start();
+        AppExecutors.io().execute(insert);
     }
 
     @androidx.media3.common.util.UnstableApi
     public void delete(Playlist playlist) {
         DeleteThreadSafe delete = new DeleteThreadSafe(playlistDao, playlist);
-        Thread thread = new Thread(delete);
-        thread.start();
+        AppExecutors.io().execute(delete);
     }
 
     @androidx.media3.common.util.UnstableApi
@@ -698,7 +698,7 @@ public class PlaylistRepository {
 
     @androidx.media3.common.util.UnstableApi
     public void updatePinnedPlaylists(List<String> forceIds) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<Playlist> pinned = playlistDao.getAllSync();
             if (pinned != null && !pinned.isEmpty()) {
                 App.getSubsonicClientInstance(false)
@@ -709,7 +709,7 @@ public class PlaylistRepository {
                             public void onResponse(@NonNull Call<ApiResponse> call, @NonNull Response<ApiResponse> response) {
                                 if (response.isSuccessful() && response.body() != null && response.body().getSubsonicResponse().getPlaylists() != null && response.body().getSubsonicResponse().getPlaylists().getPlaylists() != null) {
                                     List<Playlist> remotes = response.body().getSubsonicResponse().getPlaylists().getPlaylists();
-                                    new Thread(() -> {
+                                    AppExecutors.io().execute(() -> {
                                         for (Playlist p : pinned) {
                                             for (Playlist r : remotes) {
                                                 if (p.getId().equals(r.getId())) {
@@ -722,7 +722,7 @@ public class PlaylistRepository {
                                                 }
                                             }
                                         }
-                                    }).start();
+                                    });
                                 }
                             }
 
@@ -731,7 +731,7 @@ public class PlaylistRepository {
                             }
                         });
             }
-        }).start();
+        });
     }
 
     /**

@@ -50,6 +50,8 @@ public class AlbumArtistBackfill {
         if (!RUNNING.compareAndSet(false, true)) return;
 
         new Thread(() -> {
+            // Nobody waits for this: keep it off the fast cores the screen and audio need.
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
             try {
                 backfill();
             } catch (Exception exception) {

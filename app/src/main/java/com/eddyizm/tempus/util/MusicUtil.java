@@ -19,7 +19,6 @@ import androidx.media3.session.MediaBrowser;
 import com.eddyizm.tempus.App;
 import com.eddyizm.tempus.R;
 import com.eddyizm.tempus.model.Download;
-import com.eddyizm.tempus.repository.DownloadRepository;
 import com.eddyizm.tempus.subsonic.models.Child;
 
 import java.text.CharacterIterator;
@@ -64,7 +63,6 @@ public class MusicUtil {
         int transport = getActiveTransport();
         String selectedFormat = transcodingFormatFor(transport);
         String selectedBitrate = bitrateFor(transport, selectedFormat);
-        Log.i(TAG, "DEBUG: Requesting Format: " + selectedFormat + " at Bitrate: " + selectedBitrate);
 
         if (!Preferences.isServerPrioritized())
             uri.append("&maxBitRate=").append(selectedBitrate);
@@ -74,8 +72,6 @@ public class MusicUtil {
             uri.append("&timeOffset=").append(timeOffset);
 
         uri.append("&id=").append(id);
-
-        Log.d(TAG, "getStreamUri: " + uri);
 
         return Uri.parse(uri.toString());
     }
@@ -115,9 +111,10 @@ public class MusicUtil {
     public static Uri getDownloadUri(String id) {
         StringBuilder uri = new StringBuilder();
 
-        Download download = new DownloadRepository().getDownload(id);
+        // The in-memory copy of the download table, not a query (and a new thread) per song.
+        Download download = MappingUtil.getCachedDownloads().get(id);
 
-        if (download == null || download.getDownloadUri().isEmpty()) {
+        if (download == null || download.getDownloadUri() == null || download.getDownloadUri().isEmpty()) {
             Map<String, String> params = App.getSubsonicClientInstance(false).getParams();
 
             uri.append(App.getSubsonicClientInstance(false).getUrl());
@@ -140,8 +137,6 @@ public class MusicUtil {
         } else {
             uri.append(download.getDownloadUri());
         }
-
-        Log.d(TAG, "getDownloadUri: " + uri);
 
         return Uri.parse(uri.toString());
     }
@@ -173,8 +168,6 @@ public class MusicUtil {
             uri.append("&format=").append(getTranscodingFormatPreferenceForDownload());
 
         uri.append("&id=").append(id);
-
-        Log.d(TAG, "getTranscodedDownloadUri: " + uri);
 
         return Uri.parse(uri.toString());
     }

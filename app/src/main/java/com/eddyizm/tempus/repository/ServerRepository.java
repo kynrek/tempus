@@ -1,5 +1,7 @@
 package com.eddyizm.tempus.repository;
 
+import com.eddyizm.tempus.util.AppExecutors;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Transformations;
 
@@ -38,20 +40,17 @@ public class ServerRepository {
 
     public void insert(Server server) {
         InsertThreadSafe insert = new InsertThreadSafe(serverDao, CredentialCipher.encrypted(server));
-        Thread thread = new Thread(insert);
-        thread.start();
+        AppExecutors.io().execute(insert);
     }
 
     public void update(Server server) {
         UpdateThreadSafe update = new UpdateThreadSafe(serverDao, CredentialCipher.encrypted(server));
-        Thread thread = new Thread(update);
-        thread.start();
+        AppExecutors.io().execute(update);
     }
 
     public void delete(Server server) {
         DeleteThreadSafe delete = new DeleteThreadSafe(serverDao, server);
-        Thread thread = new Thread(delete);
-        thread.start();
+        AppExecutors.io().execute(delete);
     }
 
     private static class InsertThreadSafe implements Runnable {

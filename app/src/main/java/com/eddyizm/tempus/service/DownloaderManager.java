@@ -36,7 +36,8 @@ public class DownloaderManager {
     private final DataSource.Factory dataSourceFactory;
     private final DownloadIndex downloadIndex;
 
-    private static HashMap<String, Download> downloads;
+    // Written on the main thread (download events) and read from queue-mapping threads.
+    private static java.util.Map<String, Download> downloads;
     // Handed to the service and not yet finished, the map above only learns of a download once it completes.
     private static final Set<String> requested = ConcurrentHashMap.newKeySet();
 
@@ -44,7 +45,7 @@ public class DownloaderManager {
         this.context = context.getApplicationContext();
         this.dataSourceFactory = dataSourceFactory;
 
-        downloads = new HashMap<>();
+        downloads = new ConcurrentHashMap<>();
         downloadIndex = downloadManager.getDownloadIndex();
 
         loadDownloads();
@@ -62,6 +63,7 @@ public class DownloaderManager {
     }
 
     public boolean isDownloaded(String mediaId) {
+        if (mediaId == null) return false;   // ConcurrentHashMap refuses a null key
         @Nullable Download download = downloads.get(mediaId);
         return download != null && download.state != Download.STATE_FAILED;
     }
@@ -105,7 +107,8 @@ public class DownloaderManager {
     }
 
     public void remove(MediaItem mediaItem, com.eddyizm.tempus.model.Download download) {
-        DownloadService.sendRemoveDownload(context, DownloaderService.class, buildDownloadRequest(mediaItem).id, false);
+        // The request id is the media id (see buildDownloadRequest): no need to build a request to read it.
+        DownloadService.sendRemoveDownload(context, DownloaderService.class, mediaItem.mediaId, false);
         deleteDatabase(download.getId());
         downloads.remove(download.getId());
     }

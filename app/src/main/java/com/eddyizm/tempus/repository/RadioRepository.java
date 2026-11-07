@@ -1,5 +1,7 @@
 package com.eddyizm.tempus.repository;
 
+import com.eddyizm.tempus.util.AppExecutors;
+
 import androidx.annotation.NonNull;
 import androidx.lifecycle.MutableLiveData;
 
@@ -49,7 +51,7 @@ public class RadioRepository {
     }
 
     private void cacheSubsonicStations(List<InternetRadioStation> stations) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             AppDatabase db = AppDatabase.getInstance();
             db.internetRadioStationDao().deleteSubsonic();
             List<InternetRadioStationCache> cacheList = stations.stream()
@@ -62,11 +64,11 @@ public class RadioRepository {
                     RadioCoverArtDownloader.downloadCoverArt(cache.getId(), cache.getCoverArtUrl());
                 }
             }
-        }).start();
+        });
     }
 
     private void mergeWithLocal(MutableLiveData<List<InternetRadioStation>> liveData, List<InternetRadioStation> subsonicStations) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<InternetRadioStationCache> localCaches = AppDatabase.getInstance().internetRadioStationDao().getLocal();
             List<InternetRadioStation> localStations = localCaches.stream()
                     .map(InternetRadioStationCache::toInternetRadioStation)
@@ -76,11 +78,11 @@ public class RadioRepository {
             merged.addAll(localStations);
             sortByName(merged);
             liveData.postValue(merged);
-        }).start();
+        });
     }
 
     private void fallbackToCache(MutableLiveData<List<InternetRadioStation>> liveData) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<InternetRadioStation> cached = AppDatabase.getInstance().internetRadioStationDao().getAll().stream()
                     .map(InternetRadioStationCache::toInternetRadioStation)
                     .collect(Collectors.toList());
@@ -88,7 +90,7 @@ public class RadioRepository {
                 sortByName(cached);
                 liveData.postValue(cached);
             }
-        }).start();
+        });
     }
 
     private void sortByName(List<InternetRadioStation> stations) {
@@ -98,7 +100,7 @@ public class RadioRepository {
     }
 
     public void createLocalStation(String name, String streamUrl, String homepageUrl, String coverArtUrl, Runnable onComplete) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String id = "local_" + UUID.randomUUID().toString();
             InternetRadioStationCache cache = new InternetRadioStationCache();
             cache.setId(id);
@@ -117,11 +119,11 @@ public class RadioRepository {
             if (onComplete != null) {
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(onComplete);
             }
-        }).start();
+        });
     }
 
     public void updateLocalStation(String id, String name, String streamUrl, String homepageUrl, String coverArtUrl, Runnable onComplete) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             AppDatabase db = AppDatabase.getInstance();
             InternetRadioStationCache cache = db.internetRadioStationDao().getById(id);
             if (cache != null) {
@@ -139,18 +141,18 @@ public class RadioRepository {
             if (onComplete != null) {
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(onComplete);
             }
-        }).start();
+        });
     }
 
     public void deleteLocalStation(String id, Runnable onComplete) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             AppDatabase.getInstance().internetRadioStationDao().deleteById(id);
             RadioCoverArtDownloader.deleteCoverArt(id);
 
             if (onComplete != null) {
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(onComplete);
             }
-        }).start();
+        });
     }
 
     public boolean isLocalStation(String stationId) {

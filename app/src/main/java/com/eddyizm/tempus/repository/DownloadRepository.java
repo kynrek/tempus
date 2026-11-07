@@ -28,48 +28,15 @@ public class DownloadRepository {
     }
 
     public List<Download> getAllDownloads() {
-        GetAllDownloadsThreadSafe getDownloads = new GetAllDownloadsThreadSafe(downloadDao);
-        Thread thread = new Thread(getDownloads);
-        thread.start();
-
-        try {
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        return getDownloads.getDownloads();
+        return DbReads.read(downloadDao::getAllSync, new ArrayList<>());
     }
 
     public Download getDownload(String id) {
-        Download download = null;
-
-        GetDownloadThreadSafe getDownloadThreadSafe = new GetDownloadThreadSafe(downloadDao, id);
-        Thread thread = new Thread(getDownloadThreadSafe);
-        thread.start();
-
-        try {
-            thread.join();
-            download = getDownloadThreadSafe.getDownload();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        return download;
+        return DbReads.read(() -> downloadDao.getOne(id), null);
     }
 
     public List<Download> getFailedDownloads() {
-        GetFailedDownloadsThreadSafe getDownloads = new GetFailedDownloadsThreadSafe(downloadDao);
-        Thread thread = new Thread(getDownloads);
-        thread.start();
-
-        try {
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        return getDownloads.getDownloads();
+        return DbReads.read(downloadDao::getFailedSync, new ArrayList<>());
     }
 
     private static class GetAllDownloadsThreadSafe implements Runnable {

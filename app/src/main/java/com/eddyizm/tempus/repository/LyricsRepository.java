@@ -1,5 +1,7 @@
 package com.eddyizm.tempus.repository;
 
+import com.eddyizm.tempus.util.AppExecutors;
+
 import androidx.lifecycle.LiveData;
 
 import com.eddyizm.tempus.database.AppDatabase;
@@ -10,18 +12,7 @@ public class LyricsRepository {
     private final LyricsDao lyricsDao = AppDatabase.getInstance().lyricsDao();
 
     public LyricsCache getLyrics(String songId) {
-        GetLyricsThreadSafe getLyricsThreadSafe = new GetLyricsThreadSafe(lyricsDao, songId);
-        Thread thread = new Thread(getLyricsThreadSafe);
-        thread.start();
-
-        try {
-            thread.join();
-            return getLyricsThreadSafe.getLyrics();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        return null;
+        return DbReads.read(() -> lyricsDao.getOne(songId), null);
     }
 
     public LiveData<LyricsCache> observeLyrics(String songId) {
@@ -30,14 +21,12 @@ public class LyricsRepository {
 
     public void insert(LyricsCache lyricsCache) {
         InsertThreadSafe insert = new InsertThreadSafe(lyricsDao, lyricsCache);
-        Thread thread = new Thread(insert);
-        thread.start();
+        AppExecutors.io().execute(insert);
     }
 
     public void delete(String songId) {
         DeleteThreadSafe delete = new DeleteThreadSafe(lyricsDao, songId);
-        Thread thread = new Thread(delete);
-        thread.start();
+        AppExecutors.io().execute(delete);
     }
 
     private static class GetLyricsThreadSafe implements Runnable {
