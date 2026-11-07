@@ -89,7 +89,7 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
     private var upnpPlayer: UpnpPlayer? = null
     private lateinit var bitmapLoader: SyncBitmapLoader
     private lateinit var networkCallback: CustomNetworkCallback
-    private lateinit var equalizerManager: EqualizerManager
+    @Volatile private lateinit var equalizerManager: EqualizerManager
     private val parametricEqProcessor = ParametricEqAudioProcessor()
     /**
      * The thread the player, the media session and this service's player listeners run on. It
@@ -117,8 +117,12 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         if (Looper.myLooper() == playbackLooper) block() else playbackHandler.post(block)
     }
 
-    /** Runs [block] on the playback thread and waits for it (service start and stop only). */
-    private fun onPlaybackAndWait(block: () -> Unit) {
+    /**
+     * Runs [block] on the playback thread and waits for it (service start and stop only), at most
+     * [timeoutMs]. media3 itself sometimes waits on the main thread from the session's thread (a
+     * play request handled off main), so a stop must not wait forever.
+     */
+    private fun onPlaybackAndWait(timeoutMs: Long = 0L, block: () -> Unit) {
         if (Looper.myLooper() == playbackLooper) {
             block()
             return
@@ -134,7 +138,14 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
                 done.countDown()
             }
         }
-        done.await()
+        if (timeoutMs > 0) {
+            if (!done.await(timeoutMs, TimeUnit.MILLISECONDS)) {
+                Log.w(TAG, "Playback thread busy; not waiting any longer")
+                return
+            }
+        } else {
+            done.await()
+        }
         failure?.let { throw it }
     }
 
@@ -168,8 +179,9 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
     private val radioHeaderCheckExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var radioHeaderCheckScheduled = false
     private var radioHeaderCheckFuture: ScheduledFuture<*>? = null
+    // Runs on radioHeaderCheckExecutor: the player is read on the playback thread, the request made here.
     private val radioHeaderCheckRunnable = Runnable {
-        checkRadioHttpHeaders()
+        if (!serviceDestroyed) playbackHandler.post { startRadioHeaderCheck() }
     }
 
     private val queueSyncHandler by lazy { playbackHandler }
@@ -545,7 +557,8 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
                 if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO &&
                     SleepTimerManager.getInstance().isEndOfTrack) {
                     SleepTimerManager.getInstance().stopEndOfTrackPoller()
-                    SleepTimerManager.getInstance().cancelTimer()
+                    // Its listeners update the player screen: on main.
+                    mainHandler.post { SleepTimerManager.getInstance().cancelTimer() }
                     player.volume = 1f
                     player.pause()
                 }
@@ -866,7 +879,8 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
 
         Log.d(TAG, "onInstantMix: start Continuous Play with $currentMediaItem")
         MediaManager.continuousPlay(currentMediaItem, this) {
-            Handler(Looper.getMainLooper()).post { onComplete?.run() }
+            // The completion updates the notification layout, which reads the player.
+            onPlayback { onComplete?.run() }
         }
     }
 
@@ -1022,10 +1036,8 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         App.getInstance().preferences.unregisterOnSharedPreferenceChangeListener(upnpSwitchListener)
         SleepTimerManager.getInstance().stopEndOfTrackPoller()
         SleepTimerManager.getInstance().setServiceActionListener(null)
-        radioHeaderCheckExecutor.shutdown()
-        if (::bitmapLoader.isInitialized) bitmapLoader.shutdown()
         releaseUpnpRoutes()
-        onPlaybackAndWait {
+        onPlaybackAndWait(timeoutMs = 2000) {
             equalizerManager.release(exoplayer.audioSessionId)
             ReplayGainUtil.release()
             stopWidgetUpdates()
@@ -1035,6 +1047,9 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
             upnpPlayer = null
             releasePlayers()
             mediaLibrarySession.release()
+            // After the release: messages already queued on this thread may still use them.
+            radioHeaderCheckExecutor.shutdown()
+            if (::bitmapLoader.isInitialized) bitmapLoader.shutdown()
         }
         // Let what the release posted run, then end the thread.
         playbackThread?.let { thread -> playbackHandler.postDelayed({ thread.quitSafely() }, 1000) }
@@ -1130,9 +1145,13 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
     private fun initializeNetworkListener() {
         networkCallback = CustomNetworkCallback()
         // Its callbacks read and change the player: delivered on the playback thread.
-        getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(
-            networkCallback, playbackHandler
-        )
+        val connectivity = getSystemService(ConnectivityManager::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            connectivity.registerDefaultNetworkCallback(networkCallback, playbackHandler)
+        } else {
+            // Android 7: no handler variant. Each callback reaches the player through widgetUpdateHandler.
+            connectivity.registerDefaultNetworkCallback(networkCallback)
+        }
         onPlayback { updateMediaItems(mediaLibrarySession.player) }
     }
 
@@ -1240,7 +1259,7 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         if (radioHeaderCheckScheduled) return
         
         // Check immediately, then periodically
-        checkRadioHttpHeaders()
+        startRadioHeaderCheck()
         radioHeaderCheckFuture = radioHeaderCheckExecutor.scheduleWithFixedDelay(
             radioHeaderCheckRunnable,
             RADIO_HEADER_CHECK_INTERVAL_SECONDS,
@@ -1257,56 +1276,72 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         radioHeaderCheckScheduled = false
     }
 
-    private fun checkRadioHttpHeaders() {
+    /** On the playback thread: reads what to ask, then makes the request on the executor. */
+    private fun startRadioHeaderCheck() {
+        if (serviceDestroyed) return
+        val streamUrl = radioHeaderStreamUrl() ?: return
+        try {
+            radioHeaderCheckExecutor.execute {
+                val streamTitle = fetchRadioStreamTitle(streamUrl) ?: return@execute
+                processStreamTitle(streamTitle, mediaLibrarySession.player)
+            }
+        } catch (_: java.util.concurrent.RejectedExecutionException) {
+            // Stopping.
+        }
+    }
+
+    /** The radio stream to ask for a title, or null when it is not radio or already has one. Playback thread. */
+    private fun radioHeaderStreamUrl(): String? {
         val player = mediaLibrarySession.player
-        val currentItem = player.currentMediaItem ?: return
+        val currentItem = player.currentMediaItem ?: return null
         val extras = currentItem.mediaMetadata.extras
         val mediaType = extras?.getString("type")
-        if (mediaType != Constants.MEDIA_TYPE_RADIO) return
-        
+        if (mediaType != Constants.MEDIA_TYPE_RADIO) return null
+
         // Skip if we already have embedded metadata (ICY/ID3) - HTTP headers are only fallback
         val hasEmbeddedMetadata = !currentItem.mediaMetadata.artist.isNullOrBlank() ||
                 !currentItem.mediaMetadata.title.isNullOrBlank() ||
                 (!extras.getString("radioArtist").isNullOrBlank()) ||
                 (!extras.getString("radioTitle").isNullOrBlank())
-        if (hasEmbeddedMetadata) return
-        
-        val streamUrl = extras?.getString("uri") ?: currentItem.requestMetadata.mediaUri?.toString()
-        if (streamUrl.isNullOrBlank()) return
+        if (hasEmbeddedMetadata) return null
 
+        val streamUrl = extras.getString("uri") ?: currentItem.requestMetadata.mediaUri?.toString()
+        return if (streamUrl.isNullOrBlank()) null else streamUrl
+    }
+
+    /** A HEAD request for the stream's title header. Off the playback thread (it can take 6 s). */
+    private fun fetchRadioStreamTitle(streamUrl: String): String? {
         try {
             val url = URL(streamUrl)
-            val connection = url.openConnection() as? HttpURLConnection ?: return
-            
+            val connection = url.openConnection() as? HttpURLConnection ?: return null
+
             // Only try HEAD request (lightweight) - skip GET fallback as it's unreliable
             connection.requestMethod = "HEAD"
             connection.setRequestProperty("Icy-MetaData", "1")
             connection.setRequestProperty("User-Agent", "Tempus/1.0")
             connection.connectTimeout = 3000 // Reduced timeout
             connection.readTimeout = 3000
-            
+
             connection.connect()
-            
+
             if (connection.responseCode >= 400) {
                 connection.disconnect()
-                return
+                return null
             }
-            
+
             // Check for metadata in HTTP headers
             val streamTitle = connection.getHeaderField("icy-name")
                 ?: connection.getHeaderField("StreamTitle")
                 ?: connection.getHeaderField("stream-title")
-            
+
             connection.disconnect()
-            
-            if (!streamTitle.isNullOrBlank()) {
-                processStreamTitle(streamTitle, player)
-            }
+            return if (streamTitle.isNullOrBlank()) null else streamTitle
         } catch (e: Exception) {
             // Silently fail - this is a fallback mechanism, ICY metadata is primary
+            return null
         }
     }
-    
+
     private fun processStreamTitle(streamTitle: String, player: Player) {
         // Parse "Artist - Title" format
         val parts = streamTitle.split(" - ", limit = 2)
@@ -1314,13 +1349,13 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         val title = if (parts.size == 2) parts[1].trim().ifEmpty { null } else streamTitle.trim().ifEmpty { null }
         
         if (artist.isNullOrBlank() && title.isNullOrBlank()) return
-        if (artist == lastRadioArtist && title == lastRadioTitle) return // Deduplicate
-        
-        lastRadioArtist = artist
-        lastRadioTitle = title
-        
-        // Update on main thread
+
+        // Update on the playback thread (the last title is kept there too)
         widgetUpdateHandler.post {
+            if (serviceDestroyed) return@post
+            if (artist == lastRadioArtist && title == lastRadioTitle) return@post // Deduplicate
+            lastRadioArtist = artist
+            lastRadioTitle = title
             val currentItemNow = player.currentMediaItem ?: return@post
             val currentIndex = player.currentMediaItemIndex
             if (currentIndex == C.INDEX_UNSET) return@post
