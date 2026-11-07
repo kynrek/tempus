@@ -415,18 +415,31 @@ public class MediaManager {
             return;
         }
 
-        Log.d(TAG, "enqueue");
-        int current = player.getCurrentMediaItemIndex();
-        if (playImmediatelyAfter && current != C.INDEX_UNSET) {
-            enqueueDatabase(media, false, current + 1);
-            insertPlayNext(queueTarget, player, MappingUtil.mapMediaItems(media));
-        } else {
-            int firstNew = player.getMediaItemCount();
-            enqueueDatabase(media, false, firstNew);
-            player.addMediaItems(MappingUtil.mapMediaItems(media));
-            keepPlaying(player, firstNew);
-        }
-        trimHistory(player);
+        // Map off the caller's thread (a whole album or playlist, from a click on the main thread),
+        // then edit the queue on the player's own thread, reading its position only then.
+        final List<Child> songs = new ArrayList<>(media);
+        final Handler playerThread = new Handler(player.getApplicationLooper());
+        backgroundExecutor.execute(() -> {
+            final List<MediaItem> items = MappingUtil.mapMediaItems(songs);
+            playerThread.post(() -> {
+                Player live = queueTarget.livePlayer();
+                if (live == null) {
+                    Log.d(TAG, "enqueue: queue target gone, dropping " + songs.size() + " items");
+                    return;
+                }
+                int current = live.getCurrentMediaItemIndex();
+                if (playImmediatelyAfter && current != C.INDEX_UNSET) {
+                    enqueueDatabase(songs, false, current + 1);
+                    insertPlayNext(queueTarget, live, items);
+                } else {
+                    int firstNew = live.getMediaItemCount();
+                    enqueueDatabase(songs, false, firstNew);
+                    live.addMediaItems(items);
+                    keepPlaying(live, firstNew);
+                }
+                trimHistory(live);
+            });
+        });
     }
 
     public static void enqueue(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture, Child media, boolean playImmediatelyAfter) {

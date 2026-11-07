@@ -101,9 +101,44 @@ public class DownloaderManager {
     }
 
     public int download(List<MediaItem> mediaItems, List<com.eddyizm.tempus.model.Download> downloads) {
+        // A whole album, playlist or queue: a request, a Room row and a service intent per song is
+        // seconds of work for hundreds of songs, so from the main thread it goes to a worker.
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            List<MediaItem> items = new java.util.ArrayList<>(mediaItems);
+            List<com.eddyizm.tempus.model.Download> rows = new java.util.ArrayList<>(downloads);
+            com.eddyizm.tempus.util.AppExecutors.io().execute(() -> downloadNow(items, rows));
+            return items.size();
+        }
+        return downloadNow(mediaItems, downloads);
+    }
+
+    private int downloadNow(List<MediaItem> mediaItems, List<com.eddyizm.tempus.model.Download> downloads) {
+        int count = Math.min(mediaItems.size(), downloads.size());
+        List<DownloadRequest> requests = new java.util.ArrayList<>(count);
+        List<com.eddyizm.tempus.model.Download> rows = new java.util.ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            MediaItem mediaItem = mediaItems.get(i);
+            com.eddyizm.tempus.model.Download download = downloads.get(i);
+            MusicUtil.applyTranscodedDownloadMetadata(download);
+            download.setDownloadUri(mediaItem.requestMetadata.mediaUri.toString());
+            requests.add(buildDownloadRequest(mediaItem));
+            requested.add(mediaItem.mediaId);
+            rows.add(download);
+        }
+        // One transaction (and one refresh of the download lists) for the batch, not one per song.
+        getDownloadRepository().insertAll(rows);
+
         int sent = 0;
-        for (int counter = 0; counter < mediaItems.size(); counter++) {
-            if (download(mediaItems.get(counter), downloads.get(counter))) sent++;
+        for (int i = 0; i < count; i++) {
+            String id = mediaItems.get(i).mediaId;
+            try {
+                DownloadService.sendAddDownload(context, DownloaderService.class, requests.get(i), false);
+                sent++;
+            } catch (IllegalStateException e) {
+                requested.remove(id);
+                deleteDatabase(id);
+                Log.w(TAG, "Download service not started for " + id, e);
+            }
         }
         return sent;
     }
