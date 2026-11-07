@@ -31,6 +31,10 @@ class MediaService : BaseMediaService(), SessionAvailabilityListener {
         }
     }
 
+    // The Cast player only runs on the main thread, and the session's players share one thread,
+    // so this flavour keeps playback on the main thread.
+    override fun createPlaybackLooper(): android.os.Looper = mainLooper
+
     override fun getMediaLibrarySessionCallback(): MediaLibrarySession.Callback {
         if (sessionCallback == null) {
             sessionCallback = MediaLibrarySessionCallback(baseContext, this, automotiveRepository)

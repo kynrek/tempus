@@ -195,7 +195,14 @@ open class BaseSessionCallback(
 
     private var currentSession: MediaSession? = null
 
-    private val mainHandler = Handler(Looper.getMainLooper())
+    // On the player's thread, where the layout update reads the player (the playback thread).
+    private val mainHandler by lazy { Handler(service.playbackLooper) }
+
+    /** Runs [block] on the thread the session's player is used from. */
+    protected fun onPlayerThread(session: MediaSession, block: () -> Unit) {
+        val looper = session.player.applicationLooper
+        if (Looper.myLooper() == looper) block() else Handler(looper).post(block)
+    }
 
     private val layoutUpdate =
         Runnable { currentSession?.let { updateMediaNotificationCustomLayout(it) } }
@@ -411,6 +418,12 @@ open class BaseSessionCallback(
         networkCall.enqueue(object : Callback<ApiResponse?> {
             @OptIn(UnstableApi::class)
             override fun onResponse(call: Call<ApiResponse?>, response: Response<ApiResponse?>) {
+                // Retrofit answers on the main thread; the player is used on its own thread.
+                onPlayerThread(session) { onRatingResponse(response) }
+            }
+
+            @OptIn(UnstableApi::class)
+            fun onRatingResponse(response: Response<ApiResponse?>) {
                 val refused = response.body()?.subsonicResponse?.status == ResponseStatus.FAILED
 
                 if (response.isSuccessful && !refused) {
@@ -438,9 +451,11 @@ open class BaseSessionCallback(
 
             @OptIn(UnstableApi::class)
             override fun onFailure(call: Call<ApiResponse?>, t: Throwable) {
-                FavoriteRegistry.withdraw(record)
-                updateMediaNotificationCustomLayout(session)
-                future.set(SessionResult(SessionError(SessionError.ERROR_UNKNOWN, "An error has occurred")))
+                onPlayerThread(session) {
+                    FavoriteRegistry.withdraw(record)
+                    updateMediaNotificationCustomLayout(session)
+                    future.set(SessionResult(SessionError(SessionError.ERROR_UNKNOWN, "An error has occurred")))
+                }
             }
         })
 

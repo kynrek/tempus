@@ -783,53 +783,69 @@ public class MediaManager {
                 ? mediaItem.mediaMetadata.extras.getString("artistId")
                 : null;
 
-        LiveData<List<Child>> instantMix =
-                getSongRepository().getContinuousMix(trackId, artistId, 25);
+        // LiveData is observed on the main thread; the queue is read and edited on the player's
+        // thread (the service's playback thread), which is where this is called from.
+        final Handler main = new Handler(Looper.getMainLooper());
+        final Handler playerThread = new Handler(player.getApplicationLooper());
 
-        instantMix.observeForever(new Observer<List<Child>>() {
-            @Override
-            public void onChanged(List<Child> media) {
-                instantMix.removeObserver(this);
+        main.post(() -> {
+            LiveData<List<Child>> instantMix =
+                    getSongRepository().getContinuousMix(trackId, artistId, 25);
 
-                // Filter against current queue before deciding if we need fallback.
-                // getSimilarSongs2 doesn't know what's already queued, so it may
-                // return tracks we already have. Filter first, then decide.
-                if (media != null && !media.isEmpty()) {
-                    List<Child> filtered = dedupAgainstQueue(media, queueTarget);
-                    if (!filtered.isEmpty()) {
-                        Log.d(TAG, "Continuous Play: adding " + filtered.size() + " similar tracks");
-                        enqueue(queueTarget, filtered, true);
-                        continuousPlayIsRunning.set(false);
-                        return;
-                    }
+            instantMix.observeForever(new Observer<List<Child>>() {
+                @Override
+                public void onChanged(List<Child> media) {
+                    instantMix.removeObserver(this);
+                    playerThread.post(() -> addSimilarOrRandom(media, queueTarget, main, playerThread));
                 }
+            });
+        });
+    }
 
-                if (Preferences.isFallbackToRandomTracksEnabled()) {
-                    Log.w(TAG, "Continuous Play: no new similar tracks, falling back to random songs");
-                    LiveData<List<Child>> randomSongs = getSongRepository().getRandomSample(25, null, null);
-                    randomSongs.observeForever(new Observer<List<Child>>() {
-                        @Override
-                        public void onChanged(List<Child> random) {
-                            randomSongs.removeObserver(this);
-                            if (random != null && !random.isEmpty()) {
-                                List<Child> filtered = dedupAgainstQueue(random, queueTarget);
-                                if (!filtered.isEmpty()) {
-                                    Log.d(TAG, "Continuous Play: adding " + filtered.size() + " random tracks");
-                                    enqueue(queueTarget, filtered, true);
-                                } else {
-                                    Log.w(TAG, "Continuous Play: random tracks already in queue");
-                                }
-                            } else {
-                                Log.w(TAG, "Continuous Play: random fallback also empty");
-                            }
-                            continuousPlayIsRunning.set(false);
-                        }
-                    });
-                } else {
-                    Log.w(TAG, "Continuous Play: no new similar tracks, random fallback disabled");
-                    continuousPlayIsRunning.set(false);
-                }
+    /** On the player's thread. */
+    private static void addSimilarOrRandom(List<Child> media, QueueTarget queueTarget, Handler main, Handler playerThread) {
+        // Filter against current queue before deciding if we need fallback.
+        // getSimilarSongs2 doesn't know what's already queued, so it may
+        // return tracks we already have. Filter first, then decide.
+        if (media != null && !media.isEmpty()) {
+            List<Child> filtered = dedupAgainstQueue(media, queueTarget);
+            if (!filtered.isEmpty()) {
+                Log.d(TAG, "Continuous Play: adding " + filtered.size() + " similar tracks");
+                enqueue(queueTarget, filtered, true);
+                continuousPlayIsRunning.set(false);
+                return;
             }
+        }
+
+        if (!Preferences.isFallbackToRandomTracksEnabled()) {
+            Log.w(TAG, "Continuous Play: no new similar tracks, random fallback disabled");
+            continuousPlayIsRunning.set(false);
+            return;
+        }
+
+        Log.w(TAG, "Continuous Play: no new similar tracks, falling back to random songs");
+        main.post(() -> {
+            LiveData<List<Child>> randomSongs = getSongRepository().getRandomSample(25, null, null);
+            randomSongs.observeForever(new Observer<List<Child>>() {
+                @Override
+                public void onChanged(List<Child> random) {
+                    randomSongs.removeObserver(this);
+                    playerThread.post(() -> {
+                        if (random != null && !random.isEmpty()) {
+                            List<Child> filtered = dedupAgainstQueue(random, queueTarget);
+                            if (!filtered.isEmpty()) {
+                                Log.d(TAG, "Continuous Play: adding " + filtered.size() + " random tracks");
+                                enqueue(queueTarget, filtered, true);
+                            } else {
+                                Log.w(TAG, "Continuous Play: random tracks already in queue");
+                            }
+                        } else {
+                            Log.w(TAG, "Continuous Play: random fallback also empty");
+                        }
+                        continuousPlayIsRunning.set(false);
+                    });
+                }
+            });
         });
     }
 
