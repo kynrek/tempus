@@ -81,6 +81,12 @@ public class App extends Application {
         }, "EncryptCredentials").start();
 
         new Thread(RetrofitClient::warmUp, "gson-warm-up").start();
+        // Read the download table and the downloads index ahead of the first list or queue that
+        // needs them, instead of on the main thread in the middle of the first screen.
+        com.eddyizm.tempus.util.AppExecutors.io().execute(() -> {
+            com.eddyizm.tempus.util.MappingUtil.getCachedDownloads();
+            com.eddyizm.tempus.util.DownloadUtil.getDownloadTracker(context);
+        });
     }
 
     public static App getInstance() {

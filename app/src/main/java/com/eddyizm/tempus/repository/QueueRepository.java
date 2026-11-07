@@ -42,23 +42,9 @@ public class QueueRepository {
     }
 
     public List<Child> getMedia() {
-        List<Child> media = new ArrayList<>();
-
-        GetMediaThreadSafe getMedia = new GetMediaThreadSafe(queueDao);
-        Thread thread = new Thread(getMedia);
-        thread.start();
-
-        try {
-            thread.join();
-            media = getMedia.getMedia().stream()
-                    .map(Child.class::cast)
-                    .collect(Collectors.toList());
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        return media;
+        return DbReads.read(() -> queueDao.getAllSimple().stream()
+                .map(Child.class::cast)
+                .collect(Collectors.toList()), new ArrayList<>());
     }
 
     public MutableLiveData<PlayQueue> getPlayQueue() {
@@ -322,20 +308,7 @@ public class QueueRepository {
     }
 
     public int count() {
-        int count = 0;
-
-        CountThreadSafe countThread = new CountThreadSafe(queueDao);
-        Thread thread = new Thread(countThread);
-        thread.start();
-
-        try {
-            thread.join();
-            count = countThread.getCount();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        return count;
+        return DbReads.read(queueDao::count, 0);
     }
 
     public void setLastPlayedTimestamp(String id) {
@@ -355,17 +328,7 @@ public class QueueRepository {
     }
 
     public Queue getLastPlayedMedia() {
-        GetLastPlayedMediaThreadSafe getLastPlayedMediaThreadSafe = new GetLastPlayedMediaThreadSafe(queueDao);
-        Thread thread = new Thread(getLastPlayedMediaThreadSafe);
-        thread.start();
-
-        try {
-            thread.join();
-            return getLastPlayedMediaThreadSafe.getQueueItem();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return DbReads.read(queueDao::getLastPlayed, null);
     }
 
     private static class GetMediaThreadSafe implements Runnable {

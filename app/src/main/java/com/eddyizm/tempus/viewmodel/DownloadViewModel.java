@@ -1,5 +1,7 @@
 package com.eddyizm.tempus.viewmodel;
 
+import com.eddyizm.tempus.util.AppExecutors;
+
 import android.app.Application;
 import android.net.Uri;
 import android.util.Log;
@@ -71,7 +73,7 @@ public class DownloadViewModel extends AndroidViewModel {
     }
 
     public void refreshExternalDownloads() {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String directoryUri = Preferences.getDownloadDirectoryUri();
             if (directoryUri == null) {
                 refreshResult.postValue(-1);
@@ -122,6 +124,6 @@ public class DownloadViewModel extends AndroidViewModel {
             } else {
                 refreshResult.postValue(0);
             }
-        }).start();
+        });
     }
 }

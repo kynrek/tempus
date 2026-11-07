@@ -63,6 +63,7 @@ public class DownloaderManager {
     }
 
     public boolean isDownloaded(String mediaId) {
+        if (mediaId == null) return false;   // ConcurrentHashMap refuses a null key
         @Nullable Download download = downloads.get(mediaId);
         return download != null && download.state != Download.STATE_FAILED;
     }
@@ -108,7 +109,8 @@ public class DownloaderManager {
     }
 
     public void remove(MediaItem mediaItem, com.eddyizm.tempus.model.Download download) {
-        DownloadService.sendRemoveDownload(context, DownloaderService.class, buildDownloadRequest(mediaItem).id, false);
+        // The request id is the media id (see buildDownloadRequest): no need to build a request to read it.
+        DownloadService.sendRemoveDownload(context, DownloaderService.class, mediaItem.mediaId, false);
         deleteDatabase(download.getId());
         downloads.remove(download.getId());
     }

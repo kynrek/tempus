@@ -1,5 +1,7 @@
 package com.eddyizm.tempus.repository;
 
+import com.eddyizm.tempus.util.AppExecutors;
+
 import android.os.Handler;
 import android.os.Looper;
 
@@ -35,13 +37,6 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class SearchingRepository {
-    // Shared threads for "all songs" searches, let go after a minute idle: a new executor per
-    // search was never shut down, so each search left a thread behind for good.
-    private static final ExecutorService SEARCH_ALL_EXECUTOR = Executors.newCachedThreadPool(r -> {
-        Thread t = new Thread(r, "SearchAllSongs");
-        t.setDaemon(true);
-        return t;
-    });
 
     private final RecentSearchDao recentSearchDao = AppDatabase.getInstance().recentSearchDao();
 
@@ -72,7 +67,8 @@ public class SearchingRepository {
     public MutableLiveData<SearchResult3> search3(SearchFragment sf, String query) {
         MutableLiveData<SearchResult3> result = new MutableLiveData<>();
 
-        SEARCH_ALL_EXECUTOR.execute(() -> {
+        // A shared worker: a new executor per search was never shut down, leaving a thread behind each time.
+        AppExecutors.io().execute(() -> {
             List<Child> allSongs = new ArrayList<>();
             int offset = 0;
             int limit = 1000;
@@ -192,31 +188,18 @@ public class SearchingRepository {
 
     public void insert(RecentSearch recentSearch) {
         InsertThreadSafe insert = new InsertThreadSafe(recentSearchDao, recentSearch);
-        Thread thread = new Thread(insert);
-        thread.start();
+        AppExecutors.io().execute(insert);
     }
 
     public void delete(RecentSearch recentSearch) {
         DeleteThreadSafe delete = new DeleteThreadSafe(recentSearchDao, recentSearch);
-        Thread thread = new Thread(delete);
-        thread.start();
+        AppExecutors.io().execute(delete);
     }
 
     public List<String> getRecentSearchSuggestion() {
-        List<String> recent = new ArrayList<>();
-
-        RecentThreadSafe suggestionsThread = new RecentThreadSafe(recentSearchDao);
-        Thread thread = new Thread(suggestionsThread);
-        thread.start();
-
-        try {
-            thread.join();
-            recent = suggestionsThread.getRecent();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        return recent;
+        return DbReads.read(() -> Preferences.isSearchSortingChronologicallyEnabled()
+                ? recentSearchDao.getRecent()
+                : recentSearchDao.getAlpha(), new ArrayList<>());
     }
 
     private static class DeleteThreadSafe implements Runnable {

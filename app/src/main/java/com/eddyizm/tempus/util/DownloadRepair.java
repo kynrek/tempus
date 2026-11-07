@@ -69,6 +69,8 @@ public class DownloadRepair {
         Context applicationContext = context.getApplicationContext();
 
         new Thread(() -> {
+            // Nobody waits for this: keep it off the fast cores the screen and audio need.
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
             try {
                 repair(applicationContext);
             } catch (Exception exception) {

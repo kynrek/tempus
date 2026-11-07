@@ -1,5 +1,7 @@
 package com.eddyizm.tempus.repository;
 
+import com.eddyizm.tempus.util.AppExecutors;
+
 import androidx.annotation.NonNull;
 
 import com.eddyizm.tempus.App;
@@ -104,20 +106,7 @@ public class FavoriteRepository {
     }
 
     public List<Favorite> getFavorites() {
-        List<Favorite> favorites = new ArrayList<>();
-
-        GetAllThreadSafe getAllThreadSafe = new GetAllThreadSafe(favoriteDao);
-        Thread thread = new Thread(getAllThreadSafe);
-        thread.start();
-
-        try {
-            thread.join();
-            favorites = getAllThreadSafe.getFavorites();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        return favorites;
+        return DbReads.read(favoriteDao::getAll, new ArrayList<>());
     }
 
     private static class GetAllThreadSafe implements Runnable {
@@ -146,8 +135,7 @@ public class FavoriteRepository {
         lastQueuedAt = Math.max(System.currentTimeMillis(), lastQueuedAt + 1);
 
         InsertThreadSafe insert = new InsertThreadSafe(favoriteDao, new Favorite(lastQueuedAt, id, albumId, artistId, toStar));
-        Thread thread = new Thread(insert);
-        thread.start();
+        AppExecutors.io().execute(insert);
     }
 
     private static class InsertThreadSafe implements Runnable {
@@ -167,8 +155,7 @@ public class FavoriteRepository {
 
     public void delete(Favorite favorite) {
         DeleteThreadSafe delete = new DeleteThreadSafe(favoriteDao, favorite);
-        Thread thread = new Thread(delete);
-        thread.start();
+        AppExecutors.io().execute(delete);
     }
 
     private static class DeleteThreadSafe implements Runnable {

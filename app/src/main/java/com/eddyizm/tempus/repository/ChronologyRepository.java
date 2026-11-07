@@ -1,5 +1,7 @@
 package com.eddyizm.tempus.repository;
 
+import com.eddyizm.tempus.util.AppExecutors;
+
 import androidx.lifecycle.LiveData;
 
 import com.eddyizm.tempus.database.AppDatabase;
@@ -18,8 +20,7 @@ public class ChronologyRepository {
 
     public void insert(Chronology item) {
         InsertThreadSafe insert = new InsertThreadSafe(chronologyDao, item);
-        Thread thread = new Thread(insert);
-        thread.start();
+        AppExecutors.io().execute(insert);
     }
 
     private static class InsertThreadSafe implements Runnable {

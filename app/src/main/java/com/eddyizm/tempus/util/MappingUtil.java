@@ -255,6 +255,7 @@ public class MappingUtil {
     }
 
     public static MediaItem mapDownload(Child media) {
+        Uri uri = Preferences.preferTranscodedDownload() ? MusicUtil.getTranscodedDownloadUri(media.getId()) : MusicUtil.getDownloadUri(media.getId());
 
         Bundle bundle = new Bundle();
         bundle.putInt("samplingRate", media.getSamplingRate() != null ? media.getSamplingRate() : 0);
@@ -278,11 +279,11 @@ public class MappingUtil {
                 .setRequestMetadata(
                         new MediaItem.RequestMetadata.Builder()
                                 .setExtras(bundle)
-                                .setMediaUri(Preferences.preferTranscodedDownload() ? MusicUtil.getTranscodedDownloadUri(media.getId()) : MusicUtil.getDownloadUri(media.getId()))
+                                .setMediaUri(uri)
                                 .build()
                 )
                 .setMimeType(MimeTypes.BASE_TYPE_AUDIO)
-                .setUri(Preferences.preferTranscodedDownload() ? MusicUtil.getTranscodedDownloadUri(media.getId()) : MusicUtil.getDownloadUri(media.getId()))
+                .setUri(uri)
                 .build();
     }
 
@@ -498,10 +499,36 @@ public class MappingUtil {
 
     private static final Object DOWNLOADS_READ = new Object();
 
+    /** The last full read, kept after a change too: the main thread is served it while a new read runs. */
+    private static volatile Map<String, Download> lastDownloads;
+    private static final java.util.concurrent.atomic.AtomicBoolean refreshing = new java.util.concurrent.atomic.AtomicBoolean();
+
+    /** Reads the download table into memory ahead of the first list or queue that needs it. */
+    public static void warmDownloads() {
+        AppExecutors.io().execute(MappingUtil::getCachedDownloads);
+    }
+
     public static Map<String, Download> getCachedDownloads() {
         watchDownloads();
         Map<String, Download> cache = cachedDownloads;
         if (cache != null) return cache;
+
+        // On the main thread (list rows binding), the copy from before the last write is good enough
+        // for a moment: hand it back and read the new one on a background thread, instead of reading
+        // ~3,000 rows on a new thread and waiting for it in the middle of a frame.
+        Map<String, Download> previous = lastDownloads;
+        if (previous != null && android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            if (refreshing.compareAndSet(false, true)) {
+                AppExecutors.io().execute(() -> {
+                    try {
+                        getCachedDownloads();
+                    } finally {
+                        refreshing.set(false);
+                    }
+                });
+            }
+            return previous;
+        }
 
         // One read at a time: callers arriving together at start-up wait for it and share it.
         synchronized (DOWNLOADS_READ) {
@@ -523,6 +550,7 @@ public class MappingUtil {
                     map.put(download.getId(), download);
             }
             map = java.util.Collections.unmodifiableMap(map);
+            lastDownloads = map;
             boolean kept = keep && downloadsVersion.get() == version;
             if (kept) cachedDownloads = map;
             Log.i(TAG, "Read " + map.size() + " downloads" + (kept ? "" : " (not kept: table changing)"));
@@ -576,8 +604,8 @@ public class MappingUtil {
     }
 
     private static Uri getDownloadUri(String id) {
-        Download download = new DownloadRepository().getDownload(id);
-        return download != null && !download.getDownloadUri().isEmpty() ? Uri.parse(download.getDownloadUri()) : MusicUtil.getDownloadUri(id);
+        Download download = getCachedDownloads().get(id);
+        return download != null && download.getDownloadUri() != null && !download.getDownloadUri().isEmpty() ? Uri.parse(download.getDownloadUri()) : MusicUtil.getDownloadUri(id);
     }
 
     public static void observeExternalAudioRefresh(LifecycleOwner owner, Runnable onRefresh) {
