@@ -26,8 +26,16 @@ public class BookmarksClient {
         return bookmarksService.getPlayQueue(subsonic.getParams());
     }
 
+    private static final int GET_ID_LIMIT = 150;
+
     public Call<ApiResponse> savePlayQueue(List<String> ids, String current, long position) {
         Log.d(TAG, "savePlayQueue()");
+        // Every id is a query parameter: ~3,000 songs make a URL of about 100 KB, past what servers
+        // and proxies accept (commonly 8 KB). A long queue goes as a form POST instead, which
+        // Subsonic-compatible servers read the same way; a short one stays a GET as before.
+        if (ids != null && ids.size() > GET_ID_LIMIT) {
+            return bookmarksService.savePlayQueueForm(subsonic.getParams(), ids, current, position);
+        }
         return bookmarksService.savePlayQueue(subsonic.getParams(), ids, current, position);
     }
 

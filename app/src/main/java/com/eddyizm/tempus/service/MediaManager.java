@@ -860,22 +860,23 @@ public class MediaManager {
     }
 
     private static void swapDatabase(List<Child> media) {
-        getQueueRepository().insertAll(media, true, 0);
+        getQueueRepository().replaceKeepingResume(media);
     }
 
     private static void removeDatabase(List<Child> media, int toRemove) {
         if (toRemove != -1) {
             media.remove(toRemove);
-            getQueueRepository().insertAll(media, true, 0);
+            getQueueRepository().replaceKeepingResume(media);
         }
     }
 
     private static void removeRangeDatabase(List<Child> media, int fromItem, int toItem) {
-        List<Child> toRemove = media.subList(fromItem, toItem);
-
-        media.removeAll(toRemove);
-
-        getQueueRepository().insertAll(media, true, 0);
+        // By position. removeAll(subList) compared every song with every removed one (millions of
+        // equals() on the main thread for a long queue) and also dropped copies of those songs
+        // queued elsewhere, so the saved queue no longer matched the player's.
+        if (fromItem < 0 || toItem > media.size() || fromItem >= toItem) return;
+        media.subList(fromItem, toItem).clear();
+        getQueueRepository().replaceKeepingResume(media);
     }
 
     public static void clearDatabase() {
