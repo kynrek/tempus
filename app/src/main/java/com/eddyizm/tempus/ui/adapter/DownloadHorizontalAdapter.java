@@ -1,6 +1,8 @@
 package com.eddyizm.tempus.ui.adapter;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,16 +18,20 @@ import com.eddyizm.tempus.helper.recyclerview.FastScrollbar;
 import com.eddyizm.tempus.interfaces.ClickCallback;
 import com.eddyizm.tempus.model.Download;
 import com.eddyizm.tempus.subsonic.models.Child;
+import com.eddyizm.tempus.util.AppExecutors;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.MusicUtil;
 import com.eddyizm.tempus.util.Util;
 
+import java.text.CollationKey;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -41,7 +47,12 @@ public class DownloadHorizontalAdapter extends RecyclerView.Adapter<DownloadHori
     private List<Child> shuffling;
     private List<Child> grouped;
 
+    private Map<String, Integer> counts = Collections.emptyMap();
+    private int generation;
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
+
     private final java.util.Map<String, String> playlistCoverCache = new java.util.HashMap<>();
+    private final java.util.Set<String> playlistCoverLookups = new java.util.HashSet<>();
 
     public DownloadHorizontalAdapter(ClickCallback click) {
         this.click = click;
@@ -87,35 +98,72 @@ public class DownloadHorizontalAdapter extends RecyclerView.Adapter<DownloadHori
     }
 
     public void setItems(String view, String filterKey, String filterValue, List<Child> songs) {
-        this.view = filterValue != null ? view : filterKey;
-        this.filterKey = filterKey;
-        this.filterValue = filterValue;
-
-        this.songs = songs;
-
-        List<Child> result = groupSong(songs);
-        if (!Constants.DOWNLOAD_TYPE_TRACK.equals(this.view)) {
-            sortByDisplayLabel(result);
-        }
-        this.grouped = result;
-
-        this.shuffling = shufflingSong(new ArrayList<>(songs));
-
-        notifyDataSetChanged();
+        setItems(view, filterKey, filterValue, songs, null);
     }
 
-    private List<Child> sortByDisplayLabel(List<Child> items) {
+    /**
+     * Groups, sorts and counts on a worker thread (about 3,000 songs on the car box), then shows the
+     * result and runs {@code onApplied} on the main thread. A newer call replaces an older one still
+     * being worked out.
+     */
+    public void setItems(String view, String filterKey, String filterValue, List<Child> songs, Runnable onApplied) {
+        final String newView = filterValue != null ? view : filterKey;
+        final List<Child> input = songs != null ? new ArrayList<>(songs) : new ArrayList<>();
+        final int gen = ++generation;
+
+        AppExecutors.compute().execute(() -> {
+            List<Child> result = groupSong(newView, filterKey, filterValue, input);
+            if (!Constants.DOWNLOAD_TYPE_TRACK.equals(newView)) {
+                result = sortByDisplayLabel(newView, result);
+            }
+            List<Child> shuffle = shufflingSong(filterKey, filterValue, new ArrayList<>(input));
+            Map<String, Integer> counts = countsFor(newView, input);
+            final List<Child> grouping = result;
+
+            MAIN.post(() -> {
+                if (gen != generation) return;
+                this.view = newView;
+                this.filterKey = filterKey;
+                this.filterValue = filterValue;
+                this.songs = input;
+                this.grouped = grouping;
+                this.shuffling = shuffle;
+                this.counts = counts;
+                notifyDataSetChanged();
+                if (onApplied != null) onApplied.run();
+            });
+        });
+    }
+
+    private List<Child> sortByDisplayLabel(String view, List<Child> items) {
         Collator collator = Collator.getInstance();
         collator.setStrength(Collator.PRIMARY);
-        Comparator<Child> comparator = Comparator.comparing(this::getDisplayLabel, Comparator.nullsLast(collator));
-        if (Constants.DOWNLOAD_TYPE_ALBUM.equals(this.view)) {
-            comparator = comparator.thenComparing(Child::getAlbum, Comparator.nullsLast(collator));
+        boolean album = Constants.DOWNLOAD_TYPE_ALBUM.equals(view);
+        // Collation keys once per item, not two labels and two collations per comparison.
+        List<Object[]> keyed = new ArrayList<>(items.size());
+        for (Child item : items) {
+            String label = getDisplayLabel(view, item);
+            String albumName = album ? item.getAlbum() : null;
+            keyed.add(new Object[]{
+                    label != null ? collator.getCollationKey(label) : null,
+                    albumName != null ? collator.getCollationKey(albumName) : null,
+                    item});
         }
-        items.sort(comparator);
-        return items;
+        Comparator<Object[]> byLabel = Comparator.comparing(k -> (CollationKey) k[0], Comparator.nullsLast(Comparator.naturalOrder()));
+        if (album) {
+            byLabel = byLabel.thenComparing(k -> (CollationKey) k[1], Comparator.nullsLast(Comparator.naturalOrder()));
+        }
+        keyed.sort(byLabel);
+        List<Child> sorted = new ArrayList<>(keyed.size());
+        for (Object[] k : keyed) sorted.add((Child) k[2]);
+        return sorted;
     }
 
     private String getDisplayLabel(Child item) {
+        return getDisplayLabel(view, item);
+    }
+
+    private static String getDisplayLabel(String view, Child item) {
         if (item == null) return null;
 
         String label;
@@ -176,7 +224,7 @@ public class DownloadHorizontalAdapter extends RecyclerView.Adapter<DownloadHori
         return position;
     }
 
-    private List<Child> groupSong(List<Child> songs) {
+    private static List<Child> groupSong(String view, String filterKey, String filterValue, List<Child> songs) {
         switch (view) {
             case Constants.DOWNLOAD_TYPE_TRACK:
                 return filterSong(filterKey, filterValue, songs.stream().filter(song -> Objects.nonNull(song.getId())).filter(Util.distinctByKey(Child::getId)).collect(Collectors.toList()));
@@ -198,7 +246,7 @@ public class DownloadHorizontalAdapter extends RecyclerView.Adapter<DownloadHori
         return Collections.emptyList();
     }
 
-    private List<Child> filterSong(String filterKey, String filterValue, List<Child> songs) {
+    private static List<Child> filterSong(String filterKey, String filterValue, List<Child> songs) {
         if (filterValue != null) {
             switch (filterKey) {
                 case Constants.DOWNLOAD_TYPE_TRACK:
@@ -219,7 +267,7 @@ public class DownloadHorizontalAdapter extends RecyclerView.Adapter<DownloadHori
         return songs;
     }
 
-    private List<Child> shufflingSong(List<Child> songs) {
+    private static List<Child> shufflingSong(String filterKey, String filterValue, List<Child> songs) {
         if (filterValue == null) {
             return songs;
         }
@@ -242,25 +290,29 @@ public class DownloadHorizontalAdapter extends RecyclerView.Adapter<DownloadHori
         }
     }
 
-    private String countSong(String filterKey, String filterValue, List<Child> songs) {
-        if (filterValue != null) {
-            switch (filterKey) {
-                case Constants.DOWNLOAD_TYPE_TRACK:
-                    return String.valueOf(songs.stream().filter(child -> child.getId().equals(filterValue)).count());
-                case Constants.DOWNLOAD_TYPE_ALBUM:
-                    return String.valueOf(songs.stream().filter(child -> Objects.equals(child.getAlbumId(), filterValue)).count());
-                case Constants.DOWNLOAD_TYPE_GENRE:
-                    return String.valueOf(songs.stream().filter(child -> Objects.equals(child.getGenre(), filterValue)).count());
-                case Constants.DOWNLOAD_TYPE_YEAR:
-                    return String.valueOf(songs.stream().filter(child -> Objects.equals(child.getYear(), Integer.valueOf(filterValue))).count());
-                case Constants.DOWNLOAD_TYPE_ARTIST:
-                    return String.valueOf(songs.stream().filter(child -> Objects.equals(child.getArtistId(), filterValue)).count());
+    /** Songs per album / artist / genre / year / playlist, counted once instead of per bound row. */
+    private static Map<String, Integer> countsFor(String view, List<Child> songs) {
+        Map<String, Integer> counts = new HashMap<>();
+        for (Child child : songs) {
+            String value;
+            switch (view) {
+                case Constants.DOWNLOAD_TYPE_ALBUM: value = child.getAlbumId(); break;
+                case Constants.DOWNLOAD_TYPE_ARTIST: value = child.getArtistId(); break;
+                case Constants.DOWNLOAD_TYPE_GENRE: value = child.getGenre(); break;
+                case Constants.DOWNLOAD_TYPE_YEAR: value = child.getYear() != null ? child.getYear().toString() : null; break;
                 case Constants.DOWNLOAD_TYPE_PLAYLIST:
-                    return String.valueOf(songs.stream().filter(child -> child instanceof Download && Objects.equals(((Download) child).getPlaylistId(), filterValue)).count());
+                    value = child instanceof Download ? ((Download) child).getPlaylistId() : null;
+                    break;
+                default: value = null;
             }
+            if (value != null) counts.merge(view + "\u0000" + value, 1, Integer::sum);
         }
+        return counts;
+    }
 
-        return "0";
+    private String countSong(String filterKey, String filterValue, List<Child> songs) {
+        Integer count = filterValue != null ? counts.get(filterKey + "\u0000" + filterValue) : null;
+        return String.valueOf(count != null ? count : 0);
     }
 
     private void initTrackLayout(ViewHolder holder, int position) {
@@ -399,15 +451,23 @@ public class DownloadHorizontalAdapter extends RecyclerView.Adapter<DownloadHori
 
             if (coverArtId == null) {
                 // Async lookup from local playlist cache
-                new Thread(() -> {
-                    String cachedCover = com.eddyizm.tempus.database.AppDatabase.getInstance().playlistDao().getPlaylistCoverArtId(playlistId);
-                    if (cachedCover != null) {
-                        playlistCoverCache.put(playlistId, cachedCover);
-                        if (holder.itemView.getContext() instanceof android.app.Activity) {
-                            ((android.app.Activity) holder.itemView.getContext()).runOnUiThread(() -> notifyItemChanged(position));
-                        }
-                    }
-                }).start();
+                // One lookup per playlist (rebinding used to start another thread each time), and
+                // the row is found again by id: the list may have moved by the time it answers.
+                if (playlistCoverLookups.add(playlistId)) {
+                    AppExecutors.io().execute(() -> {
+                        String cachedCover = com.eddyizm.tempus.database.AppDatabase.getInstance().playlistDao().getPlaylistCoverArtId(playlistId);
+                        if (cachedCover == null) return;
+                        MAIN.post(() -> {
+                            playlistCoverCache.put(playlistId, cachedCover);
+                            for (int i = 0; i < grouped.size(); i++) {
+                                Child row = grouped.get(i);
+                                if (row instanceof Download && playlistId.equals(((Download) row).getPlaylistId())) {
+                                    notifyItemChanged(i);
+                                }
+                            }
+                        });
+                    });
+                }
                 // Fallback to track cover art while loading
                 coverArtId = download.getCoverArtId();
             }
