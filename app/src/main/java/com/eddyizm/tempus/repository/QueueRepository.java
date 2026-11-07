@@ -7,6 +7,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.eddyizm.tempus.App;
@@ -17,6 +18,7 @@ import com.eddyizm.tempus.subsonic.base.ApiResponse;
 import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.subsonic.models.Bookmark;
 import com.eddyizm.tempus.subsonic.models.PlayQueue;
+import com.eddyizm.tempus.util.AppExecutors;
 import com.eddyizm.tempus.util.Preferences;
 
 import java.util.ArrayList;
@@ -38,7 +40,26 @@ public class QueueRepository {
     private final QueueDao queueDao = AppDatabase.getInstance().queueDao();
 
     public LiveData<List<Queue>> getLiveQueue() {
-        return queueDao.getAll();
+        // The resume point (every 15 s while playing) and the last-played time (every track
+        // change) are written to the queue rows. Each write makes Room read the whole queue again
+        // (~3,000 rows on the car box) and every observer re-map it on the main thread, although
+        // the songs and their order did not change. Pass on only lists whose songs or order differ.
+        MediatorLiveData<List<Queue>> distinct = new MediatorLiveData<>();
+        distinct.addSource(queueDao.getAll(), rows -> {
+            List<Queue> shown = distinct.getValue();
+            if (shown != null && sameSongs(shown, rows)) return;
+            distinct.setValue(rows);
+        });
+        return distinct;
+    }
+
+    static boolean sameSongs(List<Queue> a, List<Queue> b) {
+        if (a == b) return true;
+        if (a == null || b == null || a.size() != b.size()) return false;
+        for (int i = 0; i < a.size(); i++) {
+            if (!java.util.Objects.equals(a.get(i).getId(), b.get(i).getId())) return false;
+        }
+        return true;
     }
 
     public List<Child> getMedia() {
@@ -116,7 +137,10 @@ public class QueueRepository {
      */
     public void savePlayQueueToServer(String current, long position) {
         if (!Preferences.isSyncronizationEnabled()) return;
-        dbExecutor.execute(() -> {
+        // A read of the whole queue: on the shared pool, not the single queue-write thread, where it
+        // held up the small writes queued behind it on every pause, seek and track change.
+        // Queued behind the writes already waiting (so it sees them), but read on the pool.
+        dbExecutor.execute(() -> AppExecutors.io().execute(() -> {
             List<String> ids = queueDao.getAllSimple().stream()
                     .map(Queue::getId)
                     .collect(Collectors.toList());
@@ -125,7 +149,7 @@ public class QueueRepository {
                 return;
             }
             savePlayQueue(ids, current, position);
-        });
+        }));
     }
 
     /**
@@ -301,6 +325,35 @@ public class QueueRepository {
 
     public void delete(int position) {
         dbExecutor.execute(() -> queueDao.delete(position));
+    }
+
+    /**
+     * Saves {@code songs} as the whole queue, in that order, keeping each song's last-played time and
+     * stored position. Rebuilding the rows from the songs alone (insertAll with reset) cleared both, so
+     * after a move, removal or shuffle the restore no longer knew which song to come back to.
+     */
+    public void replaceKeepingResume(List<Child> songs) {
+        final List<Child> copy = new ArrayList<>(songs);
+        dbExecutor.execute(() -> {
+            java.util.Map<String, Queue> previous = new java.util.HashMap<>();
+            for (Queue row : queueDao.getAllSimple()) {
+                Queue kept = previous.get(row.getId());
+                // A song queued twice: keep whichever copy was played last.
+                if (kept == null || row.getLastPlay() > kept.getLastPlay()) previous.put(row.getId(), row);
+            }
+            List<Queue> rows = new ArrayList<>(copy.size());
+            for (int i = 0; i < copy.size(); i++) {
+                Queue row = new Queue(copy.get(i));
+                Queue old = previous.get(row.getId());
+                if (old != null) {
+                    row.setLastPlay(old.getLastPlay());
+                    row.setPlayingChanged(old.getPlayingChanged());
+                }
+                row.setTrackOrder(i);
+                rows.add(row);
+            }
+            queueDao.replaceQueue(rows);
+        });
     }
 
     public void deleteAll() {
