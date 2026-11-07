@@ -36,9 +36,48 @@ import java.nio.charset.StandardCharsets;
 @OptIn(markerClass = UnstableApi.class)
 public class MappingUtil {
     public static List<MediaItem> mapMediaItems(List<Child> items) {
-        ArrayList<MediaItem> mediaItems = new ArrayList<>();
+        int n = items.size();
+        int threads = AppExecutors.computeThreads();
+        // A long queue (~3,000 songs on the car box at every restore, play and shuffle) is split
+        // across the compute threads; each song is independent. Not from a compute thread itself,
+        // which would wait on its own pool.
+        if (n < PARALLEL_MAPPING_MIN || threads < 2 || Thread.currentThread().getName().startsWith("tempus-compute")) {
+            return mapRange(items, 0, n);
+        }
 
-        for (int i = 0; i < items.size(); i++) {
+        // Shared state the songs read, made ready once here rather than raced for by each thread.
+        getCachedDownloads();
+        App.getSubsonicClientInstance(false);
+
+        int chunk = (n + threads - 1) / threads;
+        List<java.util.concurrent.Future<List<MediaItem>>> parts = new ArrayList<>();
+        for (int from = chunk; from < n; from += chunk) {
+            final int start = from;
+            final int end = Math.min(n, from + chunk);
+            parts.add(AppExecutors.compute().submit(() -> mapRange(items, start, end)));
+        }
+        ArrayList<MediaItem> mediaItems = new ArrayList<>(n);
+        mediaItems.addAll(mapRange(items, 0, Math.min(n, chunk)));
+        for (java.util.concurrent.Future<List<MediaItem>> part : parts) {
+            try {
+                mediaItems.addAll(part.get());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return mapRange(items, 0, n);
+            } catch (java.util.concurrent.ExecutionException e) {
+                Log.e(TAG, "Parallel mapping failed, mapping in one go", e);
+                return mapRange(items, 0, n);
+            }
+        }
+        return mediaItems;
+    }
+
+    private static final int PARALLEL_MAPPING_MIN = 400;
+
+    private static List<MediaItem> mapRange(List<Child> items, int from, int to) {
+        ArrayList<MediaItem> mediaItems = new ArrayList<>(Math.max(0, to - from));
+
+        for (int i = from; i < to; i++) {
             Child item = items.get(i);
             try {
                 mediaItems.add(mapMediaItem(item));

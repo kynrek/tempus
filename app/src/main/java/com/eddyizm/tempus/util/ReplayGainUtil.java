@@ -45,7 +45,7 @@ public class ReplayGainUtil {
     private static final Set<String> prefetchedIds = ConcurrentHashMap.newKeySet();
 
     private static final ExecutorService prefetchExecutor =
-            Executors.newFixedThreadPool(2);
+            AppExecutors.backgroundPool("replaygain-prefetch", 2);
 
     // Audio processor that applies gain directly to PCM samples inside
     // ExoPlayer's audio pipeline.  Unlike player.setVolume() this is

@@ -20,7 +20,7 @@ import java.util.concurrent.Executors;
 public class RadioCoverArtDownloader {
     private static final String TAG = "RadioCoverArtDownloader";
     private static final String COVER_DIR = "radio_covers";
-    private static final ExecutorService executor = Executors.newFixedThreadPool(2);
+    private static final ExecutorService executor = AppExecutors.backgroundPool("radio-covers", 2);
 
     public static File getCoverDir() {
         Context context = App.getContext();
