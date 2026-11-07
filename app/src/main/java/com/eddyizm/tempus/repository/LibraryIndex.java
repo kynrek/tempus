@@ -64,6 +64,9 @@ public final class LibraryIndex {
     private static LibraryIndexDatabase db;
     /** The open index when it may be read off the IO thread (WAL journal); null otherwise. */
     private static volatile LibraryIndexDatabase walDb;
+    /** Reads running beside the index thread; a store waits for the ones asked for before it. */
+    private static final java.util.Set<java.util.concurrent.CompletableFuture<Void>> pendingReads =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static final java.util.concurrent.locks.ReentrantReadWriteLock RELOCATING = new java.util.concurrent.locks.ReentrantReadWriteLock();
     private static File dbFile;
 
@@ -97,19 +100,29 @@ public final class LibraryIndex {
             // Once open in WAL mode (internal storage), reads run on the shared pool next to the
             // writes: a screen opening while a store of all albums (100-200 ms) is under way no
             // longer waits behind it. On the SD card (rollback journal) they stay in line.
+            // A store asked for after this read still waits for it (see pendingReads), so reads
+            // and the store's comparison keep the order they were asked in.
             LibraryIndexDatabase parallel = walDb;
             if (parallel != null) {
+                java.util.concurrent.CompletableFuture<Void> done = new java.util.concurrent.CompletableFuture<>();
+                pendingReads.add(done);
                 AppExecutors.io().execute(() -> {
-                    RELOCATING.readLock().lock();
                     try {
-                        if (walDb == parallel) {
-                            readNow(what, scope, parallel.dao(), query, convert, onMain);
-                            return;
+                        RELOCATING.readLock().lock();
+                        try {
+                            if (walDb == parallel) {
+                                readNow(what, scope, parallel.dao(), query, convert, onMain);
+                                return;
+                            }
+                        } finally {
+                            RELOCATING.readLock().unlock();
                         }
+                        // Moved meanwhile: back in line on the index thread (which opens it again).
+                        IO.execute(() -> readNow(what, scope, null, query, convert, onMain));
                     } finally {
-                        RELOCATING.readLock().unlock();
+                        pendingReads.remove(done);
+                        done.complete(null);
                     }
-                    IO.execute(() -> readNow(what, scope, null, query, convert, onMain));
                 });
             } else {
                 IO.execute(() -> readNow(what, scope, null, query, convert, onMain));
@@ -170,7 +183,18 @@ public final class LibraryIndex {
                                      java.util.function.Predicate<M> valid, @Nullable Consumer<Boolean> changedOnMain) {
         String scope = scope();
         List<M> copy = new ArrayList<>(items);
-        FirstFrame.run(() -> IO.execute(() -> {
+        FirstFrame.run(() -> {
+            // The reads asked for before this store, which may be running beside the index thread.
+            List<java.util.concurrent.CompletableFuture<Void>> earlierReads = new ArrayList<>(pendingReads);
+            IO.execute(() -> storeNow(what, scope, copy, toRow, sync, valid, changedOnMain, earlierReads));
+        });
+    }
+
+    private static <M, R> void storeNow(String what, String scope, List<M> copy, Function<M, R> toRow, Sync<R> sync,
+                                        java.util.function.Predicate<M> valid, @Nullable Consumer<Boolean> changedOnMain,
+                                        List<java.util.concurrent.CompletableFuture<Void>> earlierReads) {
+        for (java.util.concurrent.CompletableFuture<Void> read : earlierReads) read.join();
+        {
             boolean changed = true;
             try {
                 if (disabled()) return;
@@ -199,7 +223,7 @@ public final class LibraryIndex {
                     MAIN.post(() -> changedOnMain.accept(result));
                 }
             }
-        }));
+        }
     }
 
     /**
