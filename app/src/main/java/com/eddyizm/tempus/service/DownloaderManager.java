@@ -123,6 +123,8 @@ public class DownloaderManager {
             download.setDownloadUri(mediaItem.requestMetadata.mediaUri.toString());
             requests.add(buildDownloadRequest(mediaItem));
             requested.add(mediaItem.mediaId);
+            // Into the download queue and onto the progress circles, as a single download is.
+            DownloadProgress.started(context, download, false);
             rows.add(download);
         }
         // One transaction (and one refresh of the download lists) for the batch, not one per song.
@@ -137,6 +139,7 @@ public class DownloaderManager {
             } catch (IllegalStateException e) {
                 requested.remove(id);
                 deleteDatabase(id);
+                DownloadProgress.finished(id);
                 Log.w(TAG, "Download service not started for " + id, e);
             }
         }
