@@ -630,7 +630,7 @@ public class MainActivity extends BaseActivity {
     }
 
     public void goFromLogin() {
-        setBottomSheetInPeek(mainViewModel.isQueueLoaded());
+        mainViewModel.whenQueueLoaded(this::setBottomSheetInPeek);
         new PlaylistRepository().syncKeptPlaylists(getApplicationContext());
         goToHome();
         consumePendingAssetLink();

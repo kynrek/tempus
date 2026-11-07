@@ -180,9 +180,20 @@ public class SearchFragment extends Fragment implements ClickCallback {
     }
 
     public void setRecentSuggestions() {
+        // Read the recent searches on a worker, then build the rows (it used to block the main thread).
+        android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+        com.eddyizm.tempus.util.AppExecutors.io().execute(() -> {
+            List<String> recent = searchViewModel.getRecentSearchSuggestion();
+            main.post(() -> {
+                if (bind != null) showRecentSuggestions(recent);
+            });
+        });
+    }
+
+    private void showRecentSuggestions(List<String> recent) {
         bind.searchViewSuggestionContainer.removeAllViews();
 
-        for (String suggestion : searchViewModel.getRecentSearchSuggestion()) {
+        for (String suggestion : recent) {
             View view = LayoutInflater.from(bind.searchViewSuggestionContainer.getContext()).inflate(R.layout.item_search_suggestion, bind.searchViewSuggestionContainer, false);
 
             ImageView leadingImageView = view.findViewById(R.id.search_suggestion_icon);
