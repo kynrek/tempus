@@ -15,6 +15,8 @@ import android.os.IBinder
 import android.os.SystemClock
 import android.os.Handler
 import android.os.Looper
+import android.os.Process
+import android.os.HandlerThread
 import android.util.Log
 import androidx.media3.common.*
 import androidx.media3.common.audio.AudioProcessor
@@ -89,7 +91,55 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
     private lateinit var networkCallback: CustomNetworkCallback
     private lateinit var equalizerManager: EqualizerManager
     private val parametricEqProcessor = ParametricEqAudioProcessor()
-    private val widgetUpdateHandler = Handler(Looper.getMainLooper())
+    /**
+     * The thread the player, the media session and this service's player listeners run on. It
+     * used to be the main thread, shared with the screen: every queue change (building ~3,000
+     * media sources, media3 publishing the whole queue to the system, the notification) and
+     * every listener here ran in the middle of the app's frames. The tempus flavour keeps the
+     * main thread, because the Cast player has to run there and the session's players must share
+     * one thread.
+     */
+    lateinit var playbackLooper: Looper
+        private set
+    private var playbackThread: HandlerThread? = null
+    private val playbackHandler by lazy { Handler(playbackLooper) }
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    protected open fun createPlaybackLooper(): Looper {
+        val thread = HandlerThread("Playback", Process.THREAD_PRIORITY_DEFAULT)
+        thread.start()
+        playbackThread = thread
+        return thread.looper
+    }
+
+    /** Runs [block] on the playback thread: at once when already there, else posted. */
+    protected fun onPlayback(block: () -> Unit) {
+        if (Looper.myLooper() == playbackLooper) block() else playbackHandler.post(block)
+    }
+
+    /** Runs [block] on the playback thread and waits for it (service start and stop only). */
+    private fun onPlaybackAndWait(block: () -> Unit) {
+        if (Looper.myLooper() == playbackLooper) {
+            block()
+            return
+        }
+        val done = java.util.concurrent.CountDownLatch(1)
+        var failure: Throwable? = null
+        playbackHandler.post {
+            try {
+                block()
+            } catch (t: Throwable) {
+                failure = t
+            } finally {
+                done.countDown()
+            }
+        }
+        done.await()
+        failure?.let { throw it }
+    }
+
+    // On the playback thread: what it runs reads and changes the player.
+    private val widgetUpdateHandler by lazy { playbackHandler }
     private var widgetUpdateScheduled = false
     // Set in onDestroy. restorePlayerFromQueue maps the saved queue on a background thread and
     // posts the player calls back to this handler; if the service is destroyed mid map (the app
@@ -122,7 +172,7 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         checkRadioHttpHeaders()
     }
 
-    private val queueSyncHandler = Handler(Looper.getMainLooper())
+    private val queueSyncHandler by lazy { playbackHandler }
     private var hasPlayedSinceRestore = false
     private val queueSyncRunnable = object : Runnable {
         override fun run() {
@@ -404,8 +454,10 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         if (player.hasNextMediaItem() && skippedInARow < player.mediaItemCount) {
             skippedInARow++
             Log.w(TAG, "Skipping unplayable ${item.mediaId} (${error.errorCodeName})")
-            android.widget.Toast.makeText(applicationContext,
-                    getString(com.eddyizm.tempus.R.string.player_skipped_unplayable, title), android.widget.Toast.LENGTH_LONG).show()
+            val message = getString(com.eddyizm.tempus.R.string.player_skipped_unplayable, title)
+            mainHandler.post {
+                android.widget.Toast.makeText(applicationContext, message, android.widget.Toast.LENGTH_LONG).show()
+            }
             player.seekToNextMediaItem()
             player.prepare()
             player.play()
@@ -847,9 +899,11 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         val controlPoint = upnpControlPoint
         val provider = UpnpRouteProvider(this, controlPoint)
         provider.selectionListener = object : UpnpRouteProvider.SelectionListener {
-            override fun onRendererSelected(device: UpnpDevice) {
+            // MediaRouter calls these on the main thread; the players are used on the playback thread.
+            override fun onRendererSelected(device: UpnpDevice) = onPlayback {
+                if (serviceDestroyed) return@onPlayback
                 val previous = upnpPlayer
-                val player = UpnpPlayer(controlPoint, device, mainLooper, context = this@BaseMediaService)
+                val player = UpnpPlayer(controlPoint, device, playbackLooper, context = this@BaseMediaService)
                 upnpPlayer = player
                 initializePlayerListener(player)
                 setPlayer(mediaLibrarySession.player, player)
@@ -857,9 +911,10 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
                 previous?.release()
             }
 
-            override fun onRendererUnselected(device: UpnpDevice) {
-                val player = upnpPlayer ?: return
-                if (player.device != device) return
+            override fun onRendererUnselected(device: UpnpDevice) = onPlayback {
+                if (serviceDestroyed) return@onPlayback
+                val player = upnpPlayer ?: return@onPlayback
+                if (player.device != device) return@onPlayback
                 upnpPlayer = null
                 setPlayer(player, exoplayer)
                 // Paused, as when Bluetooth headphones drop, so ending the cast does not start the phone's speaker.
@@ -885,9 +940,11 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
             UpnpRoutesGate.Change.RELEASE -> {
                 // Bring playback home first, or the renderer keeps playing with nothing left to control it.
                 // Paused there, since a settings switch should not start the phone's speaker by itself.
-                upnpPlayer?.let {
-                    setPlayer(it, exoplayer)
-                    exoplayer.playWhenReady = false
+                onPlayback {
+                    upnpPlayer?.let {
+                        setPlayer(it, exoplayer)
+                        exoplayer.playWhenReady = false
+                    }
                 }
                 releaseUpnpRoutes()
             }
@@ -903,8 +960,10 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         }
         upnpRouteProvider = null
         // Left playing on the renderer otherwise, with nothing left to control it.
-        upnpPlayer?.release()
-        upnpPlayer = null
+        onPlayback {
+            upnpPlayer?.release()
+            upnpPlayer = null
+        }
     }
 
     open fun releasePlayers() {
@@ -916,6 +975,11 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
+        onPlayback { onTaskRemovedOnPlayback() }
+    }
+
+    private fun onTaskRemovedOnPlayback() {
+        if (serviceDestroyed) return
         val player = mediaLibrarySession.player
 
         if (!player.playWhenReady || player.mediaItemCount == 0) {
@@ -931,12 +995,17 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
     override fun onCreate() {
         super.onCreate()
 
-        playerInitHook()
-        initializeEqualizer()
+        playbackLooper = createPlaybackLooper()
+        // The session must exist before onGetSession answers, so the start waits for it, as it
+        // did when this all ran on the main thread.
+        onPlaybackAndWait {
+            playerInitHook()
+            initializeEqualizer()
+        }
         initializeNetworkListener()
         applyUpnpSwitch()
         App.getInstance().preferences.registerOnSharedPreferenceChangeListener(upnpSwitchListener)
-        restorePlayerFromQueue(mediaLibrarySession.player)
+        onPlayback { restorePlayerFromQueue(mediaLibrarySession.player) }
     }
 
     override fun onGetSession(controllerInfo: ControllerInfo): MediaLibrarySession {
@@ -950,19 +1019,25 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         MediaServiceExtensionRegistry.handler = null
         FavoriteRegistry.onChange = null
         releaseNetworkCallback()
-        equalizerManager.release(exoplayer.audioSessionId)
-        ReplayGainUtil.release()
-        stopWidgetUpdates()
-        queueSyncHandler.removeCallbacks(queueSyncRunnable)
-        stopRadioHeaderChecks()
+        App.getInstance().preferences.unregisterOnSharedPreferenceChangeListener(upnpSwitchListener)
         SleepTimerManager.getInstance().stopEndOfTrackPoller()
         SleepTimerManager.getInstance().setServiceActionListener(null)
         radioHeaderCheckExecutor.shutdown()
         if (::bitmapLoader.isInitialized) bitmapLoader.shutdown()
-        App.getInstance().preferences.unregisterOnSharedPreferenceChangeListener(upnpSwitchListener)
         releaseUpnpRoutes()
-        releasePlayers()
-        mediaLibrarySession.release()
+        onPlaybackAndWait {
+            equalizerManager.release(exoplayer.audioSessionId)
+            ReplayGainUtil.release()
+            stopWidgetUpdates()
+            queueSyncHandler.removeCallbacks(queueSyncRunnable)
+            stopRadioHeaderChecks()
+            upnpPlayer?.release()
+            upnpPlayer = null
+            releasePlayers()
+            mediaLibrarySession.release()
+        }
+        // Let what the release posted run, then end the thread.
+        playbackThread?.let { thread -> playbackHandler.postDelayed({ thread.quitSafely() }, 1000) }
         super.onDestroy()
     }
 
@@ -983,6 +1058,7 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .setLoadControl(StartupLoadLimit(initializeLoadControl()))
+            .setLooper(playbackLooper)
             .build()
 
         exoplayer.shuffleModeEnabled = Preferences.isShuffleModeEnabled()
@@ -1017,7 +1093,10 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         sendBroadcast(Intent(ACTION_EQUALIZER_UPDATED))
     }
 
-    fun reloadEqualizer() {
+    fun reloadEqualizer() = onPlayback { reloadEqualizerOnPlayback() }
+
+    private fun reloadEqualizerOnPlayback() {
+        if (serviceDestroyed) return
         equalizerManager.release(exoplayer.audioSessionId)
         equalizerManager = EqualizerManager(buildBackend(), baseContext)
         equalizerManager.attach(exoplayer.audioSessionId)
@@ -1050,10 +1129,11 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
 
     private fun initializeNetworkListener() {
         networkCallback = CustomNetworkCallback()
+        // Its callbacks read and change the player: delivered on the playback thread.
         getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(
-            networkCallback
+            networkCallback, playbackHandler
         )
-        updateMediaItems(mediaLibrarySession.player)
+        onPlayback { updateMediaItems(mediaLibrarySession.player) }
     }
 
     private fun initializeLoadControl(): DefaultLoadControl {
@@ -1091,21 +1171,27 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
             ?: AssetLinkUtil.buildLink(AssetLinkUtil.TYPE_ARTIST, extras?.getString("artistId"))
         val position = player.currentPosition.takeIf { it != C.TIME_UNSET } ?: 0L
         val duration = player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
-        WidgetUpdateManager.updateFromState(
-            this,
-            title ?: "",
-            artist ?: "",
-            album ?: "",
-            coverId,
-            player.isPlaying,
-            player.shuffleModeEnabled,
-            player.repeatMode,
-            position,
-            duration,
-            songLink,
-            albumLink,
-            artistLink
-        )
+        val playing = player.isPlaying
+        val shuffle = player.shuffleModeEnabled
+        val repeat = player.repeatMode
+        // Read here, on the playback thread; drawn on main, where Glide has to start its loads.
+        mainHandler.post {
+            WidgetUpdateManager.updateFromState(
+                this,
+                title ?: "",
+                artist ?: "",
+                album ?: "",
+                coverId,
+                playing,
+                shuffle,
+                repeat,
+                position,
+                duration,
+                songLink,
+                albumLink,
+                artistLink
+            )
+        }
     }
 
     /** With "Keep played songs in queue" off, a song that finishes on its own leaves the queue. */

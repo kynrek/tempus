@@ -70,6 +70,8 @@ public class SleepTimerManager {
     private static SleepTimerManager instance;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
+    /** Where the end-of-track poller runs: the player's thread. */
+    private volatile Handler pollerHandler;
     private Runnable scheduledTick;
 
     /** Duration of the volume fade-out in milliseconds. */
@@ -80,7 +82,7 @@ public class SleepTimerManager {
     /** Set to true to abort an in-progress fade (e.g. track transition fired early). */
     private volatile boolean abortCurrentFade = false;
 
-    private Runnable endOfTrackPoller;
+    private volatile Runnable endOfTrackPoller;
 
     private long endTimeMs = 0;
     private boolean active = false;
@@ -192,6 +194,9 @@ public class SleepTimerManager {
         float[] volume = {1f};
 
         abortCurrentFade = false;
+        // The player is driven on its own thread (the playback thread in the service), so the
+        // fade steps run there too.
+        Handler onPlayer = playerHandler(player);
 
         Runnable fadeStep = new Runnable() {
             @Override
@@ -203,16 +208,16 @@ public class SleepTimerManager {
                 volume[0] = Math.max(0f, volume[0] - decrement);
                 player.setVolume(volume[0]);
                 if (volume[0] > 0f) {
-                    handler.postDelayed(this, stepMs);
+                    onPlayer.postDelayed(this, stepMs);
                 } else {
-                    // Fade complete — cancel the timer and pause.
-                    cancelTimer();
+                    // Fade complete — cancel the timer (on main, where its listeners are) and pause.
+                    handler.post(SleepTimerManager.this::cancelTimer);
                     player.pause();
-                    handler.postDelayed(() -> player.setVolume(1f), 300);
+                    onPlayer.postDelayed(() -> player.setVolume(1f), 300);
                 }
             }
         };
-        handler.post(fadeStep);
+        onPlayer.post(fadeStep);
     }
 
     /**
@@ -223,6 +228,8 @@ public class SleepTimerManager {
     public void armEndOfTrackFadePoller(Player player) {
         stopEndOfTrackPoller();
         abortCurrentFade = false;
+        Handler onPlayer = playerHandler(player);
+        pollerHandler = onPlayer;
 
         endOfTrackPoller = new Runnable() {
             boolean fadeStarted = false;
@@ -243,18 +250,26 @@ public class SleepTimerManager {
                         return;
                     }
                 }
-                handler.postDelayed(this, 500);
+                onPlayer.postDelayed(this, 500);
             }
         };
-        handler.post(endOfTrackPoller);
+        onPlayer.post(endOfTrackPoller);
     }
 
     /** Cancels any running end-of-track position poller. */
     public void stopEndOfTrackPoller() {
         if (endOfTrackPoller != null) {
+            Handler onPlayer = pollerHandler;
+            if (onPlayer != null) onPlayer.removeCallbacks(endOfTrackPoller);
             handler.removeCallbacks(endOfTrackPoller);
             endOfTrackPoller = null;
         }
+    }
+
+    /** A handler on the thread the player is used from. */
+    private static Handler playerHandler(Player player) {
+        Looper looper = player.getApplicationLooper();
+        return new Handler(looper);
     }
 
     // -------------------------------------------------------------------------

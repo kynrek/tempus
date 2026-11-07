@@ -54,7 +54,6 @@ public class ReplayGainUtil {
             new ReplayGainAudioProcessor();
 
     private static volatile WeakReference<Player> playerRef = new WeakReference<>(null);
-    private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public static ReplayGainAudioProcessor getAudioProcessor() {
         return audioProcessor;
@@ -134,7 +133,10 @@ public class ReplayGainUtil {
                 //     network), apply its gain immediately.  This corrects
                 //     the audio without waiting for onTracksChanged.
                 //  2. Queue the pending gain for the next gapless transition.
-                mainHandler.post(() -> {
+                // Back on the player's thread (the playback thread in the service).
+                Player owner = playerRef.get();
+                if (owner == null) return;
+                new Handler(owner.getApplicationLooper()).post(() -> {
                     Player p = playerRef.get();
                     if (p == null) return;
 
@@ -330,6 +332,11 @@ public class ReplayGainUtil {
      * {@link #queuePendingForNextTrack} again.
      */
     public static void reapplyCurrentTrackGain(Player player) {
+        // Settings calls this from the main thread; the player lives on its own thread.
+        if (Looper.myLooper() != player.getApplicationLooper()) {
+            new Handler(player.getApplicationLooper()).post(() -> reapplyCurrentTrackGain(player));
+            return;
+        }
         MediaItem currentItem = player.getCurrentMediaItem();
         if (currentItem == null || currentItem.mediaId == null) {
             Log.d(TAG, "reapplyCurrentTrackGain: no current item, skipping");
