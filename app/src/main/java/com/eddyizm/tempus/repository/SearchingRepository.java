@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import retrofit2.Call;
@@ -34,6 +35,14 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class SearchingRepository {
+    // Shared threads for "all songs" searches, let go after a minute idle: a new executor per
+    // search was never shut down, so each search left a thread behind for good.
+    private static final ExecutorService SEARCH_ALL_EXECUTOR = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "SearchAllSongs");
+        t.setDaemon(true);
+        return t;
+    });
+
     private final RecentSearchDao recentSearchDao = AppDatabase.getInstance().recentSearchDao();
 
     public MutableLiveData<SearchResult2> search2(String query) {
@@ -63,7 +72,7 @@ public class SearchingRepository {
     public MutableLiveData<SearchResult3> search3(SearchFragment sf, String query) {
         MutableLiveData<SearchResult3> result = new MutableLiveData<>();
 
-        Executors.newSingleThreadExecutor().execute(() -> {
+        SEARCH_ALL_EXECUTOR.execute(() -> {
             List<Child> allSongs = new ArrayList<>();
             int offset = 0;
             int limit = 1000;

@@ -62,6 +62,10 @@ public class DownloadFragment extends Fragment implements ClickCallback {
 
     private MaterialToolbar materialToolbar;
 
+    /** The latest downloaded songs, laid out again whenever the user moves through the groups. */
+    @Nullable private List<Child> downloadedSongs;
+    @Nullable private OnBackPressedCallback backCallback;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -139,6 +143,7 @@ public class DownloadFragment extends Fragment implements ClickCallback {
         downloadViewModel.getDownloadedTracks(getViewLifecycleOwner()).observe(getViewLifecycleOwner(), songs -> {
             if (songs != null) {
                 if (songs.isEmpty()) {
+                    downloadedSongs = null;
                     if (bind != null) {
                         bind.emptyDownloadLayout.setVisibility(View.VISIBLE);
                         bind.downloadDownloadedSector.setVisibility(View.GONE);
@@ -177,44 +182,60 @@ public class DownloadFragment extends Fragment implements ClickCallback {
             }
         });
 
+        // One observer for the whole view: it used to be added again on every downloads change, so
+        // a batch of N finishing songs laid the list out N times on each later change.
+        downloadViewModel.getViewStack().observe(getViewLifecycleOwner(), stack -> {
+            if (bind == null) return;
+            bind.downloadedRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+            renderDownloadView();
+        });
+
         bind.downloadedGroupByImageView.setOnClickListener(view -> showPopupMenu(view, R.menu.download_popup_menu));
         bind.downloadedGoBackImageView.setOnClickListener(view -> downloadViewModel.popViewStack());
         bind.downloadedRefreshImageView.setOnClickListener(view -> downloadViewModel.refreshExternalDownloads());
     }
 
     private void finishDownloadView(List<Child> songs) {
-        downloadViewModel.getViewStack().observe(getViewLifecycleOwner(), stack -> {
+        downloadedSongs = songs;
+        if (bind.downloadedRecyclerView.getLayoutManager() == null) {
             bind.downloadedRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        }
+        renderDownloadView();
+    }
 
-            DownloadStack lastLevel = stack.get(stack.size() - 1);
+    private void renderDownloadView() {
+        List<Child> songs = downloadedSongs;
+        List<DownloadStack> stack = downloadViewModel.getViewStack().getValue();
+        if (bind == null || songs == null || stack == null || stack.isEmpty()) return;
 
-            switch (lastLevel.getId()) {
-                case Constants.DOWNLOAD_TYPE_TRACK:
-                    downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_TRACK, lastLevel.getId(), lastLevel.getView(), songs);
-                    break;
-                case Constants.DOWNLOAD_TYPE_ALBUM:
-                    downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_TRACK, lastLevel.getId(), lastLevel.getView(), songs);
-                    break;
-                case Constants.DOWNLOAD_TYPE_ARTIST:
-                    downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_ALBUM, lastLevel.getId(), lastLevel.getView(), songs);
-                    break;
-                case Constants.DOWNLOAD_TYPE_GENRE:
-                    downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_TRACK, lastLevel.getId(), lastLevel.getView(), songs);
-                    break;
-                case Constants.DOWNLOAD_TYPE_YEAR:
-                    downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_TRACK, lastLevel.getId(), lastLevel.getView(), songs);
-                    break;
-                case Constants.DOWNLOAD_TYPE_PLAYLIST:
-                    downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_TRACK, lastLevel.getId(), lastLevel.getView(), songs);
-                    break;
-            }
+        DownloadStack lastLevel = stack.get(stack.size() - 1);
 
-            bind.downloadFastScrollbar.setVisibility(downloadHorizontalAdapter.getItemCount() > 1 ? View.VISIBLE : View.GONE);
-            bind.downloadedGoBackImageView.setVisibility(stack.size() > 1 ? View.VISIBLE : View.GONE);
+        switch (lastLevel.getId()) {
+            case Constants.DOWNLOAD_TYPE_TRACK:
+                downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_TRACK, lastLevel.getId(), lastLevel.getView(), songs);
+                break;
+            case Constants.DOWNLOAD_TYPE_ALBUM:
+                downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_TRACK, lastLevel.getId(), lastLevel.getView(), songs);
+                break;
+            case Constants.DOWNLOAD_TYPE_ARTIST:
+                downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_ALBUM, lastLevel.getId(), lastLevel.getView(), songs);
+                break;
+            case Constants.DOWNLOAD_TYPE_GENRE:
+                downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_TRACK, lastLevel.getId(), lastLevel.getView(), songs);
+                break;
+            case Constants.DOWNLOAD_TYPE_YEAR:
+                downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_TRACK, lastLevel.getId(), lastLevel.getView(), songs);
+                break;
+            case Constants.DOWNLOAD_TYPE_PLAYLIST:
+                downloadHorizontalAdapter.setItems(Constants.DOWNLOAD_TYPE_TRACK, lastLevel.getId(), lastLevel.getView(), songs);
+                break;
+        }
 
-            setupBackPressing(stack.size());
-            setupShuffleButton();
-        });
+        bind.downloadFastScrollbar.setVisibility(downloadHorizontalAdapter.getItemCount() > 1 ? View.VISIBLE : View.GONE);
+        bind.downloadedGoBackImageView.setVisibility(stack.size() > 1 ? View.VISIBLE : View.GONE);
+
+        setupBackPressing(stack.size());
+        setupShuffleButton();
     }
 
     private void setupShuffleButton() {
@@ -230,7 +251,9 @@ public class DownloadFragment extends Fragment implements ClickCallback {
     }
 
     private void setupBackPressing(int stackSize) {
-        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
+        // One callback at a time, not one more per layout.
+        if (backCallback != null) backCallback.remove();
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), backCallback = new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
                 if (stackSize > 1) {

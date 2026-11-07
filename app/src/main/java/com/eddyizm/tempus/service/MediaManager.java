@@ -873,9 +873,11 @@ public class MediaManager {
     }
 
     private static void removeRangeDatabase(List<Child> media, int fromItem, int toItem) {
-        List<Child> toRemove = media.subList(fromItem, toItem);
-
-        media.removeAll(toRemove);
+        // By position: removeAll(subList) also dropped the same songs anywhere else in the queue,
+        // so the saved queue lost songs the player still had.
+        int from = Math.max(0, Math.min(fromItem, media.size()));
+        int to = Math.max(from, Math.min(toItem, media.size()));
+        media.subList(from, to).clear();
 
         getQueueRepository().insertAll(media, true, 0);
     }

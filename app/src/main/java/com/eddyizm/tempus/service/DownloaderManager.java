@@ -23,8 +23,8 @@ import com.eddyizm.tempus.util.DownloadUtil;
 import com.eddyizm.tempus.util.MusicUtil;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,7 +36,8 @@ public class DownloaderManager {
     private final DataSource.Factory dataSourceFactory;
     private final DownloadIndex downloadIndex;
 
-    private static HashMap<String, Download> downloads;
+    // Written by the download service's callbacks and read from list binds and mapping threads.
+    private static final Map<String, Download> downloads = new ConcurrentHashMap<>();
     // Handed to the service and not yet finished, the map above only learns of a download once it completes.
     private static final Set<String> requested = ConcurrentHashMap.newKeySet();
 
@@ -44,7 +45,7 @@ public class DownloaderManager {
         this.context = context.getApplicationContext();
         this.dataSourceFactory = dataSourceFactory;
 
-        downloads = new HashMap<>();
+        downloads.clear();
         downloadIndex = downloadManager.getDownloadIndex();
 
         loadDownloads();
@@ -122,7 +123,7 @@ public class DownloaderManager {
     public static void cancel(Context context, String id) {
         DownloadService.sendRemoveDownload(context.getApplicationContext(), DownloaderService.class, id, false);
         deleteDatabase(id);
-        if (downloads != null) downloads.remove(id);
+        downloads.remove(id);
         requested.remove(id);
         DownloadProgress.finished(id);
     }

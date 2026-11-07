@@ -483,6 +483,8 @@ class PlayerQueueBridge @JvmOverloads constructor(
                     val validItems = mutableListOf<androidx.media3.common.MediaItem>()
                     val validModels = mutableListOf<Download>()
                     for (song in songs) {
+                        // Already downloaded or on its way: asking again downloaded it twice.
+                        if (dm.isDownloaded(song.id) || dm.isRequested(song.id)) continue
                         try {
                             val item = MappingUtil.mapMediaItem(song)
                             if (item != null) {
@@ -498,10 +500,9 @@ class PlayerQueueBridge @JvmOverloads constructor(
                         }
                     }
                     if (validItems.isNotEmpty()) {
-                        withContext(Dispatchers.Main) {
-                            dm.download(validItems, validModels)
-                        }
-                        count = validItems.size
+                        // Stays on this IO thread: one request, database row and service start
+                        // per song, for up to the whole queue, held up the screen on Main.
+                        count = dm.download(validItems, validModels)
                     }
                 } else {
                     withContext(Dispatchers.Main) {
