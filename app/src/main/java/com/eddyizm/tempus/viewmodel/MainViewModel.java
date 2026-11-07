@@ -55,6 +55,15 @@ public class MainViewModel extends AndroidViewModel {
         return queueRepository.count() != 0;
     }
 
+    /** Counts the saved queue on a worker and answers on the main thread, instead of blocking it. */
+    public void whenQueueLoaded(java.util.function.Consumer<Boolean> answer) {
+        android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+        com.eddyizm.tempus.util.AppExecutors.io().execute(() -> {
+            boolean loaded = new QueueRepository().count() != 0;
+            main.post(() -> answer.accept(loaded));
+        });
+    }
+
     public LiveData<SubsonicResponse> ping() {
         return systemRepository.ping();
     }

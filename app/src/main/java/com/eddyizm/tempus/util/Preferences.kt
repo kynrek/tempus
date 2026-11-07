@@ -237,9 +237,19 @@ object Preferences {
         return getResumePoints().values.sortedByDescending { it.timestamp }
     }
 
+    // The parsed resume points, with the stored text they came from. Reads used to parse the whole
+    // JSON (up to 200 entries) each time: every 15 s during playback and on every track change, on
+    // the main thread. Parsed again only when the stored text is not the one parsed last.
+    private val resumeLock = Any()
+    private var resumeRaw: String? = null
+    private var resumeParsed: Map<String, ResumePoint> = emptyMap()
+
     private fun getResumePoints(): MutableMap<String, ResumePoint> {
         val raw = App.getInstance().preferences.getString(RESUME_POINTS, null)
-        return try {
+        synchronized(resumeLock) {
+            if (raw != null && raw == resumeRaw) return LinkedHashMap(resumeParsed)
+        }
+        val parsed: MutableMap<String, ResumePoint> = try {
             when {
                 raw.isNullOrBlank() -> mutableMapOf()
                 else -> Gson().fromJson(raw, object : TypeToken<MutableMap<String, ResumePoint>>() {}.type)
@@ -248,12 +258,23 @@ object Preferences {
         } catch (_: Exception) {
             mutableMapOf()
         }
+        synchronized(resumeLock) {
+            resumeRaw = raw
+            resumeParsed = LinkedHashMap(parsed)
+        }
+        return parsed
     }
 
     /** Prune + persist. Every writer routes through here, so the cap holds in one place. */
     private fun writeResumePoints(pts: MutableMap<String, ResumePoint>) {
+        val capped = capResumePoints(pts, MAX_RESUME_POINTS)
+        val json = Gson().toJson(capped)
+        synchronized(resumeLock) {
+            resumeRaw = json
+            resumeParsed = LinkedHashMap(capped)
+        }
         App.getInstance().preferences.edit()
-            .putString(RESUME_POINTS, Gson().toJson(capResumePoints(pts, MAX_RESUME_POINTS)))
+            .putString(RESUME_POINTS, json)
             .apply()
     }
 

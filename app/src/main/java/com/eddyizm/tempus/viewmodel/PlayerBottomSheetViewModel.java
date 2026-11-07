@@ -172,12 +172,9 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
 
         currentSongId = songId;
 
+        // The observer delivers the stored lyrics (Room reads them off the main thread); the extra
+        // synchronous read here blocked the main thread on every track change for the same row.
         observeCachedLyrics(owner, songId);
-
-        LyricsCache cachedLyrics = lyricsRepository.getLyrics(songId);
-        if (cachedLyrics != null) {
-            onCachedLyricsChanged(cachedLyrics);
-        }
 
         if (NetworkUtil.isOffline() || media == null) {
             return;
@@ -340,14 +337,18 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
         lyricsCachedLiveData.postValue(true);
 
         if (!TextUtils.isEmpty(lyricsCache.getStructuredLyrics())) {
-            try {
-                LyricsList cachedList = gson.fromJson(lyricsCache.getStructuredLyrics(), LyricsList.class);
-                lyricsListLiveData.postValue(cachedList);
-                lyricsLiveData.postValue(null);
-            } catch (Exception exception) {
-                lyricsListLiveData.postValue(null);
-                lyricsLiveData.postValue(lyricsCache.getLyrics());
-            }
+            // Synced lyrics are a JSON document of every line: parse it on a worker, not in the
+            // main-thread observer. The results are posted, as before.
+            com.eddyizm.tempus.util.AppExecutors.io().execute(() -> {
+                try {
+                    LyricsList cachedList = gson.fromJson(lyricsCache.getStructuredLyrics(), LyricsList.class);
+                    lyricsListLiveData.postValue(cachedList);
+                    lyricsLiveData.postValue(null);
+                } catch (Exception exception) {
+                    lyricsListLiveData.postValue(null);
+                    lyricsLiveData.postValue(lyricsCache.getLyrics());
+                }
+            });
         } else {
             lyricsListLiveData.postValue(null);
             lyricsLiveData.postValue(lyricsCache.getLyrics());

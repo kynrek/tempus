@@ -465,12 +465,18 @@ public class HomeViewModel extends AndroidViewModel {
     }
 
     public void setOfflineFavorite() {
-        ArrayList<Favorite> favorites = getFavorites();
-        ArrayList<Favorite> favoritesToSave = getFavoritesToSave(favorites);
-        ArrayList<Favorite> favoritesToDelete = getFavoritesToDelete(favorites, favoritesToSave);
+        // Read on a worker: this runs while Home is being built, and the read used to block it.
+        android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+        com.eddyizm.tempus.util.AppExecutors.io().execute(() -> {
+            ArrayList<Favorite> favorites = getFavorites();
+            main.post(() -> {
+                ArrayList<Favorite> favoritesToSave = getFavoritesToSave(favorites);
+                ArrayList<Favorite> favoritesToDelete = getFavoritesToDelete(favorites, favoritesToSave);
 
-        manageFavoriteToSave(favoritesToSave);
-        manageFavoriteToDelete(favoritesToDelete);
+                manageFavoriteToSave(favoritesToSave);
+                manageFavoriteToDelete(favoritesToDelete);
+            });
+        });
     }
 
     private ArrayList<Favorite> getFavorites() {

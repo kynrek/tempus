@@ -106,7 +106,9 @@ public class BottomSheetHelper {
         }
         pendingStateRunnable = () -> {
             pendingStateRunnable = null;
-            setStateInPeek(mainViewModel.isQueueLoaded());
+            mainViewModel.whenQueueLoaded(loaded -> {
+                if (!isExpanded()) setStateInPeek(loaded);
+            });
         };
         handler.postDelayed(pendingStateRunnable, 100);
     }
