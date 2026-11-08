@@ -21,6 +21,7 @@ import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.subsonic.models.ArtistID3;
 import com.eddyizm.tempus.subsonic.models.Genre;
 import com.eddyizm.tempus.util.FirstFrame;
+import com.eddyizm.tempus.util.AppExecutors;
 import com.eddyizm.tempus.util.Preferences;
 
 import java.io.File;
@@ -61,6 +62,9 @@ public final class LibraryIndex {
     /** Touched only on the IO thread. */
     private static Boolean disabled;
     private static LibraryIndexDatabase db;
+    /** The open index when it may be read off the IO thread (WAL journal); null otherwise. */
+    private static volatile LibraryIndexDatabase walDb;
+    private static final java.util.concurrent.locks.ReentrantReadWriteLock RELOCATING = new java.util.concurrent.locks.ReentrantReadWriteLock();
     private static File dbFile;
 
     private LibraryIndex() {
@@ -89,11 +93,39 @@ public final class LibraryIndex {
         String scope = scope();
         // Nothing of the index runs before the window's first frame (see FirstFrame): start-up on
         // the box is CPU-bound, and the server's reply is later than that anyway.
-        FirstFrame.run(() -> IO.execute(() -> {
+        FirstFrame.run(() -> {
+            // Once open in WAL mode (internal storage), reads run on the shared pool next to the
+            // writes: a screen opening while a store of all albums (100-200 ms) is under way no
+            // longer waits behind it. On the SD card (rollback journal) they stay in line.
+            LibraryIndexDatabase parallel = walDb;
+            if (parallel != null) {
+                AppExecutors.io().execute(() -> {
+                    RELOCATING.readLock().lock();
+                    try {
+                        if (walDb == parallel) {
+                            readNow(what, scope, parallel.dao(), query, convert, onMain);
+                            return;
+                        }
+                    } finally {
+                        RELOCATING.readLock().unlock();
+                    }
+                    IO.execute(() -> readNow(what, scope, null, query, convert, onMain));
+                });
+            } else {
+                IO.execute(() -> readNow(what, scope, null, query, convert, onMain));
+            }
+        });
+    }
+
+    /** {@code openDao} null: on the IO thread, opening the index if needed. */
+    private static <R, M> void readNow(String what, String scope, @Nullable LibraryIndexDao openDao,
+                                       Function<LibraryIndexDao, List<R>> query,
+                                       Function<R, M> convert, Consumer<List<M>> onMain) {
+        {
             List<M> result = null;
             try {
                 long start = SystemClock.elapsedRealtime();
-                LibraryIndexDao dao = disabled() ? null : dao();
+                LibraryIndexDao dao = openDao != null ? openDao : (disabled() ? null : dao());
                 if (dao != null && scope.equals(dao.meta(META_SCOPE))) {
                     List<R> rows = query.apply(dao);
                     if (!rows.isEmpty()) {
@@ -108,7 +140,7 @@ public final class LibraryIndex {
             }
             List<M> out = result;
             MAIN.post(() -> onMain.accept(out));
-        }));
+        }
     }
 
     // ---- writing ---------------------------------------------------------------------------
@@ -216,6 +248,12 @@ public final class LibraryIndex {
             }
             if (dbFile.equals(target)) return;
             File from = dbFile;
+            RELOCATING.writeLock().lock();
+            try {
+                walDb = null;   // no new parallel reads; the lock waits for those running
+            } finally {
+                RELOCATING.writeLock().unlock();
+            }
             db.close();
             db = null;
             dbFile = null;
@@ -257,7 +295,9 @@ public final class LibraryIndex {
     private static LibraryIndexDatabase database() {
         if (db == null) {
             dbFile = targetFile();
-            db = LibraryIndexDatabase.open(App.getContext(), dbFile, !dbFile.equals(internalFile()));
+            boolean removable = !dbFile.equals(internalFile());
+            db = LibraryIndexDatabase.open(App.getContext(), dbFile, removable);
+            if (!removable && !disabled()) walDb = db;
         }
         return db;
     }
