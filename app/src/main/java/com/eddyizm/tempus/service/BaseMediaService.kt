@@ -72,6 +72,9 @@ import retrofit2.Response
 
 private const val TAG = "BaseMediaService"
 
+/** The player on its own "Playback" thread; see createPlaybackLooper for why it is off. */
+private const val USE_PLAYBACK_THREAD = false
+
 @UnstableApi
 open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
     companion object {
@@ -106,6 +109,13 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     protected open fun createPlaybackLooper(): Looper {
+        // Off for now: media3 1.9.2 answers a play request that reaches the session off the main
+        // thread by posting to main and waiting (MediaSessionImpl.onPlayRequested), while
+        // ConnectedControllersManager.flushCommandQueue still holds the controllers' lock. The
+        // app's own MediaController on main can need that lock at the same moment (sending a
+        // result for a media-button update), so Play could freeze the app until Android offered
+        // to close it. The rest of the playback-thread code stays, ready to switch back on.
+        if (!USE_PLAYBACK_THREAD) return Looper.getMainLooper()
         val thread = HandlerThread("Playback", Process.THREAD_PRIORITY_DEFAULT)
         thread.start()
         playbackThread = thread
