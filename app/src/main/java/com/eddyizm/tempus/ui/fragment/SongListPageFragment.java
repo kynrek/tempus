@@ -37,6 +37,7 @@ import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.SongHorizontalAdapter;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.viewmodel.PlaybackViewModel;
 import com.eddyizm.tempus.viewmodel.SongListPageViewModel;
@@ -203,7 +204,7 @@ public class SongListPageFragment extends Fragment implements ClickCallback {
     }
 
     private void initButtons() {
-        songListPageViewModel.getSongList().observe(getViewLifecycleOwner(), songs -> {
+        DownloadedOnly.songs(songListPageViewModel.getSongList()).observe(getViewLifecycleOwner(), songs -> {
             if (bind != null) {
                 setSongListPageSorter();
 
@@ -225,7 +226,7 @@ public class SongListPageFragment extends Fragment implements ClickCallback {
         bind.songListRecyclerView.setAdapter(songHorizontalAdapter);
         setMediaBrowserListenableFuture();
         reapplyPlayback();
-        songListPageViewModel.getSongList().observe(getViewLifecycleOwner(), songs -> {
+        DownloadedOnly.songs(songListPageViewModel.getSongList()).observe(getViewLifecycleOwner(), songs -> {
             isLoading = false;
             songHorizontalAdapter.setItems(songs);
             reapplyPlayback();
@@ -398,7 +399,7 @@ public class SongListPageFragment extends Fragment implements ClickCallback {
 
     private void pullToRefresh() {
         LifecycleOwner lifecycleOwner = getViewLifecycleOwner();
-        songListPageViewModel.getSongList().observe(lifecycleOwner, songs -> {
+        DownloadedOnly.songs(songListPageViewModel.getSongList()).observe(lifecycleOwner, songs -> {
             isLoading = false;
             songHorizontalAdapter.setItems(songs);
             reapplyPlayback();

@@ -14,6 +14,7 @@ import com.eddyizm.tempus.model.PinnedPlaylist;
 import com.eddyizm.tempus.repository.PlaylistRepository;
 import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.subsonic.models.Playlist;
+import com.eddyizm.tempus.util.DownloadedOnly;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ public class PlaylistPageViewModel extends AndroidViewModel {
 
     private final MutableLiveData<List<Child>> songLiveList = new MutableLiveData<>();
     private final MutableLiveData<Boolean> playlistMissingEvent = new MutableLiveData<>();
+    private LiveData<List<Child>> shownSongs;
 
     public PlaylistPageViewModel(@NonNull Application application) {
         super(application);
@@ -64,6 +66,15 @@ public class PlaylistPageViewModel extends AndroidViewModel {
             refreshSongs();
         }
         return songLiveList;
+    }
+
+    /**
+     * The tracks the page shows and plays: all of them, or only the downloaded ones while
+     * "Downloaded only" is on. Removing, downloading and syncing use the full list.
+     */
+    public LiveData<List<Child>> getShownSongList() {
+        if (shownSongs == null) shownSongs = DownloadedOnly.songs(getPlaylistSongLiveList());
+        return shownSongs;
     }
 
     /** The list as it stands, without starting a fetch. */

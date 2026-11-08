@@ -10,8 +10,10 @@ import androidx.annotation.OptIn;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.Transformations;
 import androidx.media3.common.util.UnstableApi;
 
+import com.eddyizm.tempus.database.AppDatabase;
 import com.eddyizm.tempus.model.Download;
 import com.eddyizm.tempus.interfaces.StarCallback;
 import com.eddyizm.tempus.repository.AlbumRepository;
@@ -22,6 +24,7 @@ import com.eddyizm.tempus.subsonic.models.ArtistID3;
 import com.eddyizm.tempus.subsonic.models.ArtistInfo2;
 import com.eddyizm.tempus.subsonic.models.Child;
 import com.eddyizm.tempus.util.DownloadUtil;
+import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.util.MappingUtil;
 import com.eddyizm.tempus.util.NetworkUtil;
 import com.eddyizm.tempus.util.Preferences;
@@ -46,6 +49,9 @@ public class ArtistPageViewModel extends AndroidViewModel {
 
     private final MutableLiveData<List<AlbumID3>> appearsOn = new MutableLiveData<>();
     private final MutableLiveData<List<AlbumID3>> releasesInOrder = new MutableLiveData<>();
+    /** What the page lists: everything, or only releases with downloads while that switch is on. */
+    private final LiveData<List<AlbumID3>> appearsOnShown = DownloadedOnly.albums(appearsOn);
+    private final LiveData<List<AlbumID3>> releasesShown = DownloadedOnly.albums(releasesInOrder);
 
     public ArtistPageViewModel(@NonNull Application application) {
         super(application);
@@ -119,15 +125,15 @@ public class ArtistPageViewModel extends AndroidViewModel {
         }
     }
 
-    public LiveData<List<AlbumID3>> getReleasesInOrder() { return releasesInOrder; }
-    public LiveData<List<AlbumID3>> getAppearsOn() { return appearsOn; }
+    public LiveData<List<AlbumID3>> getReleasesInOrder() { return releasesShown; }
+    public LiveData<List<AlbumID3>> getAppearsOn() { return appearsOnShown; }
 
     public LiveData<ArtistInfo2> getArtistInfo(String id) {
         return artistRepository.getArtistFullInfo(id);
     }
 
     public LiveData<List<Child>> getArtistTopSongList() {
-        return artistRepository.getTopSongs(artist.getName(), 20);
+        return DownloadedOnly.songs(artistRepository.getTopSongs(artist.getName(), 20));
     }
 
     /** What the Top songs section shows: the server's list, or a stand-in built from the artist's own tracks. */
@@ -147,6 +153,7 @@ public class ArtistPageViewModel extends AndroidViewModel {
     private static final android.util.LruCache<String, TopSongs> TOP_SONGS = new android.util.LruCache<>(40);
 
     private MutableLiveData<TopSongs> topSongs;
+    private LiveData<TopSongs> topSongsShown;
     private String topSongsArtistId;
 
     /**
@@ -157,10 +164,11 @@ public class ArtistPageViewModel extends AndroidViewModel {
      */
     public LiveData<TopSongs> getTopSongs() {
         String id = artist.getId();
-        if (topSongs != null && id.equals(topSongsArtistId)) return topSongs;
+        if (topSongs != null && id.equals(topSongsArtistId)) return topSongsShown;
         topSongsArtistId = id;
         topSongs = new MutableLiveData<>(TOP_SONGS.get(id));
-        if (topSongs.getValue() != null) return topSongs;
+        topSongsShown = downloadedOnly(topSongs);
+        if (topSongs.getValue() != null) return topSongsShown;
 
         MutableLiveData<TopSongs> target = topSongs;
         String name = artist.getName();
@@ -184,7 +192,16 @@ public class ArtistPageViewModel extends AndroidViewModel {
                         rankOwnTracks(id, target);
                     }
                 });
-        return topSongs;
+        return topSongsShown;
+    }
+
+    /** The same top songs, less the ones not downloaded while the "Downloaded only" switch is on. */
+    private static LiveData<TopSongs> downloadedOnly(MutableLiveData<TopSongs> source) {
+        LiveData<List<Child>> kept = DownloadedOnly.songs(Transformations.map(source, t -> t == null ? null : t.songs));
+        return Transformations.map(kept, list -> {
+            TopSongs all = source.getValue();
+            return list == null || all == null ? null : new TopSongs(list, all.fromServer);
+        });
     }
 
     /** No top songs from the server: the artist's favourite, best rated and most played tracks (a random few if none yet). */
@@ -211,6 +228,16 @@ public class ArtistPageViewModel extends AndroidViewModel {
     }
 
     public LiveData<List<Child>> getArtistShuffleList() {
+        if (DownloadedOnly.isEnabled()) {
+            // From the downloads themselves: a random pick from the server would mostly be songs that aren't here.
+            return Transformations.map(
+                    AppDatabase.getInstance().downloadDao().getByArtist(artist.getId(), artist.getName()),
+                    downloads -> {
+                        List<Child> songs = new ArrayList<>(downloads);
+                        Collections.shuffle(songs);
+                        return songs.subList(0, Math.min(Preferences.getQueueLimit(), songs.size()));
+                    });
+        }
         return artistRepository.getRandomSong(artist, Preferences.getQueueLimit());
     }
 

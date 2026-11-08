@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 
 import com.eddyizm.tempus.model.Download;
+import com.eddyizm.tempus.model.DownloadedKeys;
 
 import java.util.List;
 
@@ -21,6 +22,12 @@ public interface DownloadDao {
     /** Just the ids of finished downloads, for "is it downloaded" marks. */
     @Query("SELECT id FROM download WHERE download_state = 1")
     LiveData<List<String>> getDownloadedIds();
+
+    @Query("SELECT id, album_id, artist_id, album_artist, artist, genre FROM download WHERE download_state = 1")
+    LiveData<List<DownloadedKeys>> getDownloadedKeys();
+
+    @Query("SELECT * FROM download WHERE download_state = 1 AND (artist_id = :artistId OR album_artist = :name COLLATE NOCASE OR artist = :name COLLATE NOCASE)")
+    LiveData<List<Download>> getByArtist(String artistId, String name);
 
     @Query("SELECT * FROM download WHERE id = :id")
     Download getOne(String id);

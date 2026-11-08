@@ -32,6 +32,7 @@ import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.adapter.AlbumHorizontalAdapter;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.util.UIUtil;
 import com.eddyizm.tempus.viewmodel.AlbumListPageViewModel;
 
@@ -166,7 +167,7 @@ public class AlbumListPageFragment extends Fragment implements ClickCallback {
         }
         bind.albumListScrubber.attach(bind.albumListRecyclerView, albumHorizontalAdapter);
         bind.albumListScrubber.setOnScrubStartListener(() -> bind.appBarLayout.setExpanded(false));
-        albumListPageViewModel.getAlbumList(getViewLifecycleOwner()).observe(getViewLifecycleOwner(), albums -> {
+        DownloadedOnly.albums(albumListPageViewModel.getAlbumList(getViewLifecycleOwner())).observe(getViewLifecycleOwner(), albums -> {
             albumHorizontalAdapter.setItems(albums);
             setAlbumListPageSubtitle(albums);
             setAlbumListPageSorter();

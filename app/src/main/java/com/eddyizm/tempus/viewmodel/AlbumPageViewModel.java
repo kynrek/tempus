@@ -16,6 +16,7 @@ import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.subsonic.models.AlbumInfo;
 import com.eddyizm.tempus.subsonic.models.ArtistID3;
 import com.eddyizm.tempus.subsonic.models.Child;
+import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.util.NetworkUtil;
 import com.eddyizm.tempus.util.FavoriteRegistry;
 
@@ -51,7 +52,7 @@ public class AlbumPageViewModel extends AndroidViewModel {
         this.albumId = album.getId();
         this.album.postValue(album);
         this.artistId = album.getArtistId();
-        this.albumSongLiveList = albumRepository.getAlbumTracks(albumId);
+        this.albumSongLiveList = DownloadedOnly.songs(albumRepository.getAlbumTracks(albumId));
 
         albumRepository.getAlbum(album.getId()).observe(owner, albums -> {
             if (albums != null) this.album.setValue(albums);

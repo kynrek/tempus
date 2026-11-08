@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupMenu;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -22,6 +23,7 @@ import com.eddyizm.tempus.model.Server;
 import com.eddyizm.tempus.repository.ServerRepository;
 import com.eddyizm.tempus.subsonic.models.MusicFolder;
 import com.eddyizm.tempus.ui.activity.MainActivity;
+import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.util.Flavors;
 import com.eddyizm.tempus.util.MusicFolderUtil;
 import com.eddyizm.tempus.util.Preferences;
@@ -73,6 +75,16 @@ public class ToolbarFragment extends Fragment {
         } else if (Flavors.routeButtonIsOnlyForUpnp(requireContext())) {
             menu.findItem(R.id.media_route_menu_item).setVisible(false);
         }
+        showDownloadedOnly(menu.findItem(R.id.action_downloaded_only));
+    }
+
+    /** Lit up while on, so it's plain at a glance that the lists are cut down. Not on the Downloads screen, which is all downloads anyway. */
+    private void showDownloadedOnly(MenuItem item) {
+        if (item == null) return;
+        item.setVisible(!(getParentFragment() instanceof DownloadFragment));
+        boolean on = DownloadedOnly.isEnabled();
+        item.setIcon(on ? R.drawable.ic_download_done : R.drawable.ic_file_download);
+        item.setChecked(on);
     }
 
     @Override
@@ -117,7 +129,13 @@ public class ToolbarFragment extends Fragment {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.action_search) {
+        if (item.getItemId() == R.id.action_downloaded_only) {
+            boolean on = !DownloadedOnly.isEnabled();
+            DownloadedOnly.setEnabled(on);
+            showDownloadedOnly(item);
+            Toast.makeText(requireContext(), on ? R.string.downloaded_only_on : R.string.downloaded_only_off, Toast.LENGTH_SHORT).show();
+            return true;
+        } else if (item.getItemId() == R.id.action_search) {
             activity.navController.navigate(R.id.searchFragment);
             return true;
         } else if (item.getItemId() == R.id.action_settings) {
