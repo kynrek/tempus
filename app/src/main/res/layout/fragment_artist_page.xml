@@ -111,6 +111,18 @@
                         app:iconPadding="18dp" />
                 </LinearLayout>
 
+                <Button
+                    android:id="@+id/button_download_artist"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="0dp"
+                    android:background="@drawable/ic_download"
+                    android:foreground="?android:attr/selectableItemBackgroundBorderless"
+                    android:gravity="center"
+                    android:text=""
+                    android:contentDescription="@string/album_bottom_sheet_download_all" />
+
                 <ToggleButton
                     android:id="@+id/button_favorite"
                     android:layout_width="34dp"

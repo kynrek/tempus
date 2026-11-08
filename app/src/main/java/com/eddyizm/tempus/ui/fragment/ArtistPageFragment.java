@@ -44,6 +44,7 @@ import com.eddyizm.tempus.ui.adapter.AlbumCarouselAdapter;
 import com.eddyizm.tempus.ui.adapter.ArtistReleaseAdapter;
 import com.eddyizm.tempus.ui.adapter.ArtistCarouselAdapter;
 import com.eddyizm.tempus.ui.adapter.SongHorizontalAdapter;
+import com.eddyizm.tempus.util.AlbumDownload;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.MusicUtil;
 import com.eddyizm.tempus.util.Preferences;
@@ -149,6 +150,14 @@ public class ArtistPageFragment extends Fragment implements ClickCallback {
         favoriteToggle.setChecked(FavoriteRegistry.resolve(FavoriteRegistry.Kind.ARTIST, artistPageViewModel.getArtist().getId(), artistPageViewModel.getArtist().getStarred() != null));
         favoriteToggle.setOnClickListener(v -> artistPageViewModel.setFavorite(requireContext()));
 
+        Button downloadArtist = view.findViewById(R.id.button_download_artist);
+        downloadArtist.setOnClickListener(v -> {
+            ArtistID3 artist = artistPageViewModel.getArtist();
+            if (artist == null || artist.getId() == null) return;
+            v.setEnabled(false); // until the track list is in, so a second tap doesn't queue it twice
+            AlbumDownload.artist(requireContext(), artist.getId(), () -> v.setEnabled(true));
+        });
+
         Button bioToggle = view.findViewById(R.id.button_toggle_bio);
         bioToggle.setOnClickListener(v ->
                 Toast.makeText(getActivity(), R.string.artist_no_artist_info_toast, Toast.LENGTH_SHORT).show());
@@ -201,6 +210,24 @@ public class ArtistPageFragment extends Fragment implements ClickCallback {
         bind.collapsingToolbar.setTitle(artistPageViewModel.getArtist().getName());
         bind.animToolbar.setNavigationOnClickListener(v -> activity.navController.navigateUp());
         bind.collapsingToolbar.setExpandedTitleColor(getResources().getColor(R.color.white, null));
+
+        // The plain arrow is dark grey and vanished on most artist photos: over the photo it gets
+        // a dark disc, and goes back to plain once the bar has collapsed onto the surface colour.
+        bind.animToolbar.setNavigationIcon(R.drawable.ic_arrow_back_on_image);
+        bind.animToolbar.setNavigationContentDescription(androidx.appcompat.R.string.abc_action_bar_up_description);
+        bind.appbar.addOnOffsetChangedListener(new com.google.android.material.appbar.AppBarLayout.OnOffsetChangedListener() {
+            private boolean collapsed;
+
+            @Override
+            public void onOffsetChanged(com.google.android.material.appbar.AppBarLayout bar, int offset) {
+                if (bind == null) return;
+                boolean now = bind.collapsingToolbar.getHeight() + offset
+                        < bind.collapsingToolbar.getScrimVisibleHeightTrigger();
+                if (now == collapsed) return;
+                collapsed = now;
+                bind.animToolbar.setNavigationIcon(now ? R.drawable.ic_arrow_back : R.drawable.ic_arrow_back_on_image);
+            }
+        });
     }
 
     private void initArtistInfo() {
