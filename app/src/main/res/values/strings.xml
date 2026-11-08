@@ -898,6 +898,20 @@
         <item quantity="other">%d artists to sync</item>
     </plurals>
     <string name="album_page_download_button">Download album</string>
+    <string name="album_page_downloaded">Album downloaded</string>
+    <string name="download_in_progress">Downloading</string>
+    <string name="download_queue_title">Download queue</string>
+    <string name="download_queue_title_count">Download queue (%d)</string>
+    <string name="download_queue_empty">Nothing is downloading.</string>
+    <string name="download_queue_select_all">Select all</string>
+    <string name="download_queue_cancel">Cancel</string>
+    <string name="download_queue_cancel_count">Cancel %d</string>
+    <string name="download_queue_waiting">Waiting</string>
+    <string name="download_queue_swipe_hint">Swipe a song sideways to cancel it.</string>
+    <plurals name="download_queue_cancelled">
+        <item quantity="one">Cancelled %d download</item>
+        <item quantity="other">Cancelled %d downloads</item>
+    </plurals>
     <string name="album_favorite_add">Add album to favorites</string>
     <string name="album_favorite_remove">Remove album from favorites</string>
     <plurals name="songs_download_started">

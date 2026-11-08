@@ -290,6 +290,8 @@ The spot is also saved as a bookmark on your server, if the server supports book
 
 **Albums**: the album page's toolbar has a star (favourite) and a download button for the whole album. On an artist's page each album has the same two under its year and track count. Downloading takes every track, even while Downloaded only hides some of them.
 
+**Download progress**: a song that's downloading shows a circle on its row that fills as it comes in (it spins while waiting its turn). An album shows one too, over the songs asked for: in the album page's toolbar and on its row of the artist page. Tap an album's circle, or the download button on the Downloads page, for the **download queue**: everything waiting or downloading, kept apart from the play queue. Check songs (or **Select all**) and tap **Cancel**, or swipe a song sideways to cancel it.
+
 [Back to top](#table-of-contents)
 
 ## Playing on another device

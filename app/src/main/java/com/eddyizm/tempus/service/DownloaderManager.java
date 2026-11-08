@@ -86,12 +86,14 @@ public class DownloaderManager {
         // Marked before the send so a completion racing this call cannot leave the id behind.
         DownloadRequest request = buildDownloadRequest(mediaItem);
         requested.add(mediaItem.mediaId);
+        DownloadProgress.started(context, download, false);
         insertDatabase(download);
         try {
             DownloadService.sendAddDownload(context, DownloaderService.class, request, false);
         } catch (IllegalStateException e) {
             requested.remove(mediaItem.mediaId);
             deleteDatabase(mediaItem.mediaId);
+            DownloadProgress.finished(mediaItem.mediaId);
             Log.w(TAG, "Download service not started for " + mediaItem.mediaId, e);
             return false;
         }
@@ -152,6 +154,15 @@ public class DownloaderManager {
         for (int counter = 0; counter < mediaItems.size(); counter++) {
             remove(mediaItems.get(counter), downloads.get(counter));
         }
+    }
+
+    /** Stops a download that is waiting or running and forgets it (the download queue's Cancel). */
+    public static void cancel(Context context, String id) {
+        DownloadService.sendRemoveDownload(context.getApplicationContext(), DownloaderService.class, id, false);
+        deleteDatabase(id);
+        if (downloads != null) downloads.remove(id);
+        requested.remove(id);
+        DownloadProgress.finished(id);
     }
 
     public void removeAll() {

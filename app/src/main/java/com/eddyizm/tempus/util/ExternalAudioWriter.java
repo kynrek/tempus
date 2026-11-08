@@ -39,6 +39,14 @@ public class ExternalAudioWriter {
 
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
     private static final Set<String> PENDING = ConcurrentHashMap.newKeySet();
+    /** Cancelled from the download queue: skipped if still waiting, stopped if copying. */
+    private static final Set<String> CANCELLED = ConcurrentHashMap.newKeySet();
+
+    /** Stops a folder download that is waiting or copying (the download queue's Cancel). */
+    public static void cancel(String songId) {
+        if (PENDING.contains(songId)) CANCELLED.add(songId);
+        com.eddyizm.tempus.service.DownloadProgress.finished(songId);
+    }
 
     public static boolean isPending(String mediaId) {
         return PENDING.contains(mediaId);
@@ -94,11 +102,19 @@ public class ExternalAudioWriter {
         DownloadProgressState.getInstance().onEnqueue(appContext);
 
         PENDING.add(child.getId());
+        CANCELLED.remove(child.getId());
+        com.eddyizm.tempus.service.DownloadProgress.started(appContext, child, true);
         EXECUTOR.execute(() -> {
             try {
-                performDownload(appContext, mediaItem, fallbackName, child, playlistId, playlistName);
+                if (CANCELLED.remove(child.getId())) {
+                    DownloadProgressState.getInstance().onSkipped(appContext);
+                } else {
+                    performDownload(appContext, mediaItem, fallbackName, child, playlistId, playlistName);
+                }
             } finally {
                 PENDING.remove(child.getId());
+                CANCELLED.remove(child.getId());
+                com.eddyizm.tempus.service.DownloadProgress.finished(child.getId());
             }
         });
     }
@@ -270,16 +286,29 @@ public class ExternalAudioWriter {
                 int len;
                 long total = 0;
                 long lastProgressMs = 0;
+                boolean cancelled = false;
                 while ((len = in.read(buffer)) != -1) {
+                    if (CANCELLED.contains(child.getId())) {
+                        cancelled = true;
+                        break;
+                    }
                     out.write(buffer, 0, len);
                     total += len;
                     long now = SystemClock.elapsedRealtime();
                     if (now - lastProgressMs > 500) {
                         DownloadProgressState.getInstance().reportBytesProgress(context, total);
+                        if (remoteLength > 0) com.eddyizm.tempus.service.DownloadProgress.progress(child.getId(), total / (float) remoteLength);
                         lastProgressMs = now;
                     }
                 }
                 out.flush();
+
+                if (cancelled) {
+                    targetFile.delete();
+                    ExternalDownloadMetadataStore.remove(metadataKey);
+                    DownloadProgressState.getInstance().onSkipped(context);
+                    return;
+                }
 
                 if (total <= 0) {
                     targetFile.delete();

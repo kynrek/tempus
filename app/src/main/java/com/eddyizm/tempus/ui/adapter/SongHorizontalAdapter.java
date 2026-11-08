@@ -41,6 +41,10 @@ import com.eddyizm.tempus.ui.activity.MainActivity;
 import com.eddyizm.tempus.ui.dialog.PlaylistChooserDialog;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.DownloadUtil;
+import java.util.Set;
+import java.util.HashSet;
+import com.eddyizm.tempus.util.ProgressCircles;
+import com.eddyizm.tempus.service.DownloadProgress;
 import com.eddyizm.tempus.util.ExternalAudioReader;
 import com.eddyizm.tempus.util.MappingUtil;
 import com.eddyizm.tempus.util.MusicUtil;
@@ -131,7 +135,37 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
 
         if (lifecycleOwner != null) {
             MappingUtil.observeExternalAudioRefresh(lifecycleOwner, this::handleExternalAudioRefresh);
+            DownloadProgress.changes().observe(lifecycleOwner, v -> refreshDownloads());
         }
+    }
+
+    private static final String PAYLOAD_DOWNLOAD = "payload_download";
+    /** Rows showing a progress circle last time, so they switch to the downloaded icon when done. */
+    private final Set<String> shownDownloading = new HashSet<>();
+
+    /** Redraws only the download indicator of the rows downloading now or until just now. */
+    private void refreshDownloads() {
+        List<Child> list = differ.getCurrentList();
+        Set<String> now = new HashSet<>();
+        for (int i = 0; i < list.size(); i++) {
+            String id = list.get(i).getId();
+            boolean downloading = DownloadProgress.song(id) != null;
+            if (downloading) now.add(id);
+            if (downloading || shownDownloading.contains(id)) notifyItemChanged(i, PAYLOAD_DOWNLOAD);
+        }
+        shownDownloading.clear();
+        shownDownloading.addAll(now);
+    }
+
+    /** A progress circle while downloading, the downloaded icon once it's here, nothing otherwise. */
+    private void bindDownload(@NonNull ViewHolder holder, @NonNull Child song) {
+        Float progress = DownloadProgress.song(song.getId());
+        boolean downloaded = progress == null && (Preferences.getDownloadDirectoryUri() == null
+                ? DownloadUtil.getDownloadTracker(holder.itemView.getContext()).isDownloaded(song.getId())
+                : ExternalAudioReader.getUri(song) != null);
+        holder.item.searchResultDownloadIndicatorImageView.setVisibility(progress != null || downloaded ? View.VISIBLE : View.GONE);
+        holder.item.downloadDoneIcon.setVisibility(downloaded ? View.VISIBLE : View.GONE);
+        ProgressCircles.show(holder.item.downloadProgress, progress);
     }
 
     @NonNull
@@ -143,8 +177,10 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position, @NonNull List<Object> payloads) {
-        if (!payloads.isEmpty() && payloads.contains("payload_playback")) {
-            bindPlaybackState(holder, differ.getCurrentList().get(position));
+        if (!payloads.isEmpty() && (payloads.contains("payload_playback") || payloads.contains(PAYLOAD_DOWNLOAD))) {
+            Child song = differ.getCurrentList().get(position);
+            if (payloads.contains("payload_playback")) bindPlaybackState(holder, song);
+            if (payloads.contains(PAYLOAD_DOWNLOAD)) bindDownload(holder, song);
         } else {
             super.onBindViewHolder(holder, position, payloads);
         }
@@ -172,19 +208,7 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
 
         holder.item.trackNumberTextView.setText(MusicUtil.getReadableTrackNumber(holder.itemView.getContext(), song.getTrack()));
 
-        if (Preferences.getDownloadDirectoryUri() == null) {
-            if (DownloadUtil.getDownloadTracker(holder.itemView.getContext()).isDownloaded(song.getId())) {
-                holder.item.searchResultDownloadIndicatorImageView.setVisibility(View.VISIBLE);
-            } else {
-                holder.item.searchResultDownloadIndicatorImageView.setVisibility(View.GONE);
-            }
-        } else {
-            if (ExternalAudioReader.getUri(song) != null) {
-                holder.item.searchResultDownloadIndicatorImageView.setVisibility(View.VISIBLE);
-            } else {
-                holder.item.searchResultDownloadIndicatorImageView.setVisibility(View.GONE);
-            }
-        }
+        bindDownload(holder, song);
 
         if (showCoverArt) CustomGlideRequest.Builder
                 .from(holder.itemView.getContext(), song.getCoverArtId(), CustomGlideRequest.ResourceType.Song)

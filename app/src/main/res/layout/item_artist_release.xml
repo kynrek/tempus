@@ -67,16 +67,34 @@
                     android:src="@drawable/ic_star_outlined"
                     app:tint="?attr/colorOnSurface" />
 
-                <ImageButton
-                    android:id="@+id/release_download_button"
+                <FrameLayout
                     android:layout_width="40dp"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/album_page_download_button"
-                    android:padding="7dp"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/ic_file_download"
-                    app:tint="?attr/colorOnSurface" />
+                    android:layout_height="36dp">
+
+                    <ImageButton
+                        android:id="@+id/release_download_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/album_page_download_button"
+                        android:padding="7dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_file_download"
+                        app:tint="?attr/colorOnSurface" />
+
+                    <!-- While the album downloads, in place of the button; tap it for the queue. -->
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                        android:id="@+id/release_download_progress"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:clickable="true"
+                        android:contentDescription="@string/download_queue_title"
+                        android:focusable="true"
+                        android:visibility="gone"
+                        app:indicatorSize="20dp"
+                        app:trackThickness="3dp" />
+                </FrameLayout>
             </LinearLayout>
         </LinearLayout>
 
