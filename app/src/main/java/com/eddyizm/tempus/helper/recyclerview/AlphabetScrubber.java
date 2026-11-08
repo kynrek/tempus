@@ -942,8 +942,9 @@ public class AlphabetScrubber extends View {
     private long holdFramesUntil;
     private boolean invalidateDeferred;
     private final Window.OnFrameMetricsAvailableListener frameMetrics = (window, metrics, dropped) -> {
-        long frameNanos = frameMillis() * 1_000_000L;
-        if (metrics.getMetric(FrameMetrics.COMMAND_ISSUE_DURATION) > frameNanos / 2) queuedFrames++;
+        // Half a refresh, but at least 8 ms: on a 90-120 Hz phone half a refresh is an ordinary frame.
+        long threshold = Math.max(frameMillis() * 1_000_000L / 2, 8_000_000L);
+        if (metrics.getMetric(FrameMetrics.COMMAND_ISSUE_DURATION) > threshold) queuedFrames++;
         else queuedFrames = 0;
         if (queuedFrames >= 3 && touching) {
             queuedFrames = 0;
