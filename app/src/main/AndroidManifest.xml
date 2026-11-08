@@ -23,7 +23,7 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme.SplashScreen"
+        android:theme="@style/AppTheme.Launch"
         android:usesCleartextTraffic="true">
 
         <!-- Declare that this session demo supports Android Auto. -->

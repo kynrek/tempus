@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="AppTheme.SplashScreen" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#000000</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ui_splash_screen</item>
-        <item name="postSplashScreenTheme">@style/AppTheme</item>
-        <item name="windowSplashScreenAnimationDuration">100</item>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+        The app's theme with a blank start window: Android 12+ always shows one while the app
+        draws its first screen, and with no icon it's just the app's background, so the app
+        seems to open straight away instead of behind a splash.
+    -->
+    <style name="AppTheme.Launch">
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@android:color/transparent</item>
     </style>
 
     <style name="AppTheme" parent="Theme.Material3.Light.NoActionBar">
