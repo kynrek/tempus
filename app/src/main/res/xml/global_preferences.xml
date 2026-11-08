@@ -416,7 +416,7 @@
             app:useSimpleSummaryProvider="true" />
 
         <ListPreference
-            app:defaultValue="[repeatID]"
+            app:defaultValue="@string/default_custom_command_second_button"
             app:dialogTitle="@string/settings_custom_command_second_button"
             app:entries="@array/custom_commands_titles"
             app:entryValues="@array/custom_commands_values"

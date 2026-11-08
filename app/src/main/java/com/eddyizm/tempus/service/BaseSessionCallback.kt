@@ -132,6 +132,15 @@ open class BaseSessionCallback(
             .setSlots(CommandButton.SLOT_OVERFLOW)
             .build()
 
+    @Suppress("DEPRECATION")
+    private val customCommandClose =
+        CommandButton.Builder(CommandButton.ICON_UNDEFINED)
+            .setDisplayName(context.getString(R.string.media_control_close))
+            .setSessionCommand(SessionCommand(Constants.CUSTOM_COMMAND_CLOSE, Bundle.EMPTY))
+            .setIconResId(R.drawable.ic_close)
+            .setSlots(CommandButton.SLOT_OVERFLOW)
+            .build()
+
     // Standard transport controls. Kept pinned in setMediaButtonPreferences so the custom
     // overflow buttons can't take their place on the last track (see #663).
     private val previousButton =
@@ -162,7 +171,8 @@ open class BaseSessionCallback(
         customCommandToggleHeartOff,
         customCommandToggleHeartLoading,
         customCommandInstantMixOn,
-        customCommandInstantMixOff
+        customCommandInstantMixOff,
+        customCommandClose
     )
 
     private val playerListener = object : Player.Listener {
@@ -368,6 +378,8 @@ open class BaseSessionCallback(
 
             "[instantMixID]" -> if (!MediaManager.continuousPlayIsRunning.get()) customCommandInstantMixOn
             else customCommandInstantMixOff
+            // Only where it's picked as the first or second button (it isn't one of allButtons).
+            "[closeID]" -> if (player.currentMediaItem != null) customCommandClose else null
             else -> null
         }
     }
@@ -523,6 +535,17 @@ open class BaseSessionCallback(
                 }
                 session.player.repeatMode = nextMode
                 updateMediaNotificationCustomLayout(session)
+                Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+            Constants.CUSTOM_COMMAND_CLOSE -> {
+                // Like swiping the app away while paused: keep the spot to resume from, then stop,
+                // which takes the notification down and lets the service end. The queue stays.
+                val player = session.player
+                if (player.currentMediaItem != null && player.currentPosition > 0) {
+                    MediaManager.setResumePoint(player.currentMediaItem, player.currentPosition)
+                }
+                player.pause()
+                player.stop()
                 Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
             Constants.CUSTOM_COMMAND_TOGGLE_HEART_ON,

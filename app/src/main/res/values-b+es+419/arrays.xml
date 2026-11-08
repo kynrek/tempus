@@ -373,6 +373,7 @@
         <item>Repetir</item>
         <item>Aletorio</item>
         <item>Mix instántaneo</item>
+        <item>Close</item>
     </string-array>
     <string-array name="custom_commands_values" translatable="false">
         <item>[heartID]</item>
