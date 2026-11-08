@@ -10,7 +10,6 @@ import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.splashscreen.SplashScreen;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.media3.common.util.UnstableApi;
@@ -40,7 +39,6 @@ public class CrashActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        SplashScreen.installSplashScreen(this);
         DynamicColors.applyToActivityIfAvailable(this);
 
         super.onCreate(savedInstanceState);

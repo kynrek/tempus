@@ -126,7 +126,6 @@ dependencies {
     implementation libs.androidx.navigation.ui.ktx
     implementation libs.androidx.recyclerview
     implementation libs.androidx.room.runtime
-    implementation libs.androidx.splashscreen
     implementation libs.androidx.appcompat
     implementation libs.androidx.swiperefreshlayout
 
