@@ -12,6 +12,12 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.os.Build;
+import android.os.Looper;
+import android.os.MessageQueue;
+import android.view.Display;
+import android.view.FrameMetrics;
+import android.view.Window;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.util.TypedValue;
@@ -315,6 +321,8 @@ public class AlphabetScrubber extends View {
             recyclerView.removeCallbacks(applyPendingScroll);
         }
         pendingScroll = RecyclerView.NO_POSITION;
+        jumpStartedAt = 0;
+        nextJumpAt = 0;
         setImagesPaused(false);
         cancelHold();
         resetZoom();
@@ -341,9 +349,51 @@ public class AlphabetScrubber extends View {
                 recyclerView.setPaddingRelative(recyclerView.getPaddingStart(), recyclerView.getPaddingTop(),
                         paddingEnd, recyclerView.getPaddingBottom());
             }
+            if (visible) recyclerView.post(this::warmTiles);
         }
         invalidate();
     }
+
+    /**
+     * Keeps a page of spare tiles ready, so a jump binds the tiles it shows instead of inflating
+     * them: while the list lays out the new page, the page it leaves is still held as scrap, so
+     * every tile it needs has to come from the pool. Spares are made one per idle moment.
+     */
+    private void warmTiles() {
+        RecyclerView rv = recyclerView;
+        if (rv == null || rv.getAdapter() == null || rv.getChildCount() == 0) return;
+        RecyclerView.ViewHolder first = rv.getChildViewHolder(rv.getChildAt(0));
+        if (first == null) return;
+        int type = first.getItemViewType();
+        int page = rv.getChildCount();
+        // Never below the 4 rows the fragments already keep.
+        int target = Math.max(12, page + Math.max(2, page / 4));
+        RecyclerView.RecycledViewPool pool = rv.getRecycledViewPool();
+        if (target <= warmedTarget && type == warmedType) return;
+        warmedTarget = target;
+        warmedType = type;
+        pool.setMaxRecycledViews(type, target);
+        if (warming) return;
+        warming = true;
+        Looper.myQueue().addIdleHandler(new MessageQueue.IdleHandler() {
+            @Override
+            public boolean queueIdle() {
+                RecyclerView list = recyclerView;
+                if (list == null || list.getAdapter() == null || touching
+                        || list.getScrollState() != RecyclerView.SCROLL_STATE_IDLE
+                        || list.getRecycledViewPool().getRecycledViewCount(warmedType) >= warmedTarget) {
+                    warming = false;
+                    return false;
+                }
+                list.getRecycledViewPool().putRecycledView(list.getAdapter().createViewHolder(list, warmedType));
+                return true;
+            }
+        });
+    }
+
+    private int warmedTarget;
+    private int warmedType = -1;
+    private boolean warming;
 
     private float stripLeft() {
         return getWidth() - getPaddingRight() - stripWidth;
@@ -386,6 +436,9 @@ public class AlphabetScrubber extends View {
         // Leaving mid-scrub: don't leave the app's covers held back.
         removeCallbacks(showImagesAtRest);
         touching = false;
+        watchFrames(false);
+        removeCallbacks(deferredInvalidate);
+        invalidateDeferred = false;
         setImagesPaused(false);
         player = null;
         lastVisibleBottom = -1f;
@@ -404,6 +457,7 @@ public class AlphabetScrubber extends View {
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
+        onJumpDrawn();
 
         int n = topLevel.count();
         if (n == 0 || sections == null) return;
@@ -652,6 +706,7 @@ public class AlphabetScrubber extends View {
                     return false;
                 }
                 touching = true;
+                watchFrames(true);
                 getParent().requestDisallowInterceptTouchEvent(true);
                 if (recyclerView != null) recyclerView.stopScroll();
                 if (onScrubStart != null) onScrubStart.run();
@@ -671,6 +726,7 @@ public class AlphabetScrubber extends View {
             case MotionEvent.ACTION_CANCEL:
                 if (!touching) return false;
                 touching = false;
+                watchFrames(false);
                 removeCallbacks(showImagesAtRest);
                 cancelHold();
                 getParent().requestDisallowInterceptTouchEvent(false);
@@ -849,11 +905,102 @@ public class AlphabetScrubber extends View {
     }
 
     private int pendingScroll = RecyclerView.NO_POSITION;
+    /**
+     * While the finger is down, the list jumps no sooner than this. A jump lays out and binds a
+     * whole page, which on the car box (a 22 Hz panel, 45 ms a frame) can take 30-130 ms of the
+     * UI thread; jumping every frame left the strip and bubble a frame behind the finger. They
+     * still follow every frame; the list catches up after each jump has been drawn, and lands on
+     * the last section as soon as the finger rests or lifts.
+     */
+    private long nextJumpAt;
+    /** When the last jump started, until the frame that shows it is drawn; 0 when none is pending. */
+    private long jumpStartedAt;
     private final Runnable applyPendingScroll = () -> {
         int position = pendingScroll;
+        if (position == RecyclerView.NO_POSITION || recyclerView == null) return;
+        long now = SystemClock.uptimeMillis();
+        if (touching && now < nextJumpAt) {
+            recyclerView.postOnAnimation(this.applyPendingScroll);
+            return;
+        }
         pendingScroll = RecyclerView.NO_POSITION;
-        if (position != RecyclerView.NO_POSITION) jumpTo(position);
+        jumpStartedAt = now;
+        nextJumpAt = now + frameMillis() * 3 / 2;
+        jumpTo(position);
     };
+
+    /**
+     * Catching up after a slow frame. One frame that runs long (the first jump, covers arriving)
+     * lets the display queue fill: from then on every frame waits for a free buffer and reaches
+     * the screen a whole refresh late, and with a new frame every refresh the queue never drains.
+     * Three frames in a row spending most of a refresh waiting to be issued is read as that, and
+     * the strip holds still for one refresh so the queue empties.
+     */
+    @Nullable
+    private Window metricsWindow;
+    private int queuedFrames;
+    private long holdFramesUntil;
+    private boolean invalidateDeferred;
+    private final Window.OnFrameMetricsAvailableListener frameMetrics = (window, metrics, dropped) -> {
+        long frameNanos = frameMillis() * 1_000_000L;
+        if (metrics.getMetric(FrameMetrics.COMMAND_ISSUE_DURATION) > frameNanos / 2) queuedFrames++;
+        else queuedFrames = 0;
+        if (queuedFrames >= 3 && touching) {
+            queuedFrames = 0;
+            holdFramesUntil = SystemClock.uptimeMillis() + frameMillis();
+            nextJumpAt = Math.max(nextJumpAt, holdFramesUntil + frameMillis());
+        }
+    };
+
+    private void watchFrames(boolean watch) {
+        if (watch && metricsWindow == null) {
+            Activity activity = findActivity(getContext());
+            if (activity == null || activity.getWindow() == null) return;
+            metricsWindow = activity.getWindow();
+            queuedFrames = 0;
+            metricsWindow.addOnFrameMetricsAvailableListener(frameMetrics, new Handler(Looper.getMainLooper()));
+        } else if (!watch && metricsWindow != null) {
+            try {
+                metricsWindow.removeOnFrameMetricsAvailableListener(frameMetrics);
+            } catch (IllegalArgumentException ignored) {
+                // Already gone with the window.
+            }
+            metricsWindow = null;
+            holdFramesUntil = 0;
+        }
+    }
+
+    @Override
+    public void invalidate() {
+        long wait = holdFramesUntil - SystemClock.uptimeMillis();
+        if (wait > 0) {
+            if (!invalidateDeferred) {
+                invalidateDeferred = true;
+                postDelayed(deferredInvalidate, wait);
+            }
+            return;
+        }
+        super.invalidate();
+    }
+
+    private final Runnable deferredInvalidate = () -> {
+        invalidateDeferred = false;
+        invalidate();
+    };
+
+    /** The jump's frame is being drawn: wait as long again as it took before the next one. */
+    private void onJumpDrawn() {
+        if (jumpStartedAt == 0) return;
+        long cost = SystemClock.uptimeMillis() - jumpStartedAt;
+        jumpStartedAt = 0;
+        nextJumpAt = Math.max(nextJumpAt, SystemClock.uptimeMillis() + Math.min(cost, 250));
+    }
+
+    private long frameMillis() {
+        Display display = getDisplay();
+        float hz = display != null ? display.getRefreshRate() : 60f;
+        return (long) (1000f / Math.max(10f, hz));
+    }
 
     private void jumpTo(int position) {
         if (recyclerView == null) return;
