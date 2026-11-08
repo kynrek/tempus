@@ -285,6 +285,11 @@ The spot is also saved as a bookmark on your server, if the server supports book
 - **Library**: Your server's complete music collection
 - **Download**: Locally downloaded files from server 
 
+### Library
+**Downloaded only**: the download button in the toolbar switches the library to downloaded music. Artists, Albums, Genres, Favorites, Recent, album and artist pages (Top songs included) and playlist pages then list only downloaded songs. Tap it again to see everything.
+
+**Albums**: the album page's toolbar has a star (favourite) and a download button for the whole album. On an artist's page each album has the same two under its year and track count. Downloading takes every track, even while Downloaded only hides some of them.
+
 [Back to top](#table-of-contents)
 
 ## Playing on another device

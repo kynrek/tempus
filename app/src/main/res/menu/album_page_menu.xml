@@ -18,12 +18,20 @@
         android:icon="@drawable/ic_playlist_add"
         android:title="@string/menu_add_to_playlist_button"
         app:iconTint="?attr/colorOnSurface"
+        app:showAsAction="ifRoom" />
+    <!-- Star the album (the same favourite as the heart on the page). -->
+    <item
+        android:id="@+id/action_favorite_album"
+        android:icon="@drawable/ic_star_outlined"
+        android:title="@string/album_favorite_add"
+        app:iconTint="?attr/colorOnSurface"
         app:showAsAction="always" />
     <item
         android:id="@+id/action_download_album"
         android:icon="@drawable/ic_file_download"
-        android:title="@string/menu_download_all_button"
-        app:showAsAction="never" />
+        android:title="@string/album_page_download_button"
+        app:iconTint="?attr/colorOnSurface"
+        app:showAsAction="always" />
     <item
         android:id="@+id/action_play_next"
         android:title="@string/album_bottom_sheet_play_next"

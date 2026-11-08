@@ -45,7 +45,10 @@ import com.eddyizm.tempus.ui.dialog.PlaylistChooserDialog;
 import com.eddyizm.tempus.ui.dialog.RatingDialog;
 import com.eddyizm.tempus.util.AssetLinkUtil;
 import com.eddyizm.tempus.util.Constants;
+import com.eddyizm.tempus.util.AlbumDownload;
+import com.eddyizm.tempus.util.AlbumFavorite;
 import com.eddyizm.tempus.util.DownloadUtil;
+import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.util.MappingUtil;
 import com.eddyizm.tempus.util.MusicUtil;
 import com.eddyizm.tempus.util.ExternalAudioWriter;
@@ -85,6 +88,18 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
     public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.album_page_menu, menu);
+    }
+
+    /** @noinspection deprecation*/
+    @Override
+    public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+        MenuItem star = menu.findItem(R.id.action_favorite_album);
+        AlbumID3 album = albumPageViewModel != null ? albumPageViewModel.getAlbum().getValue() : null;
+        if (star == null || album == null) return;
+        boolean favorite = AlbumFavorite.isFavorite(album);
+        star.setIcon(favorite ? R.drawable.ic_star : R.drawable.ic_star_outlined);
+        star.setTitle(favorite ? R.string.album_favorite_remove : R.string.album_favorite_add);
     }
 
     @Override
@@ -178,19 +193,16 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
                 return true;
             }
 
+        if (item.getItemId() == R.id.action_favorite_album) {
+            albumPageViewModel.setFavorite();
+            return true;
+        }
         if (item.getItemId() == R.id.action_download_album) {
+            // While "Downloaded only" hides the rest of the album, fetch the whole of it to download.
+            AlbumID3 album = albumPageViewModel.getAlbum().getValue();
             List<Child> songs = albumPageViewModel.getAlbumSongLiveList().getValue();
-            if (songs == null || songs.isEmpty()) {
-                return true;
-            }
-            if (Preferences.getDownloadDirectoryUri() == null) {
-                DownloadUtil.getDownloadTracker(requireContext()).download(
-                    MappingUtil.mapDownloads(songs),
-                    songs.stream().map(Download::new).collect(Collectors.toList())
-                );
-            } else {
-                songs.forEach(child -> ExternalAudioWriter.downloadToUserDirectory(requireContext(), child));
-            }
+            if (DownloadedOnly.isEnabled() && album != null) AlbumDownload.download(requireContext(), album.getId());
+            else AlbumDownload.download(requireContext(), songs);
             return true;
         }
         if (item.getItemId() == R.id.action_add_to_playlist) {
@@ -232,6 +244,7 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
         albumPageViewModel.getAlbum().observe(getViewLifecycleOwner(), album -> {
             if (album != null) {
                 favoriteToggle.setChecked(FavoriteRegistry.resolve(FavoriteRegistry.Kind.ALBUM, album.getId(), album.getStarred() != null));
+                requireActivity().invalidateOptionsMenu();   // the toolbar star follows
             }
         });
     }

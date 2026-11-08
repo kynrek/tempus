@@ -48,6 +48,36 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:singleLine="true" />
+
+            <!-- Favourite and download the whole album, under its year and track count. -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="-8dp"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/release_favorite_button"
+                    android:layout_width="40dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/album_favorite_add"
+                    android:padding="7dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_star_outlined"
+                    app:tint="?attr/colorOnSurface" />
+
+                <ImageButton
+                    android:id="@+id/release_download_button"
+                    android:layout_width="40dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/album_page_download_button"
+                    android:padding="7dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_file_download"
+                    app:tint="?attr/colorOnSurface" />
+            </LinearLayout>
         </LinearLayout>
 
         <ImageButton
@@ -66,6 +96,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/album_page_queue_button"
             android:src="@drawable/ic_queue_q" />
+
 
         <ImageButton
             android:id="@+id/release_expand_button"

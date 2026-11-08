@@ -22,6 +22,8 @@ import com.eddyizm.tempus.repository.AlbumRepository;
 import com.eddyizm.tempus.service.MediaManager;
 import com.eddyizm.tempus.subsonic.models.AlbumID3;
 import com.eddyizm.tempus.subsonic.models.Child;
+import com.eddyizm.tempus.util.AlbumDownload;
+import com.eddyizm.tempus.util.AlbumFavorite;
 import com.eddyizm.tempus.util.Constants;
 import com.eddyizm.tempus.util.DownloadedOnly;
 import com.eddyizm.tempus.viewmodel.ArtistPageViewModel;
@@ -92,6 +94,8 @@ public class ArtistReleaseAdapter extends RecyclerView.Adapter<ArtistReleaseAdap
                 .build()
                 .into(holder.item.releaseCover);
 
+        showFavorite(holder, AlbumFavorite.isFavorite(album));
+
         boolean open = expanded.contains(album.getId());
         holder.item.releaseExpandButton.setRotation(open ? 180f : 0f);
         holder.item.releaseExpandButton.setContentDescription(holder.itemView.getContext().getString(
@@ -101,6 +105,12 @@ public class ArtistReleaseAdapter extends RecyclerView.Adapter<ArtistReleaseAdap
             List<Child> albumTracks = tracks.get(album.getId());
             if (albumTracks != null) holder.trackAdapter(album).setItems(DownloadedOnly.songs(albumTracks));
         }
+    }
+
+    private static void showFavorite(ViewHolder holder, boolean favorite) {
+        holder.item.releaseFavoriteButton.setImageResource(favorite ? R.drawable.ic_star : R.drawable.ic_star_outlined);
+        holder.item.releaseFavoriteButton.setContentDescription(holder.itemView.getContext().getString(
+                favorite ? R.string.album_favorite_remove : R.string.album_favorite_add));
     }
 
     @Override
@@ -164,6 +174,19 @@ public class ArtistReleaseAdapter extends RecyclerView.Adapter<ArtistReleaseAdap
                 withTracks(album, list -> {
                     if (!list.isEmpty()) MediaManager.startQueue(mediaBrowserListenableFuture, list, 0);
                 });
+            });
+            item.releaseFavoriteButton.setOnClickListener(v -> {
+                AlbumID3 album = album();
+                if (album == null) return;
+                showFavorite(this, AlbumFavorite.toggle(album));
+            });
+            item.releaseDownloadButton.setOnClickListener(v -> {
+                AlbumID3 album = album();
+                if (album == null) return;
+                // The whole album, even while "Downloaded only" shows part of it.
+                List<Child> cached = tracks.get(album.getId());
+                if (cached != null) AlbumDownload.download(itemView.getContext(), cached);
+                else AlbumDownload.download(itemView.getContext(), album.getId());
             });
             item.releaseQueueButton.setOnClickListener(v -> {
                 AlbumID3 album = album();
