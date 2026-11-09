@@ -7,7 +7,22 @@
     -->
     <style name="AppTheme.Launch">
         <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@android:color/transparent</item>
+        <item name="android:windowSplashScreenBackground" tools:targetApi="31">@color/md_theme_light_background</item>
     </style>
+
+    <!--
+        Start windows in the Settings > Colors backgrounds. AppColors.applyLaunchWindow registers the
+        chosen one (SplashScreen.setSplashScreenTheme), so the next start window is already that colour.
+    -->
+    <style name="AppTheme.Launch.Bg.black" parent="AppTheme.Launch"><item name="android:windowSplashScreenBackground" tools:targetApi="31">#000000</item><item name="android:windowBackground">#000000</item></style>
+    <style name="AppTheme.Launch.Bg.charcoal" parent="AppTheme.Launch"><item name="android:windowSplashScreenBackground" tools:targetApi="31">#1E2427</item><item name="android:windowBackground">#1E2427</item></style>
+    <style name="AppTheme.Launch.Bg.slate" parent="AppTheme.Launch"><item name="android:windowSplashScreenBackground" tools:targetApi="31">#263238</item><item name="android:windowBackground">#263238</item></style>
+    <style name="AppTheme.Launch.Bg.navy" parent="AppTheme.Launch"><item name="android:windowSplashScreenBackground" tools:targetApi="31">#0D1B2A</item><item name="android:windowBackground">#0D1B2A</item></style>
+    <style name="AppTheme.Launch.Bg.forest" parent="AppTheme.Launch"><item name="android:windowSplashScreenBackground" tools:targetApi="31">#10261C</item><item name="android:windowBackground">#10261C</item></style>
+    <style name="AppTheme.Launch.Bg.burgundy" parent="AppTheme.Launch"><item name="android:windowSplashScreenBackground" tools:targetApi="31">#2A1015</item><item name="android:windowBackground">#2A1015</item></style>
+    <style name="AppTheme.Launch.Bg.white" parent="AppTheme.Launch"><item name="android:windowSplashScreenBackground" tools:targetApi="31">#FFFFFF</item><item name="android:windowBackground">#FFFFFF</item></style>
+    <style name="AppTheme.Launch.Bg.light_gray" parent="AppTheme.Launch"><item name="android:windowSplashScreenBackground" tools:targetApi="31">#ECEFF1</item><item name="android:windowBackground">#ECEFF1</item></style>
+    <style name="AppTheme.Launch.Bg.sand" parent="AppTheme.Launch"><item name="android:windowSplashScreenBackground" tools:targetApi="31">#F3EBDD</item><item name="android:windowBackground">#F3EBDD</item></style>
 
     <style name="AppTheme" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/md_theme_light_primary</item>

@@ -15,6 +15,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Rating
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CommandButton
+import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
@@ -299,6 +300,53 @@ open class BaseSessionCallback(
         return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
             .setAvailableSessionCommands(sessionCommands)
             .build()
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Resuming from outside the app (MiniMap's ▶, Android's media controls)
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * An empty root, so that framework MediaBrowser clients can connect (media3 refuses them when
+     * there is no root). MiniMap's play button connects this way to resume the last song after a
+     * reboot without opening the app. The tempus flavour overrides this with its Android Auto tree.
+     */
+    override fun onGetLibraryRoot(
+        session: MediaLibraryService.MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        params: MediaLibraryService.LibraryParams?
+    ): ListenableFuture<LibraryResult<MediaItem>> {
+        Log.d(TAG, "onGetLibraryRoot pkg=${browser.packageName}")
+        val root = MediaItem.Builder()
+            .setMediaId("root")
+            .setMediaMetadata(
+                MediaMetadata.Builder().setIsBrowsable(true).setIsPlayable(false).build()
+            )
+            .build()
+        return Futures.immediateFuture(LibraryResult.ofItem(root, params))
+    }
+
+    /**
+     * Play pressed while the player is still empty (the service has just been started from outside,
+     * before its own restore has loaded the queue): play the saved queue from where it stopped.
+     */
+    override fun onPlaybackResumption(
+        mediaSession: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        isForPlayback: Boolean
+    ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+        Log.i(TAG, "onPlaybackResumption pkg=${controller.packageName} forPlayback=$isForPlayback")
+        val future = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
+        Thread({
+            try {
+                val saved = service.loadSavedQueue()
+                if (saved != null) future.set(saved)
+                else future.setException(UnsupportedOperationException("no saved queue"))
+            } catch (e: Exception) {
+                future.setException(e)
+            }
+        }, "PlaybackResumption").start()
+        return future
     }
 
     // ─────────────────────────────────────────────────────────────

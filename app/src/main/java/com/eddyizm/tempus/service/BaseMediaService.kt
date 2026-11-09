@@ -371,41 +371,49 @@ open class BaseMediaService : MediaLibraryService(), MediaManager.QueueTarget {
         }
     }
 
+    /**
+     * The saved queue as media items, starting at the last song played and where it stopped, or null
+     * if there is none. Blocking (database reads and mapping): call it off the main thread.
+     */
+    fun loadSavedQueue(): MediaSession.MediaItemsWithStartPosition? {
+        while (ConnectionUtil.pingsOutstanding()) {
+            if (serviceDestroyed) return null
+            Thread.sleep(25)
+        }
+        val queueRepository = QueueRepository()
+        val storedQueue = queueRepository.media
+        if (storedQueue.isNullOrEmpty()) return null
+        val mediaItems = MappingUtil.mapMediaItems(storedQueue)
+        if (mediaItems.isEmpty()) return null
+
+        val lastPlayed = try {
+            queueRepository.lastPlayedMedia
+        } catch (_: Exception) {
+            null
+        }
+        var lastIndex = 0
+        var lastPosition = 0L
+        if (lastPlayed != null) {
+            val found = MappingUtil.indexOfMediaId(mediaItems, lastPlayed.id)
+            if (found >= 0) {
+                lastIndex = found
+                lastPosition = MediaManager.resumePosition(lastPlayed)
+            }
+        }
+        return MediaSession.MediaItemsWithStartPosition(mediaItems, lastIndex, lastPosition)
+    }
+
     fun restorePlayerFromQueue(player: Player) {
         if (player.mediaItemCount > 0) return
 
         // Map off the main thread: mapMediaItems does a blocking lookup per song, so a
         // large saved queue froze the UI on launch (#600).
         Thread {
-            while (ConnectionUtil.pingsOutstanding()) {
-                if (serviceDestroyed) return@Thread
-                Thread.sleep(25)
-            }
-
             val addressWhenMapped = Preferences.getInUseServerAddress()
-            val queueRepository = QueueRepository()
-            val storedQueue = queueRepository.media
-            if (storedQueue.isNullOrEmpty()) return@Thread
-
-            val mediaItems = MappingUtil.mapMediaItems(storedQueue)
-            if (mediaItems.isEmpty()) return@Thread
-
-            val lastPlayed = try {
-                queueRepository.lastPlayedMedia
-            } catch (_: Exception) {
-                null
-            }
-
-            var lastIndex = 0
-            var lastPosition = 0L
-
-            if (lastPlayed != null) {
-                val found = MappingUtil.indexOfMediaId(mediaItems, lastPlayed.id)
-                if (found >= 0) {
-                    lastIndex = found
-                    lastPosition = MediaManager.resumePosition(lastPlayed)
-                }
-            }
+            val saved = loadSavedQueue() ?: return@Thread
+            val mediaItems = saved.mediaItems
+            val lastIndex = saved.startIndex
+            val lastPosition = saved.startPositionMs
 
             widgetUpdateHandler.post {
                 // onDestroy may have released the player while this queue was still mapping, and

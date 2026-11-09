@@ -2,6 +2,11 @@ package com.eddyizm.tempus.util;
 
 import android.app.Activity;
 import android.content.res.Resources;
+import android.os.Build;
+import android.window.SplashScreen;
+import android.window.SplashScreenView;
+
+import com.eddyizm.tempus.R;
 
 import androidx.annotation.Nullable;
 
@@ -92,6 +97,28 @@ public final class AppColors {
         String bg = pick(MAIN_BG, "default"), text = pick(MAIN_TEXT, "default");
         if (BG.containsKey(bg)) apply(activity, res.getIdentifier("ThemeOverlay.Tempus.Bg." + bg, "style", activity.getPackageName()));
         if (TEXT.containsKey(text)) apply(activity, res.getIdentifier("ThemeOverlay.Tempus.Text." + text, "style", activity.getPackageName()));
+    }
+
+    /**
+     * The start window: removed the moment the app's first frame is ready, instead of Android's
+     * radial wipe (which smeared the start window across the dark control panel), and drawn in the
+     * chosen background colour from the next launch on. Call from the launcher activity's onCreate.
+     */
+    public static void applyLaunchWindow(Activity activity) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
+        SplashScreen splash = activity.getSplashScreen();
+        splash.setOnExitAnimationListener(SplashScreenView::remove);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        String bg = pick(MAIN_BG, "default");
+        int style = BG.containsKey(bg)
+                ? activity.getResources().getIdentifier("AppTheme.Launch.Bg." + bg, "style", activity.getPackageName())
+                : 0;
+        if (style == 0) style = R.style.AppTheme_Launch;
+        try {
+            splash.setSplashScreenTheme(style);
+        } catch (RuntimeException ignored) {
+            // only the launcher activity may set it; nothing to fix up elsewhere
+        }
     }
 
     private static void apply(Activity activity, int style) {

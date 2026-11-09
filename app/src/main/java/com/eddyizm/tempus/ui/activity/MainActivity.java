@@ -157,6 +157,7 @@ public class MainActivity extends BaseActivity {
         fixUpEdgeToEdge();
         super.onCreate(savedInstanceState);
         AppColors.applyMainWindow(this);   // Settings > Colors, over the theme
+        AppColors.applyLaunchWindow(this);
 
         bind = ActivityMainBinding.inflate(getLayoutInflater());
         View view = bind.getRoot();
