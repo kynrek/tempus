@@ -174,6 +174,10 @@ public class NavigationHelper {
 
     @OptIn(markerClass = UnstableApi.class)
     public void setSystemBarsVisibility(AppCompatActivity activity, boolean visibility) {
+        // In a window (the car box's home screen pane) there are no system bars over the app to hide or
+        // show. Asking anyway re-sends the window insets each time a screen opens, and on the box the
+        // decor then pushes the whole app 24 px down for a frame or two: the bounce on opening.
+        if (activity.isInMultiWindowMode()) return;
         WindowInsetsControllerCompat insetsController;
         Window window = activity.getWindow();
         View decorView = window.getDecorView();

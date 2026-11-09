@@ -1037,6 +1037,26 @@ public class MainActivity extends BaseActivity {
                         v.post(() -> v.setLayoutParams(lp));
                     }
                 });
+                // The listener above fixes the margin only after a frame laid out with it has been drawn,
+                // so every time the decor re-applies it (insets dispatched again while the app starts) one
+                // frame showed the whole app 24 px low: the bounce on opening. Catch it before drawing
+                // instead: zero it and skip that frame. At most 3 frames in a row, so drawing never stalls.
+                View root = windowRoot;
+                int[] skipped = new int[1];
+                decor.getViewTreeObserver().addOnPreDrawListener(() -> {
+                    if (pinnedWindowRoot != root || !isInMultiWindowMode()
+                            || !(root.getLayoutParams() instanceof ViewGroup.MarginLayoutParams)) return true;
+                    ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) root.getLayoutParams();
+                    if (lp.topMargin == 0 || skipped[0] >= 3) {
+                        skipped[0] = 0;
+                        return true;
+                    }
+                    skipped[0]++;
+                    android.util.Log.d("BoxInsets", "decor top margin " + lp.topMargin + " -> 0, frame skipped");
+                    lp.topMargin = 0;
+                    root.setLayoutParams(lp);
+                    return false;
+                });
             }
         }
         if (android.os.Build.VERSION.SDK_INT >= 30) {

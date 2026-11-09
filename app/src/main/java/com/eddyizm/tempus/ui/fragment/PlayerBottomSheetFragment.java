@@ -83,6 +83,7 @@ public class PlayerBottomSheetFragment extends Fragment {
         initPlayerController();
         initQueueBridge(playbackViewModel);
         setHeaderBookmarksButton();
+        showSnapshot();
         com.eddyizm.tempus.lan.LanRemoteSession.state().observe(getViewLifecycleOwner(), this::renderRemote);
         // Settings is a fragment in this activity, so a flipped switch is heard here rather than on resume.
         com.eddyizm.tempus.App.getInstance().getPreferences().registerOnSharedPreferenceChangeListener(lanSwitchListener);
@@ -162,6 +163,14 @@ public class PlayerBottomSheetFragment extends Fragment {
 
     @Override
     public void onStop() {
+        // Where the song is, for the panel snapshot the next start shows (see showSnapshot).
+        MediaBrowser browser = progressBarBrowser;
+        if (browser != null && browser.getCurrentMediaItem() != null) {
+            android.content.SharedPreferences p = snapshotPrefs();
+            if (browser.getCurrentMediaItem().mediaId.equals(p.getString("id", null))) {
+                p.edit().putLong("position", Math.max(0, browser.getCurrentPosition())).apply();
+            }
+        }
         releaseMediaBrowser();
         super.onStop();
     }
@@ -185,6 +194,7 @@ public class PlayerBottomSheetFragment extends Fragment {
         remoteVisible = false;
         remoteCover = null;
         remoteMediaSignature = null;
+        shownCoverId = null;
         bind = null;
     }
 
@@ -375,12 +385,80 @@ public class PlayerBottomSheetFragment extends Fragment {
                                 mediaMetadata.extras.getString("coverArtId"), CustomGlideRequest.ResourceType.Radio));
                 request = RadioCoverArtDownloader.applyLocalFileSignature(request, mediaMetadata.artworkUri);
                 request.into(bind.playerHeaderLayout.playerHeaderMediaCoverImage);
+                shownCoverId = null;
             } else {
-                CustomGlideRequest.Builder
-                        .from(requireContext(), mediaMetadata.extras.getString("coverArtId"), CustomGlideRequest.ResourceType.Song)
-                        .build()
-                        .into(bind.playerHeaderLayout.playerHeaderMediaCoverImage);
+                String coverId = mediaMetadata.extras.getString("coverArtId");
+                // The same cover as shown (the snapshot's, or a metadata refresh): reloading it would
+                // clear the view to the placeholder for a few frames.
+                if (coverId == null || !coverId.equals(shownCoverId)) {
+                    CustomGlideRequest.Builder
+                            .from(requireContext(), coverId, CustomGlideRequest.ResourceType.Song)
+                            .build()
+                            .into(bind.playerHeaderLayout.playerHeaderMediaCoverImage);
+                    shownCoverId = coverId;
+                }
+                saveSnapshot(mediaMetadata);
             }
+        }
+    }
+
+    // ---- what the panel showed last, so a fresh start shows the song at once ----
+
+    private static final String SNAPSHOT = "panel_snapshot";
+    /** The song cover in the panel's image, or null when something else (radio, LAN remote) put one there. */
+    @Nullable private String shownCoverId;
+
+    private android.content.SharedPreferences snapshotPrefs() {
+        return requireContext().getSharedPreferences(SNAPSHOT, android.content.Context.MODE_PRIVATE);
+    }
+
+    /** Keeps the current song's panel text, cover and length for the next start. */
+    private void saveSnapshot(MediaMetadata m) {
+        if (m.extras == null) return;
+        String id = m.extras.getString("id");
+        String title = m.extras.getString("title");
+        if (TextUtils.isEmpty(id) || TextUtils.isEmpty(title)) return;
+        long durationMs = m.durationMs != null && m.durationMs > 0 ? m.durationMs : m.extras.getInt("duration", 0) * 1000L;
+        android.content.SharedPreferences p = snapshotPrefs();
+        if (id.equals(p.getString("id", null)) && durationMs == p.getLong("duration", -1)) return;
+        p.edit()
+                .remove("position")   // a new song: its position is saved when the app goes to the background
+                .putString("id", id)
+                .putString("title", title)
+                .putString("artist", m.artist != null ? m.artist.toString() : "")
+                .putString("cover", m.extras.getString("coverArtId"))
+                .putLong("duration", durationMs)
+                .apply();
+    }
+
+    /**
+     * Before the player has connected (a few frames after the app's first screen), shows the last song
+     * instead of an empty panel with 0:00 / 1:40 (the seek bar's default length).
+     */
+    private void showSnapshot() {
+        android.content.SharedPreferences p = snapshotPrefs();
+        String id = p.getString("id", null), title = p.getString("title", null);
+        if (id == null || TextUtils.isEmpty(title)) return;
+        String artist = p.getString("artist", "");
+        bind.playerHeaderLayout.playerHeaderMediaTitleLabel.setText(title);
+        bind.playerHeaderLayout.playerHeaderMediaTitleLabel.setVisibility(View.VISIBLE);
+        bind.playerHeaderLayout.playerHeaderMediaArtistLabel.setText(artist);
+        bind.playerHeaderLayout.playerHeaderMediaArtistLabel.setVisibility(TextUtils.isEmpty(artist) ? View.GONE : View.VISIBLE);
+        String cover = p.getString("cover", null);
+        CustomGlideRequest.Builder
+                .from(requireContext(), cover, CustomGlideRequest.ResourceType.Song)
+                .build()
+                .dontAnimate()   // no cross-fade: it should look as if it was always there
+                .into(bind.playerHeaderLayout.playerHeaderMediaCoverImage);
+        shownCoverId = cover;
+        int duration = (int) (p.getLong("duration", 0) / 1000);
+        if (duration > 0) {
+            long savedMs = p.getLong("position", -1);
+            if (savedMs < 0) savedMs = Preferences.getResumePoint(id);
+            int position = (int) Math.min(duration, savedMs / 1000);
+            bind.playerHeaderLayout.playerHeaderSeekBar.setMax(duration);
+            bind.playerHeaderLayout.playerHeaderSeekBar.setProgress(position);
+            setHeaderTimes(position, duration);
         }
     }
 
@@ -783,6 +861,8 @@ public class PlayerBottomSheetFragment extends Fragment {
                     (com.eddyizm.tempus.lan.LanRemoteSession.current().positionAt(android.os.SystemClock.elapsedRealtime()) / 1000), true);
             return;
         }
+        // Nothing loaded yet (the service is still restoring the queue): keep the snapshot's position.
+        if (mediaBrowser.getCurrentMediaItem() == null) return;
         if (bind != null && !scrubbing) {
             int position = (int) (mediaBrowser.getCurrentPosition() / 1000);
             bind.playerHeaderLayout.playerHeaderSeekBar.setProgress(position, true);
@@ -860,6 +940,7 @@ public class PlayerBottomSheetFragment extends Fragment {
             bind.playerHeaderLayout.playerHeaderSeekBar.setProgress((int) (state.getPosition() / 1000));
             if (!Objects.equals(remoteCover, state.getCoverId())) {
                 remoteCover = state.getCoverId();
+                shownCoverId = null;
                 CustomGlideRequest.Builder.from(requireContext(), remoteCover.isEmpty() ? null : remoteCover,
                         CustomGlideRequest.ResourceType.Song).build().into(bind.playerHeaderLayout.playerHeaderMediaCoverImage);
             }
