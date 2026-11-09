@@ -9,10 +9,10 @@
 > | App | Repository | Based on | Role |
 > |---|---|---|---|
 > | Lawnchair (launcher) | [kynrek/lawnchair-custom](https://github.com/kynrek/lawnchair-custom) | [LawnchairLauncher/lawnchair](https://github.com/LawnchairLauncher/lawnchair) | Phone. Home screen; takes screenshots through Screenshot Tile (hold Power, gestures) and gives its share list the recent Messages / Signal conversations (`ShareTargetsProvider`). |
-> | Screenshot Tile | [kynrek/ScreenshotTile-CustomShare](https://github.com/kynrek/ScreenshotTile-CustomShare) | [cvzi/ScreenshotTile](https://github.com/cvzi/ScreenshotTile) | Phone. Screenshots with a big preview, built-in editor and its own share list (with Lawnchair's recent conversations); Gallery opens the custom Fossify Gallery. |
+> | Screenshot Tile | [kynrek/ScreenshotTile-CustomShare](https://github.com/kynrek/ScreenshotTile-CustomShare) | [cvzi/ScreenshotTile](https://github.com/cvzi/ScreenshotTile) | Phone. Screenshots with a big preview, Edit in Image Toolbox (built-in editor as fallback) and its own share list (with Lawnchair's recent conversations); Gallery opens the custom Fossify Gallery. |
 > | MiniMap (OsmAnd) | [kynrek/MiniMap](https://github.com/kynrek/MiniMap) | [osmandapp/OsmAnd](https://github.com/osmandapp/OsmAnd) | Car box. Map, navigation and home screen. |
 > | **Tempus (music)** (this repo) | [kynrek/tempus](https://github.com/kynrek/tempus) (branch `car-alphabet-index`) | [eddyizm/tempus](https://github.com/eddyizm/tempus) | Car box. Subsonic music client with an A–Z letter scrubber for the car. |
-> | Fossify Gallery (custom share) | not on GitHub yet | [FossifyOrg/Gallery](https://github.com/FossifyOrg/Gallery) | Phone. Gallery with the same custom share list; Screenshot Tile's Gallery button opens it. |
+> | Fossify Gallery (custom share) | [kynrek/FossifyGallery-CustomShare](https://github.com/kynrek/FossifyGallery-CustomShare) | [FossifyOrg/Gallery](https://github.com/FossifyOrg/Gallery) | Phone. Gallery with the same custom share list and recent conversations; Edit opens Image Toolbox. Screenshot Tile's Gallery button opens it. |
 <!-- related-forks:end -->
 
 <p align="center">
