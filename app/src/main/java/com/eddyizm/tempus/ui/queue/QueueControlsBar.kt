@@ -1,6 +1,9 @@
 package com.eddyizm.tempus.ui.queue
 
 import androidx.annotation.OptIn
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -25,6 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,6 +79,13 @@ fun QueueControlsBar(fragment: PlayerBottomSheetFragment, modifier: Modifier = M
         refresh++
     }
 
+    val haptics = LocalHapticFeedback.current
+    fun longPress(button: String) {
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        fragment.barLongPress(button)
+        refresh++
+    }
+
     Surface(
         tonalElevation = 3.dp,
         shadowElevation = 6.dp,
@@ -100,7 +113,7 @@ fun QueueControlsBar(fragment: PlayerBottomSheetFragment, modifier: Modifier = M
                     )
                 }
                 if (seekButtons) {
-                    IconButton(onClick = { press("rewind") }) {
+                    LongPressIconButton(onClick = { press("rewind") }, onLongClick = { longPress("rewind") }) {
                         Icon(painterResource(R.drawable.ic_replay), stringResource(R.string.queue_bar_rewind), Modifier.size(28.dp))
                     }
                 }
@@ -112,12 +125,15 @@ fun QueueControlsBar(fragment: PlayerBottomSheetFragment, modifier: Modifier = M
                     )
                 }
                 if (seekButtons) {
-                    IconButton(onClick = { press("forward") }) {
+                    LongPressIconButton(onClick = { press("forward") }, onLongClick = { longPress("forward") }) {
                         Icon(painterResource(R.drawable.ic_forward), stringResource(R.string.queue_bar_forward), Modifier.size(28.dp))
                     }
-                }
-                IconButton(onClick = { press("next") }, enabled = nextEnabled) {
-                    Icon(painterResource(R.drawable.ic_skip_next), stringResource(R.string.queue_bar_next), Modifier.size(28.dp))
+                } else {
+                    // Only while the seek buttons are hidden (the LAN remote); otherwise a long
+                    // press on fast forward is Next, as on the mini player.
+                    IconButton(onClick = { press("next") }, enabled = nextEnabled) {
+                        Icon(painterResource(R.drawable.ic_skip_next), stringResource(R.string.queue_bar_next), Modifier.size(28.dp))
+                    }
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -149,4 +165,22 @@ fun QueueControlsBar(fragment: PlayerBottomSheetFragment, modifier: Modifier = M
             }
         }
     }
+}
+
+/** An icon button that also takes a long press (IconButton has no long press). */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun LongPressIconButton(onClick: () -> Unit, onLongClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .combinedClickable(
+                role = Role.Button,
+                interactionSource = null,
+                indication = androidx.compose.material3.ripple(bounded = false, radius = 24.dp),
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
+        contentAlignment = Alignment.Center
+    ) { content() }
 }

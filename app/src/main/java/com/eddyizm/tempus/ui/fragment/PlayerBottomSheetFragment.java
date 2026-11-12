@@ -107,6 +107,13 @@ public class PlayerBottomSheetFragment extends Fragment {
                 && bind.playerHeaderLayout.playerHeaderNextMediaButton.isEnabled();
     }
 
+    /** "rewind" or "forward": the same as a long press on that mini player button. */
+    public void barLongPress(String button) {
+        if (bind == null) return;
+        if ("rewind".equals(button)) rewindOrPrevious(true);
+        else if ("forward".equals(button)) nextSong();
+    }
+
     /** "rewind", "play", "forward" or "next": the same as tapping that mini player button. */
     public void barPress(String button) {
         if (bind == null) return;
@@ -612,10 +619,11 @@ public class PlayerBottomSheetFragment extends Fragment {
                     break;
                 case Constants.MEDIA_TYPE_MUSIC:
                 default:
-                    // Seek back/forward by the Settings amount sit around Play for music too.
+                    // Seek back/forward by the Settings amount sit around Play for music too. No
+                    // Next button: a long press on fast forward skips, and one on rewind goes back.
                     bind.playerHeaderLayout.playerHeaderFastForwardMediaButton.setVisibility(View.VISIBLE);
                     bind.playerHeaderLayout.playerHeaderRewindMediaButton.setVisibility(View.VISIBLE);
-                    bind.playerHeaderLayout.playerHeaderNextMediaButton.setVisibility(View.VISIBLE);
+                    bind.playerHeaderLayout.playerHeaderNextMediaButton.setVisibility(View.GONE);
                     break;
             }
         }
@@ -681,6 +689,47 @@ public class PlayerBottomSheetFragment extends Fragment {
                 }, MoreExecutors.directExecutor());
             }
         });
+    }
+
+    private static final long PREVIOUS_SONG_WITHIN_MS = 3000;
+
+    /** Rewinds by the Settings amount, or goes to the previous song when asked or near the start. */
+    private void rewindOrPrevious(boolean previous) {
+        if (com.eddyizm.tempus.lan.LanRemoteSession.isActive()) {
+            if (previous) com.eddyizm.tempus.lan.LanRemoteSession.command("previous");
+            return;
+        }
+        if (mediaBrowserListenableFuture == null) return;
+        mediaBrowserListenableFuture.addListener(() -> {
+            try {
+                MediaBrowser browser = mediaBrowserListenableFuture.get();
+                if (previous || browser.getCurrentPosition() < PREVIOUS_SONG_WITHIN_MS) {
+                    if (browser.hasPreviousMediaItem()) browser.seekToPreviousMediaItem();
+                    else browser.seekTo(0);
+                } else {
+                    seekBy(-Preferences.getSeekSeconds());
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Rewind failed", e);
+            }
+        }, MoreExecutors.directExecutor());
+    }
+
+    /** Long press on fast forward: the next song, as the Next button does. */
+    private void nextSong() {
+        if (com.eddyizm.tempus.lan.LanRemoteSession.isActive()) {
+            com.eddyizm.tempus.lan.LanRemoteSession.command("next");
+            return;
+        }
+        if (mediaBrowserListenableFuture == null) return;
+        mediaBrowserListenableFuture.addListener(() -> {
+            try {
+                MediaBrowser browser = mediaBrowserListenableFuture.get();
+                if (browser.hasNextMediaItem()) browser.seekToNextMediaItem();
+            } catch (Exception e) {
+                Log.e(TAG, "Next failed", e);
+            }
+        }, MoreExecutors.directExecutor());
     }
 
     /** Jumps by the Settings amount (5–60 s, as in MiniCarHome's widget), clamped to the track. */
@@ -753,8 +802,21 @@ public class PlayerBottomSheetFragment extends Fragment {
             if (com.eddyizm.tempus.lan.LanRemoteSession.isActive()) com.eddyizm.tempus.lan.LanRemoteSession.command("next");
             else bind.getRoot().findViewById(R.id.exo_next).performClick();
         });
-        bind.playerHeaderLayout.playerHeaderRewindMediaButton.setOnClickListener(view -> seekBy(-Preferences.getSeekSeconds()));
+        // No room for a Previous button: in a song's first 3 s rewind goes to the previous song
+        // (as a Previous button does), and a long press always does.
+        bind.playerHeaderLayout.playerHeaderRewindMediaButton.setOnClickListener(view -> rewindOrPrevious(false));
+        bind.playerHeaderLayout.playerHeaderRewindMediaButton.setOnLongClickListener(view -> {
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+            rewindOrPrevious(true);
+            return true;
+        });
         bind.playerHeaderLayout.playerHeaderFastForwardMediaButton.setOnClickListener(view -> seekBy(Preferences.getSeekSeconds()));
+        // A long press on fast forward goes to the next song.
+        bind.playerHeaderLayout.playerHeaderFastForwardMediaButton.setOnLongClickListener(view -> {
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+            nextSong();
+            return true;
+        });
     }
 
     private void setHeaderNextButtonState(boolean isEnabled) {
