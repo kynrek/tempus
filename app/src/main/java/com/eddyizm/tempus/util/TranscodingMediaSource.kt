@@ -130,7 +130,9 @@ class TranscodingMediaSource(
         }
 
         override fun maybeThrowPrepareError() {
-            if (!isReloading) currentPeriod.maybeThrowPrepareError()
+            // While reloading, currentPeriod is the reload: its errors must surface too, or a
+            // failed reload leaves the player buffering forever.
+            currentPeriod.maybeThrowPrepareError()
         }
 
         override fun getTrackGroups() = currentPeriod.trackGroups
@@ -197,6 +199,11 @@ class TranscodingMediaSource(
         }
 
         override fun seekToUs(positionUs: Long): Long {
+            // The reload isn't prepared yet, so it can't be asked anything: start it again here.
+            if (isReloading) {
+                reloadSource(positionUs)
+                return positionUs
+            }
             if (positionUs == 0L && currentOffsetUs == 0L) {
                 return currentPeriod.seekToUs(positionUs)
             }
@@ -265,7 +272,7 @@ class TranscodingMediaSource(
             seekChildId?.let { releaseChildSource(it) }
 
             val seconds = Util.usToMs(positionUs) / 1000
-            val newUri = MusicUtil.getStreamUri(mediaItem.mediaId, seconds.toInt())
+            val newUri = offsetUri(seconds.toInt())
             val newMediaItem = mediaItem.buildUpon().setUri(newUri).build()
 
             val newSource = progressiveMediaSourceFactory.createMediaSource(newMediaItem)
@@ -278,6 +285,22 @@ class TranscodingMediaSource(
             val newPeriod = newSource.createPeriod(id, allocator, 0)
             currentPeriod = newPeriod
             newPeriod.prepare(this, 0)
+        }
+
+        /**
+         * The item's own stream URL restarted at [seconds]. Keeping its format and bitrate (not
+         * today's settings) keeps the reload's track the same as the one ExoPlayer selected.
+         */
+        private fun offsetUri(seconds: Int): android.net.Uri {
+            val uri = mediaItem.localConfiguration?.uri
+                    ?: return MusicUtil.getStreamUri(mediaItem.mediaId, seconds)
+            val builder = uri.buildUpon().clearQuery()
+            for (name in uri.queryParameterNames) {
+                if (name == "timeOffset") continue
+                for (value in uri.getQueryParameters(name)) builder.appendQueryParameter(name, value)
+            }
+            if (seconds > 0) builder.appendQueryParameter("timeOffset", seconds.toString())
+            return builder.build()
         }
 
         private fun restoreTracks() {

@@ -53,13 +53,22 @@ class DynamicMediaSourceFactory(
             }
 
             else -> {
-                val extractorsFactory: ExtractorsFactory = DefaultExtractorsFactory()
-                val progressiveFactory = ProgressiveMediaSource.Factory(dataSourceFactory, extractorsFactory)
-
                 val uri = mediaItem.localConfiguration?.uri
                 val isTranscoding = uri?.getQueryParameter("format") != null && uri.getQueryParameter("format") != "raw"
-                
-                if (isTranscoding && OpenSubsonicExtensionsUtil.isTranscodeOffsetExtensionAvailable()) {
+                // A "download" URL is a whole file the server keeps (it answers byte ranges and
+                // ignores timeOffset), and a downloaded song plays it from the cache. Only a live
+                // "stream" transcode needs TranscodingMediaSource's restart-at-an-offset seeks.
+                val isLiveTranscode = isTranscoding && uri?.lastPathSegment != "download"
+
+                // The server's MP3 transcodes carry no Xing/Info header, so ExoPlayer can only seek
+                // them as constant bitrate, and by default not at all while the length is unknown:
+                // a seek then fell back to a timeOffset reload that never finished.
+                val extractorsFactory: ExtractorsFactory = DefaultExtractorsFactory()
+                    .setConstantBitrateSeekingEnabled(true)
+                    .setConstantBitrateSeekingAlwaysEnabled(!isLiveTranscode)
+                val progressiveFactory = ProgressiveMediaSource.Factory(dataSourceFactory, extractorsFactory)
+
+                if (isLiveTranscode && OpenSubsonicExtensionsUtil.isTranscodeOffsetExtensionAvailable()) {
                      TranscodingMediaSource(mediaItem, dataSourceFactory, progressiveFactory)
                 } else {
                      MetadataDurationMediaSource(progressiveFactory.createMediaSource(mediaItem))
